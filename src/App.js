@@ -58,31 +58,60 @@ function App() {
     return () => unsubscribe();
   }, []);
 
-  // Initialize Pi SDK with better error handling
+  // Enhanced Pi SDK initialization for testnet
   useEffect(() => {
     const initializePiSDK = async () => {
       try {
         if (window.Pi) {
-          await window.Pi.init({
+          console.log('🧪 Initializing Pi SDK for testnet...');
+          
+          const config = {
             version: "2.0",
-            sandbox: true, // Set to false for production
+            sandbox: true, // Testnet mode
             development: true,
-            timeout: 30000,
-            origin: window.location.origin
+            timeout: 45000,
+            // Enhanced testnet configuration
+            environment: 'sandbox',
+            origin: window.location.origin,
+            // Allow cross-origin for development
+            allowCrossOrigin: true
+          };
+          
+          console.log('Pi SDK Config:', {
+            version: config.version,
+            sandbox: config.sandbox,
+            environment: config.environment,
+            origin: config.origin
           });
+          
+          await window.Pi.init(config);
           setPiSDKLoaded(true);
-          console.log('Pi SDK initialized successfully');
+          console.log('✅ Pi testnet SDK initialized successfully');
+          
+          // Test if SDK is actually responsive
+          if (window.Pi.authenticate) {
+            console.log('✅ Pi authentication method available');
+          } else {
+            console.warn('⚠️ Pi authentication method not available');
+          }
+          
         } else {
-          console.warn('Pi SDK not available');
-          setTimeout(initializePiSDK, 2000); // Retry after 2 seconds
+          console.warn('⚠️ Pi SDK not loaded - retrying in 3 seconds...');
+          setTimeout(initializePiSDK, 3000);
         }
       } catch (error) {
-        console.error('Pi SDK initialization error:', error);
+        console.error('❌ Pi SDK initialization error:', error);
+        console.error('Error details:', {
+          message: error.message,
+          name: error.name,
+          stack: error.stack
+        });
         setPiSDKLoaded(false);
       }
     };
 
-    initializePiSDK();
+    // Delay initialization to ensure DOM is ready
+    setTimeout(initializePiSDK, 1000);
   }, []);
 
   // Load data when user is authenticated
@@ -140,45 +169,68 @@ function App() {
     }
   };
 
-  // Pi Wallet functions with improved error handling
+  // Enhanced Pi wallet connection for testnet
   const connectWallet = async () => {
     setError('');
+    console.log('🔗 Attempting Pi wallet connection...');
     
     try {
       if (!window.Pi) {
-        setError('Pi SDK not loaded. Please refresh the page and try again.');
-        return;
+        throw new Error('Pi SDK not loaded');
       }
 
       if (!piSDKLoaded) {
-        setError('Pi SDK is still loading. Please wait a moment and try again.');
-        return;
+        throw new Error('Pi SDK not initialized');
       }
 
       setLoading(true);
       
-      // Add timeout wrapper for authentication
+      // Check environment
+      const isLocalhost = window.location.hostname === 'localhost';
+      const isPiBrowser = navigator.userAgent.includes('PiBrowser') || navigator.userAgent.includes('Pi/');
+      
+      console.log('Environment check:', {
+        isLocalhost,
+        isPiBrowser,
+        hostname: window.location.hostname,
+        userAgent: navigator.userAgent
+      });
+      
+      // Enhanced authentication for testnet
+      console.log('🔐 Starting Pi authentication...');
       const authResult = await Promise.race([
-        window.Pi.authenticate(['payments'], onIncompletePaymentFound),
+        window.Pi.authenticate(['payments'], (payment) => {
+          console.log('Incomplete payment found:', payment);
+          onIncompletePaymentFound(payment);
+        }),
         new Promise((_, reject) => 
-          setTimeout(() => reject(new Error('Authentication timeout after 30 seconds')), 30000)
+          setTimeout(() => reject(new Error('Authentication timeout after 45 seconds')), 45000)
         )
       ]);
 
+      console.log('✅ Pi authentication successful:', {
+        uid: authResult.user.uid,
+        username: authResult.user.username
+      });
+
       setPiUser(authResult.user);
       setWalletConnected(true);
-      setSuccess(`Pi Wallet connected successfully! Welcome, ${authResult.user.username}`);
-    } catch (error) {
-      console.error('Pi auth error:', error);
+      setSuccess(`🎉 Pi testnet wallet connected! Welcome, ${authResult.user.username}`);
       
-      if (error.message.includes('timeout') || error.message.includes('Messaging promise')) {
-        setError('Pi Wallet connection timed out. This may be due to network restrictions, ad blockers, or Pi Network being unavailable.');
-      } else if (error.message.includes('postMessage')) {
-        setError('Pi Wallet connection blocked. Please disable ad blockers and try again.');
+    } catch (error) {
+      console.error('❌ Pi authentication failed:', error);
+      
+      // Enhanced error handling for testnet
+      if (error.message.includes('postMessage') || error.message.includes('origin')) {
+        setError('🌐 Cross-origin restriction detected. Pi testnet may require domain registration with Pi Network. Your lottery features work without Pi wallet.');
+      } else if (error.message.includes('timeout')) {
+        setError('⏱️ Pi connection timed out. Try again or continue without Pi wallet.');
       } else if (error.message.includes('User cancelled')) {
-        setError('Pi Wallet connection cancelled by user.');
+        setError('🚫 Pi connection cancelled.');
+      } else if (error.message.includes('not loaded')) {
+        setError('⚠️ Pi SDK not available. Refresh page and try again.');
       } else {
-        setError(`Failed to connect Pi Wallet: ${error.message}`);
+        setError(`🔧 Pi testnet connection failed: ${error.message}`);
       }
     } finally {
       setLoading(false);
@@ -530,11 +582,11 @@ function App() {
 
       {/* Pi Wallet Connection */}
       <div className="card">
-        <h2>💰 Pi Wallet Connection</h2>
+        <h2>💰 Pi Testnet Wallet Connection</h2>
         <div className={`wallet-status ${walletConnected ? 'wallet-connected' : ''}`}>
           <div className="wallet-indicator"></div>
           <div className="wallet-info">
-            <h4>{walletConnected ? 'Wallet Connected' : 'Wallet Disconnected'}</h4>
+            <h4>{walletConnected ? 'Pi Testnet Wallet Connected' : 'Pi Testnet Wallet Disconnected'}</h4>
             {piUser && (
               <p>User: {piUser.username} ({piUser.uid})</p>
             )}
@@ -552,24 +604,20 @@ function App() {
               className="button success"
               disabled={!piSDKLoaded || loading}
             >
-              {loading ? '🔄 Connecting...' : '🔗 Connect Pi Wallet'}
+              {loading ? '🔄 Connecting...' : '🧪 Connect Pi Testnet'}
             </button>
           )}
         </div>
         
-        {!piSDKLoaded && (
-          <div className="warning" style={{marginTop: '15px'}}>
-            <strong>Pi SDK Issues:</strong> If the Pi Wallet connection doesn't work, this may be due to:
-            <ul style={{marginTop: '10px', paddingLeft: '20px'}}>
-              <li>Ad blockers blocking the Pi SDK</li>
-              <li>Network restrictions</li>
-              <li>Pi Network service unavailability</li>
-            </ul>
-            <p style={{marginTop: '10px'}}>
-              <strong>Note:</strong> Pi Wallet connection is optional. You can still manage lotteries without it.
-            </p>
-          </div>
-        )}
+        <div className="warning" style={{marginTop: '15px'}}>
+          <strong>🧪 Pi Testnet Mode:</strong> This is sandbox/testing mode with fake Pi.
+          <ul style={{marginTop: '10px', paddingLeft: '20px'}}>
+            <li>No real Pi payments will be processed</li>
+            <li>May require domain registration with Pi Network</li>
+            <li>Cross-origin restrictions may apply</li>
+            <li>Your lottery management works perfectly without Pi wallet</li>
+          </ul>
+        </div>
       </div>
 
       {/* Create New Lottery */}
