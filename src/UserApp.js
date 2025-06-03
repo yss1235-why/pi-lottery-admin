@@ -13,7 +13,32 @@ import {
   arrayUnion
 } from 'firebase/firestore';
 
+import { 
+  LegalModal, 
+  LegalFooter, 
+  useConsentTracking,
+  LEGAL_VERSIONS 
+} from './components/LegalComponents';
+
 function UserApp() {
+  // Legal modal / consent tracking state
+  const [legalModal, setLegalModal] = useState({ isOpen: false, type: 'privacy' });
+  const { recordConsent, hasConsent } = useConsentTracking();
+
+  const openLegal = (type) => {
+    setLegalModal({ isOpen: true, type });
+  };
+
+  const closeLegal = () => {
+    setLegalModal({ isOpen: false, type: 'privacy' });
+  };
+
+  const handleLegalAccept = (type) => {
+    recordConsent(type);
+    console.log(`User accepted ${type}`);
+    closeLegal();
+  };
+
   // Pi Wallet state
   const [piUser, setPiUser] = useState(null);
   const [walletConnected, setWalletConnected] = useState(false);
@@ -747,6 +772,17 @@ function UserApp() {
           </div>
         </div>
       )}
+
+      {/* Legal Modal and Footer */}
+      <LegalModal
+        isOpen={legalModal.isOpen}
+        onClose={closeLegal}
+        type={legalModal.type}
+        onAccept={handleLegalAccept}
+        showAcceptButton={true}
+      />
+
+      <LegalFooter onOpenLegal={openLegal} />
     </div>
   );
 }
