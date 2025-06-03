@@ -2,6 +2,8 @@
 import React, { useState, useEffect } from 'react';
 import App from './App'; // Admin Interface
 import UserApp from './UserApp'; // User Interface
+import LegalComponents from './components/LegalComponents';
+
 
 function MainApp() {
   const [currentInterface, setCurrentInterface] = useState('user'); // Default to user interface
