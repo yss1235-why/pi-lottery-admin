@@ -1,16 +1,46 @@
-[build]
-  command = "npm run build"
-  publish = "build"
+# File path: netlify.toml - Enhanced Production Configuration
 
+[build]
+  command = "npm run build:production"
+  publish = "build"
+  
 [build.environment]
   NODE_VERSION = "18"
+  NPM_VERSION = "9"
   CI = "false"
+  GENERATE_SOURCEMAP = "false"
+  REACT_APP_DEPLOYMENT_ENV = "production"
 
+# Production build optimization
+[build.processing]
+  skip_processing = false
+
+[build.processing.css]
+  bundle = true
+  minify = true
+
+[build.processing.js]
+  bundle = true
+  minify = true
+
+[build.processing.html]
+  pretty_urls = true
+
+# URL redirects for SPA routing
 [[redirects]]
   from = "/*"
   to = "/index.html"
   status = 200
+  conditions = {Role = ["admin", "user"]}
 
+# API redirects for development
+[[redirects]]
+  from = "/api/*"
+  to = "http://localhost:3001/api/:splat"
+  status = 200
+  conditions = {Role = ["admin"]}
+
+# Security headers
 [[headers]]
   for = "/*"
   [headers.values]
@@ -18,8 +48,90 @@
     X-XSS-Protection = "1; mode=block"
     X-Content-Type-Options = "nosniff"
     Referrer-Policy = "strict-origin-when-cross-origin"
+    Permissions-Policy = "camera=(), microphone=(), geolocation=()"
+    Content-Security-Policy = "default-src 'self'; script-src 'self' 'unsafe-inline' https://sdk.minepi.com https://blockstream.info; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; connect-src 'self' https://firebase.googleapis.com https://blockstream.info https://sdk.minepi.com; frame-src 'none';"
 
+# Static asset caching
 [[headers]]
   for = "/static/*"
   [headers.values]
     Cache-Control = "public, max-age=31536000, immutable"
+
+# Font caching
+[[headers]]
+  for = "*.woff2"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
+
+# Pi SDK specific headers
+[[headers]]
+  for = "*.js"
+  [headers.values]
+    Cache-Control = "public, max-age=86400"
+
+# Environment-specific redirects
+[[redirects]]
+  from = "/admin"
+  to = "/index.html"
+  status = 200
+  conditions = {Role = ["admin"]}
+
+[[redirects]]
+  from = "/user"
+  to = "/index.html"
+  status = 200
+
+# Development context
+[context.development]
+  command = "npm run build"
+  [context.development.environment]
+    REACT_APP_DEPLOYMENT_ENV = "development"
+    REACT_APP_ENABLE_DEBUG_MODE = "true"
+
+# Staging context
+[context.staging]
+  command = "npm run build"
+  [context.staging.environment]
+    REACT_APP_DEPLOYMENT_ENV = "staging"
+    REACT_APP_ENABLE_DEBUG_MODE = "true"
+
+# Production context
+[context.production]
+  command = "npm run build:production"
+  [context.production.environment]
+    REACT_APP_DEPLOYMENT_ENV = "production"
+    REACT_APP_ENABLE_DEBUG_MODE = "false"
+    GENERATE_SOURCEMAP = "false"
+
+# Deploy previews
+[context.deploy-preview]
+  command = "npm run build"
+  [context.deploy-preview.environment]
+    REACT_APP_DEPLOYMENT_ENV = "preview"
+
+# Branch deploys
+[context.branch-deploy]
+  command = "npm run build"
+  [context.branch-deploy.environment]
+    REACT_APP_DEPLOYMENT_ENV = "branch"
+
+# Plugin configuration
+[[plugins]]
+  package = "@netlify/plugin-lighthouse"
+  
+  [plugins.inputs.audits]
+    output_path = "reports/lighthouse.html"
+    
+  [plugins.inputs.settings]
+    preset = "desktop"
+
+[[plugins]]
+  package = "netlify-plugin-submit-sitemap"
+  
+  [plugins.inputs]
+    baseUrl = "https://your-domain.netlify.app"
+    sitemapPath = "/sitemap.xml"
+    providers = [
+      "google",
+      "bing"
+    ]
