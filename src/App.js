@@ -25,6 +25,7 @@ function App() {
   // Pi Wallet state
   const [piUser, setPiUser] = useState(null);
   const [walletConnected, setWalletConnected] = useState(false);
+  const [piSDKLoaded, setPiSDKLoaded] = useState(false);
 
   // Lottery data
   const [lotteries, setLotteries] = useState([]);
@@ -57,14 +58,31 @@ function App() {
     return () => unsubscribe();
   }, []);
 
-  // Initialize Pi SDK
+  // Initialize Pi SDK with better error handling
   useEffect(() => {
-    if (window.Pi) {
-      window.Pi.init({
-        version: "2.0",
-        sandbox: true // Set to false for production
-      });
-    }
+    const initializePiSDK = async () => {
+      try {
+        if (window.Pi) {
+          await window.Pi.init({
+            version: "2.0",
+            sandbox: true, // Set to false for production
+            development: true,
+            timeout: 30000,
+            origin: window.location.origin
+          });
+          setPiSDKLoaded(true);
+          console.log('Pi SDK initialized successfully');
+        } else {
+          console.warn('Pi SDK not available');
+          setTimeout(initializePiSDK, 2000); // Retry after 2 seconds
+        }
+      } catch (error) {
+        console.error('Pi SDK initialization error:', error);
+        setPiSDKLoaded(false);
+      }
+    };
+
+    initializePiSDK();
   }, []);
 
   // Load data when user is authenticated
@@ -87,8 +105,18 @@ function App() {
       setEmail('');
       setPassword('');
     } catch (error) {
-      setError('Invalid email or password');
       console.error('Login error:', error);
+      if (error.code === 'auth/user-not-found') {
+        setError('Admin account not found. Please create the admin account in Firebase Console first.');
+      } else if (error.code === 'auth/wrong-password') {
+        setError('Invalid password');
+      } else if (error.code === 'auth/invalid-email') {
+        setError('Invalid email address');
+      } else if (error.code === 'auth/too-many-requests') {
+        setError('Too many failed attempts. Please try again later.');
+      } else {
+        setError('Login failed: ' + error.message);
+      }
     }
     setLoading(false);
   };
@@ -99,27 +127,61 @@ function App() {
       setSuccess('Successfully logged out!');
       setPiUser(null);
       setWalletConnected(false);
+      setLotteries([]);
+      setStats({
+        totalLotteries: 0,
+        activeParticipants: 0,
+        totalPiCollected: 0,
+        winnersDrawn: 0
+      });
     } catch (error) {
       setError('Error logging out');
       console.error('Logout error:', error);
     }
   };
 
-  // Pi Wallet functions
+  // Pi Wallet functions with improved error handling
   const connectWallet = async () => {
+    setError('');
+    
     try {
       if (!window.Pi) {
-        setError('Pi SDK not loaded');
+        setError('Pi SDK not loaded. Please refresh the page and try again.');
         return;
       }
 
-      const authResult = await window.Pi.authenticate(['payments'], onIncompletePaymentFound);
+      if (!piSDKLoaded) {
+        setError('Pi SDK is still loading. Please wait a moment and try again.');
+        return;
+      }
+
+      setLoading(true);
+      
+      // Add timeout wrapper for authentication
+      const authResult = await Promise.race([
+        window.Pi.authenticate(['payments'], onIncompletePaymentFound),
+        new Promise((_, reject) => 
+          setTimeout(() => reject(new Error('Authentication timeout after 30 seconds')), 30000)
+        )
+      ]);
+
       setPiUser(authResult.user);
       setWalletConnected(true);
-      setSuccess('Pi Wallet connected successfully!');
+      setSuccess(`Pi Wallet connected successfully! Welcome, ${authResult.user.username}`);
     } catch (error) {
-      setError('Failed to connect Pi Wallet');
       console.error('Pi auth error:', error);
+      
+      if (error.message.includes('timeout') || error.message.includes('Messaging promise')) {
+        setError('Pi Wallet connection timed out. This may be due to network restrictions, ad blockers, or Pi Network being unavailable.');
+      } else if (error.message.includes('postMessage')) {
+        setError('Pi Wallet connection blocked. Please disable ad blockers and try again.');
+      } else if (error.message.includes('User cancelled')) {
+        setError('Pi Wallet connection cancelled by user.');
+      } else {
+        setError(`Failed to connect Pi Wallet: ${error.message}`);
+      }
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -131,11 +193,13 @@ function App() {
 
   const onIncompletePaymentFound = (payment) => {
     console.log('Incomplete payment found:', payment);
+    setError('Incomplete payment detected. Please complete or cancel it in Pi Browser.');
   };
 
-  // Lottery functions
+  // Lottery functions with improved error handling
   const loadLotteries = async () => {
     try {
+      setError(''); // Clear any previous errors
       const lotteriesRef = collection(db, 'lotteries');
       const q = query(lotteriesRef, orderBy('createdAt', 'desc'));
       const querySnapshot = await getDocs(q);
@@ -153,8 +217,14 @@ function App() {
       
       setLotteries(lotteriesData);
     } catch (error) {
-      setError('Error loading lotteries');
       console.error('Load lotteries error:', error);
+      if (error.code === 'permission-denied') {
+        setError('Permission denied. Please ensure you are logged in with the admin account and Firebase rules are configured correctly.');
+      } else if (error.code === 'unavailable') {
+        setError('Firebase service temporarily unavailable. Please try again in a moment.');
+      } else {
+        setError('Error loading lotteries: ' + error.message);
+      }
     }
   };
 
@@ -190,6 +260,7 @@ function App() {
       });
     } catch (error) {
       console.error('Error calculating stats:', error);
+      // Don't show error for stats calculation to avoid cluttering UI
     }
   };
 
@@ -199,12 +270,28 @@ function App() {
     setLoading(true);
 
     try {
+      // Validate form data
+      if (!newLottery.title.trim()) {
+        throw new Error('Lottery title is required');
+      }
+      if (!newLottery.entryFee || parseFloat(newLottery.entryFee) <= 0) {
+        throw new Error('Entry fee must be greater than 0');
+      }
+      if (!newLottery.endDate) {
+        throw new Error('End date is required');
+      }
+      
+      const endDate = new Date(newLottery.endDate);
+      if (endDate <= new Date()) {
+        throw new Error('End date must be in the future');
+      }
+
       const lotteriesRef = collection(db, 'lotteries');
       await addDoc(lotteriesRef, {
         ...newLottery,
         entryFee: parseFloat(newLottery.entryFee),
         maxParticipants: parseInt(newLottery.maxParticipants) || null,
-        endDate: Timestamp.fromDate(new Date(newLottery.endDate)),
+        endDate: Timestamp.fromDate(endDate),
         createdAt: Timestamp.now(),
         participants: [],
         status: 'active',
@@ -223,8 +310,12 @@ function App() {
       loadLotteries();
       calculateStats();
     } catch (error) {
-      setError('Error creating lottery');
       console.error('Create lottery error:', error);
+      if (error.code === 'permission-denied') {
+        setError('Permission denied. Please ensure you are logged in with the admin account.');
+      } else {
+        setError('Error creating lottery: ' + error.message);
+      }
     }
     setLoading(false);
   };
@@ -256,8 +347,8 @@ function App() {
       loadLotteries();
       calculateStats();
     } catch (error) {
-      setError('Error drawing winner');
       console.error('Draw winner error:', error);
+      setError('Error drawing winner: ' + error.message);
     }
   };
 
@@ -272,8 +363,8 @@ function App() {
       setSuccess('Lottery ended successfully');
       loadLotteries();
     } catch (error) {
-      setError('Error ending lottery');
       console.error('End lottery error:', error);
+      setError('Error ending lottery: ' + error.message);
     }
   };
 
@@ -325,6 +416,9 @@ function App() {
             <div className="login-header">
               <h2>🔐 Admin Login</h2>
               <p>Please sign in to access the admin dashboard</p>
+              <p style={{fontSize: '0.9rem', color: '#6c757d', marginTop: '10px'}}>
+                Admin Email: {process.env.REACT_APP_ADMIN_EMAIL}
+              </p>
             </div>
 
             {error && (
@@ -444,17 +538,38 @@ function App() {
             {piUser && (
               <p>User: {piUser.username} ({piUser.uid})</p>
             )}
+            {!piSDKLoaded && (
+              <p style={{color: '#ffc107', fontSize: '0.9rem'}}>⚠️ Pi SDK loading...</p>
+            )}
           </div>
           {walletConnected ? (
             <button onClick={disconnectWallet} className="button danger">
               🔌 Disconnect Wallet
             </button>
           ) : (
-            <button onClick={connectWallet} className="button success">
-              🔗 Connect Pi Wallet
+            <button 
+              onClick={connectWallet} 
+              className="button success"
+              disabled={!piSDKLoaded || loading}
+            >
+              {loading ? '🔄 Connecting...' : '🔗 Connect Pi Wallet'}
             </button>
           )}
         </div>
+        
+        {!piSDKLoaded && (
+          <div className="warning" style={{marginTop: '15px'}}>
+            <strong>Pi SDK Issues:</strong> If the Pi Wallet connection doesn't work, this may be due to:
+            <ul style={{marginTop: '10px', paddingLeft: '20px'}}>
+              <li>Ad blockers blocking the Pi SDK</li>
+              <li>Network restrictions</li>
+              <li>Pi Network service unavailability</li>
+            </ul>
+            <p style={{marginTop: '10px'}}>
+              <strong>Note:</strong> Pi Wallet connection is optional. You can still manage lotteries without it.
+            </p>
+          </div>
+        )}
       </div>
 
       {/* Create New Lottery */}
