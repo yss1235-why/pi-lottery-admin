@@ -11,8 +11,40 @@
       content="Pi Lottery Admin Dashboard"
     />
     <title>Pi Lottery Admin</title>
-    <!-- Pi SDK -->
+    
+    <!-- Pi SDK for Testnet/Sandbox -->
+    <!-- Enhanced configuration for better testnet compatibility -->
+    <script>
+      // Pre-configure Pi SDK environment
+      window.PI_SDK_CONFIG = {
+        environment: 'sandbox',
+        debug: true,
+        allowCrossOrigin: true
+      };
+    </script>
     <script src="https://sdk.minepi.com/pi-sdk.js"></script>
+    
+    <!-- Alternative: Try Pi SDK with explicit sandbox parameter -->
+    <!-- <script src="https://sdk.minepi.com/pi-sdk.js?env=sandbox"></script> -->
+    
+    <!-- Debug: Add error listener for SDK loading -->
+    <script>
+      window.addEventListener('error', function(e) {
+        if (e.filename && e.filename.includes('pi-sdk')) {
+          console.error('Pi SDK loading error:', e.error);
+        }
+      });
+      
+      // Monitor SDK loading
+      window.addEventListener('load', function() {
+        if (window.Pi) {
+          console.log('✅ Pi SDK loaded successfully');
+          console.log('Pi SDK version:', window.Pi.version || 'unknown');
+        } else {
+          console.warn('⚠️ Pi SDK not loaded');
+        }
+      });
+    </script>
   </head>
   <body>
     <noscript>You need to enable JavaScript to run this app.</noscript>
