@@ -1,5 +1,5 @@
 // File path: src/utils/bitcoinUtils.js
-// Bitcoin blockchain utilities for provably fair lottery system
+// Bitcoin blockchain utilities for provably fair lottery system with monthly lottery support
 
 /**
  * Bitcoin API configuration and fallback endpoints
@@ -108,7 +108,7 @@ export const getCurrentBitcoinBlock = async () => {
 };
 
 /**
- * Calculate future Bitcoin block for lottery commitment
+ * Calculate future Bitcoin block for lottery commitment with monthly lottery support
  */
 export const calculateCommitmentBlock = (currentBlock, endDate, lotteryType = 'standard') => {
   const now = new Date();
@@ -131,6 +131,9 @@ export const calculateCommitmentBlock = (currentBlock, endDate, lotteryType = 's
       break;
     case 'weekly':
       safetyMarginPercent = parseFloat(process.env.REACT_APP_WEEKLY_LOTTERY_MARGIN_PERCENT) || 10;
+      break;
+    case 'monthly':
+      safetyMarginPercent = parseFloat(process.env.REACT_APP_MONTHLY_LOTTERY_MARGIN_PERCENT) || 15;
       break;
     default:
       safetyMarginPercent = parseFloat(process.env.REACT_APP_STANDARD_LOTTERY_MARGIN_PERCENT) || 10;
@@ -526,6 +529,57 @@ export const isValidBlockHeight = (height) => {
 };
 
 /**
+ * Calculate lottery-specific block parameters based on type
+ */
+export const getLotteryTypeBlockParameters = (lotteryType) => {
+  const parameters = {
+    standard: {
+      safetyMarginPercent: 10,
+      minSafetyMargin: 1,
+      maxSafetyMargin: 6,
+      description: 'Standard lottery with 10% safety margin'
+    },
+    daily: {
+      safetyMarginPercent: 5,
+      minSafetyMargin: 1,
+      maxSafetyMargin: 3,
+      description: '24-hour lottery with 5% safety margin'
+    },
+    weekly: {
+      safetyMarginPercent: 10,
+      minSafetyMargin: 3,
+      maxSafetyMargin: 12,
+      description: '7-day lottery with 10% safety margin'
+    },
+    monthly: {
+      safetyMarginPercent: 15,
+      minSafetyMargin: 6,
+      maxSafetyMargin: 24,
+      description: '30-day lottery with 15% safety margin'
+    }
+  };
+  
+  return parameters[lotteryType] || parameters.standard;
+};
+
+/**
+ * Estimate lottery end block with type-specific parameters
+ */
+export const estimateLotteryEndBlock = (currentBlock, endDate, lotteryType = 'standard') => {
+  const params = getLotteryTypeBlockParameters(lotteryType);
+  const commitment = calculateCommitmentBlock(currentBlock, endDate, lotteryType);
+  
+  return {
+    currentBlock,
+    commitmentBlock: commitment,
+    lotteryType,
+    parameters: params,
+    estimatedEndTime: new Date(endDate),
+    blockchainConfirmation: `Block #${commitment} will be used for winner selection`
+  };
+};
+
+/**
  * Export utility object for easy importing
  */
 export const BitcoinUtils = {
@@ -540,6 +594,8 @@ export const BitcoinUtils = {
   formatBlockTime,
   isValidBlockHash,
   isValidBlockHeight,
+  getLotteryTypeBlockParameters,
+  estimateLotteryEndBlock,
   config: BITCOIN_CONFIG
 };
 
