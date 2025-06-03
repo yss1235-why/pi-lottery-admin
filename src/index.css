@@ -1,4 +1,4 @@
-/* File path: src/index.css */
+/* File path: src/index.css - ENHANCED VERSION */
 
 * {
   margin: 0;
@@ -15,6 +15,7 @@ body {
   -moz-osx-font-smoothing: grayscale;
   background-color: #f8f9fa;
   color: #333;
+  line-height: 1.6;
 }
 
 code {
@@ -38,17 +39,41 @@ code {
   border-radius: 12px;
   text-align: center;
   box-shadow: 0 4px 12px rgba(111, 66, 193, 0.2);
+  position: relative;
+  overflow: hidden;
+}
+
+.header::before {
+  content: '';
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: linear-gradient(45deg, transparent, rgba(255,255,255,0.1), transparent);
+  transform: rotate(45deg);
+  animation: headerShine 3s ease-in-out infinite;
+}
+
+@keyframes headerShine {
+  0% { transform: translateX(-100%) translateY(-100%) rotate(45deg); }
+  50% { transform: translateX(100%) translateY(100%) rotate(45deg); }
+  100% { transform: translateX(-100%) translateY(-100%) rotate(45deg); }
 }
 
 .header h1 {
   font-size: 2.5rem;
   margin-bottom: 10px;
   font-weight: 700;
+  position: relative;
+  z-index: 1;
 }
 
 .header p {
   font-size: 1.1rem;
   opacity: 0.9;
+  position: relative;
+  z-index: 1;
 }
 
 /* Cards */
@@ -59,6 +84,12 @@ code {
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
   margin-bottom: 25px;
   border: 1px solid #e9ecef;
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
 }
 
 .card h2 {
@@ -98,7 +129,7 @@ code {
   margin-bottom: 20px;
 }
 
-.admin-info {
+.admin-info, .user-info {
   color: #28a745;
   font-weight: 600;
 }
@@ -123,7 +154,7 @@ code {
   border: 2px solid #e9ecef;
   border-radius: 8px;
   font-size: 16px;
-  transition: border-color 0.3s ease;
+  transition: border-color 0.3s ease, box-shadow 0.3s ease;
 }
 
 .form-group input:focus,
@@ -139,6 +170,13 @@ code {
   min-height: 100px;
 }
 
+.form-group small {
+  display: block;
+  margin-top: 5px;
+  color: #6c757d;
+  font-size: 0.875rem;
+}
+
 /* Buttons */
 .button {
   background: #6f42c1;
@@ -152,13 +190,19 @@ code {
   transition: all 0.3s ease;
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 8px;
+  text-decoration: none;
 }
 
 .button:hover {
   background: #5a359a;
   transform: translateY(-2px);
   box-shadow: 0 4px 12px rgba(111, 66, 193, 0.3);
+}
+
+.button:active {
+  transform: translateY(0);
 }
 
 .button:disabled {
@@ -225,17 +269,36 @@ code {
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
   text-align: center;
   border: 1px solid #e9ecef;
-  transition: transform 0.3s ease;
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+  position: relative;
+  overflow: hidden;
 }
 
 .stat-card:hover {
   transform: translateY(-4px);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
+}
+
+.stat-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: linear-gradient(90deg, #6f42c1, #8b5cf6);
 }
 
 .stat-number {
   font-size: 2.5rem;
   font-weight: 700;
   margin-bottom: 8px;
+  animation: countUp 1s ease-out;
+}
+
+@keyframes countUp {
+  from { transform: scale(0.5); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
 }
 
 .stat-label {
@@ -263,11 +326,18 @@ code {
   border-radius: 12px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
   border: 1px solid #e9ecef;
-  transition: transform 0.3s ease;
+  transition: all 0.3s ease;
+  position: relative;
 }
 
 .lottery-item:hover {
   transform: translateY(-2px);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+}
+
+.lottery-item.winner-item {
+  border-left: 4px solid #28a745;
+  background: linear-gradient(90deg, rgba(40, 167, 69, 0.05), white);
 }
 
 .lottery-header {
@@ -291,11 +361,19 @@ code {
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.5px;
+  white-space: nowrap;
 }
 
 .status-active {
   background: #d4edda;
   color: #155724;
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0% { opacity: 1; }
+  50% { opacity: 0.7; }
+  100% { opacity: 1; }
 }
 
 .status-ended {
@@ -317,6 +395,14 @@ code {
 
 .lottery-detail {
   text-align: center;
+  padding: 10px;
+  background: #f8f9fa;
+  border-radius: 8px;
+  transition: background-color 0.3s ease;
+}
+
+.lottery-detail:hover {
+  background: #e9ecef;
 }
 
 .lottery-detail-label {
@@ -338,6 +424,305 @@ code {
   display: flex;
   gap: 10px;
   flex-wrap: wrap;
+  margin-top: 20px;
+}
+
+/* Prize Distribution Styles */
+.winners-section {
+  background: #f8f9fa;
+  padding: 20px;
+  border-radius: 8px;
+  margin: 20px 0;
+  border-left: 4px solid #28a745;
+}
+
+.winners-grid {
+  display: grid;
+  gap: 10px;
+  margin-top: 15px;
+}
+
+.winner-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 15px;
+  background: white;
+  border-radius: 8px;
+  border: 2px solid #ffc107;
+  transition: all 0.3s ease;
+}
+
+.winner-item.paid {
+  border-color: #28a745;
+  background: linear-gradient(90deg, rgba(40, 167, 69, 0.1), white);
+}
+
+.winner-item:hover {
+  transform: translateX(5px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.winner-info {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+}
+
+.winner-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.prize-amount {
+  font-weight: bold;
+  color: #007bff;
+  font-size: 1.1rem;
+}
+
+/* Ticket System Styles */
+.ticket-limit-info {
+  background: #fff3cd;
+  border: 1px solid #ffeaa7;
+  border-radius: 8px;
+  padding: 15px;
+  margin: 15px 0;
+}
+
+.ticket-limit-display {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  font-size: 1.1rem;
+  font-weight: 600;
+}
+
+.current-tickets {
+  color: #007bff;
+  font-size: 1.3rem;
+}
+
+.max-tickets {
+  color: #6c757d;
+}
+
+.ticket-separator {
+  color: #6c757d;
+  font-size: 1.2rem;
+}
+
+.ticket-label {
+  color: #6c757d;
+  font-size: 0.9rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.unlimited-tickets {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+}
+
+.unlimited-label {
+  color: #28a745;
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+.limit-reached {
+  color: #856404;
+  font-weight: 600;
+  text-align: center;
+  margin-top: 10px;
+}
+
+/* Provably Fair Styles */
+.provably-fair-section {
+  background: #e7f3ff;
+  border: 1px solid #b8daff;
+  border-radius: 8px;
+  padding: 20px;
+  margin: 20px 0;
+}
+
+.provably-fair-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 15px;
+}
+
+.provably-fair-summary {
+  margin-bottom: 15px;
+}
+
+.guarantee-points {
+  display: grid;
+  gap: 10px;
+}
+
+.guarantee-point {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px;
+  background: white;
+  border-radius: 6px;
+}
+
+.guarantee-icon {
+  font-size: 1.2rem;
+}
+
+.provably-fair-details {
+  background: white;
+  padding: 20px;
+  border-radius: 8px;
+  margin-top: 15px;
+}
+
+.detail-section {
+  margin-bottom: 20px;
+}
+
+.detail-section h4 {
+  color: #495057;
+  margin-bottom: 10px;
+}
+
+.detail-section ul {
+  padding-left: 20px;
+}
+
+.detail-section li {
+  margin-bottom: 5px;
+}
+
+.process-steps {
+  display: grid;
+  gap: 15px;
+}
+
+.process-step {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  padding: 15px;
+  background: #f8f9fa;
+  border-radius: 8px;
+  border-left: 4px solid #6f42c1;
+}
+
+.step-number {
+  background: #6f42c1;
+  color: white;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+  font-size: 0.9rem;
+}
+
+.step-text {
+  flex: 1;
+  font-weight: 500;
+}
+
+.verification-links {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-top: 15px;
+}
+
+/* Prize Pool Display */
+.live-prize-calculator {
+  background: linear-gradient(135deg, #fff3cd, #ffeaa7);
+  border: 1px solid #ffc107;
+  border-radius: 12px;
+  padding: 20px;
+  margin: 20px 0;
+}
+
+.prize-pool-summary {
+  margin-bottom: 20px;
+}
+
+.pool-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+  gap: 15px;
+  margin-bottom: 15px;
+}
+
+.stat {
+  text-align: center;
+  background: white;
+  padding: 15px;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.stat-value {
+  font-size: 1.4rem;
+  font-weight: 700;
+  color: #495057;
+  margin-bottom: 5px;
+}
+
+.current-prizes h4 {
+  margin-bottom: 15px;
+  color: #495057;
+}
+
+.prize-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 10px;
+  margin-bottom: 15px;
+}
+
+.prize-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px;
+  background: white;
+  border-radius: 6px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  transition: transform 0.2s ease;
+}
+
+.prize-item:hover {
+  transform: scale(1.02);
+}
+
+.prize-position {
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+.more-prizes {
+  text-align: center;
+  color: #6c757d;
+  font-style: italic;
+  grid-column: 1 / -1;
+}
+
+.win-probability {
+  text-align: center;
+  padding: 15px;
+  background: white;
+  border-radius: 8px;
+  color: #28a745;
+  font-size: 1.1rem;
 }
 
 /* Pi Wallet */
@@ -350,6 +735,7 @@ code {
   background: #f8f9fa;
   border-radius: 8px;
   border: 2px solid #e9ecef;
+  transition: all 0.3s ease;
 }
 
 .wallet-connected {
@@ -362,10 +748,17 @@ code {
   height: 12px;
   border-radius: 50%;
   background: #dc3545;
+  animation: blink 2s infinite;
+}
+
+@keyframes blink {
+  0%, 50% { opacity: 1; }
+  51%, 100% { opacity: 0.3; }
 }
 
 .wallet-connected .wallet-indicator {
   background: #28a745;
+  animation: none;
 }
 
 .wallet-info h4 {
@@ -380,11 +773,114 @@ code {
   font-size: 0.9rem;
 }
 
+/* Wallet Features */
+.wallet-features {
+  margin: 20px 0;
+}
+
+.wallet-features h3 {
+  color: #495057;
+  margin-bottom: 15px;
+}
+
+.wallet-features ul {
+  color: #6c757d;
+}
+
+.wallet-features li {
+  margin-bottom: 8px;
+}
+
+/* Winners Display */
+.winner-verification {
+  background: #d4edda;
+  border: 1px solid #c3e6cb;
+  border-radius: 8px;
+  padding: 20px;
+  margin: 20px 0;
+}
+
+.verification-summary {
+  margin-bottom: 20px;
+}
+
+.block-info {
+  background: white;
+  padding: 15px;
+  border-radius: 6px;
+  font-family: monospace;
+  font-size: 0.9rem;
+  line-height: 1.4;
+}
+
+.winners-list {
+  margin-bottom: 20px;
+}
+
+.winner-verification-item {
+  background: white;
+  padding: 15px;
+  border-radius: 8px;
+  margin-bottom: 10px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.winner-basic-info {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.winner-position {
+  font-size: 1.1rem;
+  font-weight: 600;
+}
+
+.winner-details {
+  flex: 1;
+  margin: 0 15px;
+}
+
+.winner-verification-button {
+  flex-shrink: 0;
+}
+
+.verification-footer {
+  text-align: center;
+}
+
+/* Winners Display for Recent Winners */
+.winners-display {
+  margin-top: 15px;
+}
+
+.winners-display h4 {
+  margin-bottom: 10px;
+  color: #495057;
+}
+
 /* Loading and Error States */
 .loading {
   text-align: center;
   padding: 40px;
   color: #6c757d;
+}
+
+.loading::after {
+  content: '';
+  display: inline-block;
+  width: 20px;
+  height: 20px;
+  border: 3px solid #f3f3f3;
+  border-top: 3px solid #6f42c1;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin-left: 10px;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
 }
 
 .error {
@@ -394,6 +890,13 @@ code {
   border-radius: 8px;
   margin-bottom: 20px;
   border: 1px solid #f5c6cb;
+  position: relative;
+  animation: slideIn 0.3s ease-out;
+}
+
+@keyframes slideIn {
+  from { transform: translateY(-10px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
 }
 
 .success {
@@ -403,6 +906,8 @@ code {
   border-radius: 8px;
   margin-bottom: 20px;
   border: 1px solid #c3e6cb;
+  position: relative;
+  animation: slideIn 0.3s ease-out;
 }
 
 .warning {
@@ -412,6 +917,8 @@ code {
   border-radius: 8px;
   margin-bottom: 20px;
   border: 1px solid #ffeaa7;
+  position: relative;
+  animation: slideIn 0.3s ease-out;
 }
 
 /* Form Row */
@@ -468,6 +975,30 @@ code {
     align-items: flex-start;
     gap: 10px;
   }
+  
+  .winner-basic-info {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+  }
+  
+  .provably-fair-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+  }
+  
+  .verification-links {
+    flex-direction: column;
+  }
+  
+  .pool-stats {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  
+  .prize-list {
+    grid-template-columns: 1fr;
+  }
 }
 
 @media (max-width: 480px) {
@@ -485,5 +1016,61 @@ code {
   
   .stat-number {
     font-size: 2rem;
+  }
+  
+  .pool-stats {
+    grid-template-columns: 1fr;
+  }
+  
+  .process-step {
+    flex-direction: column;
+    text-align: center;
+  }
+  
+  .step-number {
+    margin-bottom: 10px;
+  }
+}
+
+/* Dark mode support (optional) */
+@media (prefers-color-scheme: dark) {
+  body {
+    background-color: #1a1a1a;
+    color: #e9ecef;
+  }
+  
+  .card {
+    background: #2d3748;
+    border-color: #4a5568;
+  }
+  
+  .lottery-detail {
+    background: #1a202c;
+  }
+  
+  .stat-card {
+    background: #2d3748;
+    border-color: #4a5568;
+  }
+}
+
+/* Print styles */
+@media print {
+  .header {
+    background: none !important;
+    color: black !important;
+  }
+  
+  .button {
+    display: none;
+  }
+  
+  .lottery-actions {
+    display: none;
+  }
+  
+  .card {
+    box-shadow: none;
+    border: 1px solid #ccc;
   }
 }
