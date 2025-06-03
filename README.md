@@ -117,7 +117,7 @@ firebase deploy --only hosting
    - Should see the login screen
 
 2. **Test Login:**
-   - Email: `yursccc@gmail.com`
+   - Email: ``
    - Password: [the password you created]
    - Should see admin dashboard after login
 
@@ -135,12 +135,12 @@ firebase deploy --only hosting
 
 ### Environment Variables (Already Set in Netlify)
 ```bash
-REACT_APP_FIREBASE_API_KEY=AIzaSyB3KNFDxcvlpj235SxHwMam1b8xhM8l7wM
-REACT_APP_FIREBASE_AUTH_DOMAIN=pi-lottery-901c4.firebaseapp.com
-REACT_APP_FIREBASE_PROJECT_ID=pi-lottery-901c4
-REACT_APP_PI_API_KEY=vgbblghw4ypzi69aeobiaxuawzllnh999pqtembvtcxvzmoaxwlnaqghessawnzov
+REACT_APP_FIREBASE_API_KEY=
+REACT_APP_FIREBASE_AUTH_DOMAIN=
+REACT_APP_FIREBASE_PROJECT_ID=
+REACT_APP_PI_API_KEY=
 REACT_APP_PI_SANDBOX=true
-REACT_APP_ADMIN_EMAIL=yursccc@gmail.com
+REACT_APP_ADMIN_EMAIL=
 ```
 
 ## 🎯 Features
