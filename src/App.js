@@ -1,4 +1,4 @@
-// File path: src/App.js - COMPLETE UPDATED VERSION
+// File path: src/App.js - COMPLETE UPDATED VERSION WITH MONTHLY LOTTERIES
 import React, { useState, useEffect } from 'react';
 import { auth, db } from './firebase';
 import { signInWithEmailAndPassword, signOut, onAuthStateChanged } from 'firebase/auth';
@@ -47,7 +47,7 @@ function App() {
     platformFeePercent: 10,
     minWinners: 3,
     maxTicketsPerUser: 2, // Starting limit
-    lotteryType: 'standard' // 'standard', 'daily', 'weekly'
+    lotteryType: 'standard' // 'standard', 'daily', 'weekly', 'monthly'
   });
 
   // Bitcoin API state
@@ -152,7 +152,7 @@ function App() {
     }
   };
 
-  // Calculate commitment block for different lottery types
+  // Calculate commitment block for different lottery types including monthly
   const calculateCommitmentBlock = (currentBlock, endDate, lotteryType) => {
     const now = new Date();
     const end = new Date(endDate);
@@ -169,6 +169,9 @@ function App() {
         break;
       case 'weekly':
         safetyMargin = Math.max(3, Math.min(12, Math.ceil(blocksUntilEnd * 0.1))); // 10% margin for weekly
+        break;
+      case 'monthly':
+        safetyMargin = Math.max(6, Math.min(24, Math.ceil(blocksUntilEnd * 0.15))); // 15% margin for monthly
         break;
       default:
         safetyMargin = Math.max(1, Math.min(6, Math.ceil(blocksUntilEnd * 0.1))); // Standard margin
@@ -892,6 +895,7 @@ function App() {
                 <option value="standard">Standard Lottery</option>
                 <option value="daily">Daily Lottery (24 hours)</option>
                 <option value="weekly">Weekly Lottery (7 days)</option>
+                <option value="monthly">Monthly Lottery (30 days)</option>
               </select>
             </div>
           </div>
