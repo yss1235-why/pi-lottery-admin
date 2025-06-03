@@ -17,9 +17,9 @@ const LEGAL_VERSIONS = {
 
 const COMPANY_INFO = {
   name: process.env.REACT_APP_COMPANY_NAME || "Pi Lottery Inc.",
-  address: process.env.REACT_APP_COMPANY_ADDRESS || "123 Blockchain St, Crypto City, CC 12345",
-  contactEmail: process.env.REACT_APP_CONTACT_EMAIL || "legal@pilottery.com",
-  supportEmail: process.env.REACT_APP_SUPPORT_EMAIL || "support@pilottery.com"
+  address: process.env.REACT_APP_COMPANY_ADDRESS || "",
+  contactEmail: process.env.REACT_APP_CONTACT_EMAIL || "",
+  supportEmail: process.env.REACT_APP_SUPPORT_EMAIL || ""
 };
 
 // Privacy Policy Component
