@@ -1,4 +1,4 @@
-// File path: src/App.js - COMPLETE REPLACEMENT with Provably Fair System
+// File path: src/App.js - COMPLETE UPDATED VERSION
 import React, { useState, useEffect } from 'react';
 import { auth, db } from './firebase';
 import { signInWithEmailAndPassword, signOut, onAuthStateChanged } from 'firebase/auth';
@@ -22,9 +22,9 @@ function App() {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
 
-  // Pi Wallet state
-  const [piUser, setPiUser] = useState(null);
-  const [walletConnected, setWalletConnected] = useState(false);
+  // Pi Wallet state for ADMIN (for prize distribution)
+  const [adminPiUser, setAdminPiUser] = useState(null);
+  const [adminWalletConnected, setAdminWalletConnected] = useState(false);
   const [piSDKLoaded, setPiSDKLoaded] = useState(false);
 
   // Lottery data
@@ -36,17 +36,26 @@ function App() {
     winnersDrawn: 0
   });
 
-  // New lottery form
+  // New lottery form with enhanced options
   const [newLottery, setNewLottery] = useState({
     title: '',
     description: '',
     entryFee: '',
     endDate: '',
-    maxParticipants: ''
+    maxParticipants: '',
+    platformFee: 0.1,
+    platformFeePercent: 10,
+    minWinners: 3,
+    maxTicketsPerUser: 2, // Starting limit
+    lotteryType: 'standard' // 'standard', 'daily', 'weekly'
   });
 
   // Bitcoin API state
   const [currentBitcoinBlock, setCurrentBitcoinBlock] = useState(null);
+
+  // Prize distribution state
+  const [distributingPrizes, setDistributingPrizes] = useState(false);
+  const [distributionResults, setDistributionResults] = useState({});
 
   // Check admin email
   const isAdmin = user && user.email === process.env.REACT_APP_ADMIN_EMAIL;
@@ -61,29 +70,27 @@ function App() {
     return () => unsubscribe();
   }, []);
 
-  // Enhanced Pi SDK initialization for testnet
+  // Enhanced Pi SDK initialization for admin wallet
   useEffect(() => {
     const initializePiSDK = async () => {
       try {
         if (window.Pi) {
-          console.log('🧪 Initializing Pi SDK for testnet...');
+          console.log('🔧 Initializing Pi SDK for admin wallet...');
           
           const config = {
             version: "2.0",
             sandbox: true,
             development: true,
             timeout: 45000,
-            environment: 'sandbox',
-            origin: window.location.origin,
-            allowCrossOrigin: true
+            environment: 'sandbox'
           };
           
           await window.Pi.init(config);
           setPiSDKLoaded(true);
-          console.log('✅ Pi testnet SDK initialized successfully');
+          console.log('✅ Pi SDK initialized for admin');
           
         } else {
-          console.warn('⚠️ Pi SDK not loaded - retrying in 3 seconds...');
+          console.warn('⚠️ Pi SDK not loaded - retrying...');
           setTimeout(initializePiSDK, 3000);
         }
       } catch (error) {
@@ -98,6 +105,9 @@ function App() {
   // Get current Bitcoin block height
   useEffect(() => {
     fetchCurrentBitcoinBlock();
+    // Update every 10 minutes
+    const interval = setInterval(fetchCurrentBitcoinBlock, 600000);
+    return () => clearInterval(interval);
   }, []);
 
   // Load data when user is authenticated
@@ -114,10 +124,11 @@ function App() {
       const response = await fetch('https://blockstream.info/api/blocks/tip/height');
       const height = await response.json();
       setCurrentBitcoinBlock(height);
+      console.log('📦 Current Bitcoin block:', height);
     } catch (error) {
       console.error('Error fetching Bitcoin block height:', error);
-      // Fallback to a reasonable estimate if API fails
-      setCurrentBitcoinBlock(850000); // Approximate current height as fallback
+      // Fallback calculation
+      setCurrentBitcoinBlock(Math.floor((Date.now() - 1609459200000) / 600000) + 665000);
     }
   };
 
@@ -141,22 +152,131 @@ function App() {
     }
   };
 
-  // Provably fair random number generation
-  const generateProvablyFairRandom = (blockHash, lotteryId, participantCount) => {
-    // Combine block hash with lottery ID for unique randomness per lottery
-    const combinedString = blockHash + lotteryId;
+  // Calculate commitment block for different lottery types
+  const calculateCommitmentBlock = (currentBlock, endDate, lotteryType) => {
+    const now = new Date();
+    const end = new Date(endDate);
+    const hoursUntilEnd = (end - now) / (1000 * 60 * 60);
     
-    // Simple hash function to convert to number
-    let hash = 0;
-    for (let i = 0; i < combinedString.length; i++) {
-      const char = combinedString.charCodeAt(i);
-      hash = ((hash << 5) - hash) + char;
-      hash = hash & hash; // Convert to 32-bit integer
+    // Bitcoin averages ~6 blocks per hour
+    const blocksUntilEnd = Math.ceil(hoursUntilEnd * 6);
+    
+    // Safety margin based on lottery type
+    let safetyMargin;
+    switch (lotteryType) {
+      case 'daily':
+        safetyMargin = Math.max(1, Math.min(3, Math.ceil(blocksUntilEnd * 0.05))); // 5% margin for daily
+        break;
+      case 'weekly':
+        safetyMargin = Math.max(3, Math.min(12, Math.ceil(blocksUntilEnd * 0.1))); // 10% margin for weekly
+        break;
+      default:
+        safetyMargin = Math.max(1, Math.min(6, Math.ceil(blocksUntilEnd * 0.1))); // Standard margin
     }
     
-    // Ensure positive number and get index within participant range
-    const randomIndex = Math.abs(hash) % participantCount;
-    return randomIndex;
+    const commitmentBlock = currentBlock + blocksUntilEnd + safetyMargin;
+    
+    console.log(`📊 Commitment block calculation for ${lotteryType} lottery:`, {
+      currentBlock,
+      hoursUntilEnd: hoursUntilEnd.toFixed(1),
+      blocksUntilEnd,
+      safetyMargin,
+      commitmentBlock
+    });
+    
+    return commitmentBlock;
+  };
+
+  // Calculate dynamic ticket limit (2% system)
+  const calculateMaxTicketsPerUser = (totalParticipants) => {
+    return Math.max(2, Math.floor(totalParticipants * 0.02));
+  };
+
+  // Provably fair random number generation for multiple winners
+  const generateProvablyFairWinners = (blockHash, lotteryId, participants, winnerCount) => {
+    console.log('🎯 Generating provably fair winners:', {
+      blockHash: blockHash.substring(0, 16) + '...',
+      lotteryId,
+      participantCount: participants.length,
+      winnerCount
+    });
+    
+    const winners = [];
+    const remainingParticipants = [...participants];
+    
+    for (let position = 1; position <= winnerCount; position++) {
+      // Create unique seed for each winner position
+      const combinedString = blockHash + lotteryId + position + 'WINNER_SALT';
+      
+      // Generate deterministic hash
+      let hash = 0;
+      for (let i = 0; i < combinedString.length; i++) {
+        const char = combinedString.charCodeAt(i);
+        hash = ((hash << 5) - hash) + char;
+        hash = hash & hash; // Convert to 32-bit integer
+      }
+      
+      // Ensure positive number and get index within remaining participant range
+      const randomIndex = Math.abs(hash) % remainingParticipants.length;
+      const selectedWinner = remainingParticipants[randomIndex];
+      
+      winners.push({
+        position,
+        winner: selectedWinner,
+        verificationData: {
+          seed: combinedString,
+          hash: hash.toString(16),
+          randomIndex,
+          selectedFrom: remainingParticipants.length
+        }
+      });
+      
+      // Remove selected winner from pool (no duplicate winners)
+      remainingParticipants.splice(randomIndex, 1);
+    }
+    
+    return winners;
+  };
+
+  // Calculate number of winners based on participants
+  const calculateWinnerCount = (participantCount, minWinners = 1) => {
+    if (participantCount < 10) return Math.max(1, minWinners);
+    if (participantCount < 25) return Math.max(3, minWinners);
+    if (participantCount < 50) return Math.max(5, minWinners);
+    if (participantCount < 100) return Math.max(7, minWinners);
+    if (participantCount < 200) return Math.max(10, minWinners);
+    if (participantCount < 500) return Math.max(15, minWinners);
+    if (participantCount < 1000) return Math.max(20, minWinners);
+    return Math.max(25, minWinners);
+  };
+
+  // Calculate prize distribution
+  const calculatePrizeDistribution = (participantCount, entryFee, platformFee, winnerCount) => {
+    const totalCollected = participantCount * entryFee;
+    const totalPlatformFee = participantCount * platformFee;
+    const prizePool = totalCollected - totalPlatformFee;
+    
+    // Prize distribution percentages based on winner count
+    const getDistributionPercentages = (count) => {
+      const distributions = {
+        1: [100],
+        3: [60, 30, 10],
+        5: [40, 25, 20, 10, 5],
+        7: [30, 20, 15, 12, 10, 8, 5],
+        10: [25, 18, 14, 11, 9, 7, 6, 4, 3, 3],
+        15: [20, 15, 12, 10, 8, 7, 6, 5, 4, 3, 3, 2, 2, 2, 1],
+        20: [18, 14, 11, 8, 7, 6, 5, 4.5, 4, 3.5, 3, 2.8, 2.5, 2.2, 2, 1.8, 1.5, 1.2, 1, 1],
+        25: [15, 12, 9, 7, 6, 5, 4.5, 4, 3.5, 3.2, 3, 2.8, 2.5, 2.3, 2.1, 2, 1.8, 1.6, 1.4, 1.3, 1.2, 1.1, 1, 1, 1]
+      };
+      return distributions[count] || [100];
+    };
+    
+    const percentages = getDistributionPercentages(winnerCount);
+    const prizes = percentages.map(percentage => 
+      Math.round(prizePool * (percentage / 100) * 100) / 100
+    );
+    
+    return prizes;
   };
 
   // Auth functions
@@ -176,10 +296,6 @@ function App() {
         setError('Admin account not found. Please create the admin account in Firebase Console first.');
       } else if (error.code === 'auth/wrong-password') {
         setError('Invalid password');
-      } else if (error.code === 'auth/invalid-email') {
-        setError('Invalid email address');
-      } else if (error.code === 'auth/too-many-requests') {
-        setError('Too many failed attempts. Please try again later.');
       } else {
         setError('Login failed: ' + error.message);
       }
@@ -191,80 +307,132 @@ function App() {
     try {
       await signOut(auth);
       setSuccess('Successfully logged out!');
-      setPiUser(null);
-      setWalletConnected(false);
+      setAdminPiUser(null);
+      setAdminWalletConnected(false);
       setLotteries([]);
-      setStats({
-        totalLotteries: 0,
-        activeParticipants: 0,
-        totalPiCollected: 0,
-        winnersDrawn: 0
-      });
     } catch (error) {
       setError('Error logging out');
       console.error('Logout error:', error);
     }
   };
 
-  // Enhanced Pi wallet connection for testnet
-  const connectWallet = async () => {
+  // Admin Pi wallet connection for prize distribution
+  const connectAdminWallet = async () => {
     setError('');
-    console.log('🔗 Attempting Pi wallet connection...');
+    console.log('🔗 Connecting admin Pi wallet for prize distribution...');
     
     try {
-      if (!window.Pi) {
+      if (!window.Pi || !piSDKLoaded) {
         throw new Error('Pi SDK not loaded');
-      }
-
-      if (!piSDKLoaded) {
-        throw new Error('Pi SDK not initialized');
       }
 
       setLoading(true);
       
-      const authResult = await Promise.race([
-        window.Pi.authenticate(['payments'], (payment) => {
-          console.log('Incomplete payment found:', payment);
-          onIncompletePaymentFound(payment);
-        }),
-        new Promise((_, reject) => 
-          setTimeout(() => reject(new Error('Authentication timeout after 45 seconds')), 45000)
-        )
-      ]);
+      const authResult = await window.Pi.authenticate(['payments'], (payment) => {
+        console.log('Incomplete payment found:', payment);
+      });
 
-      setPiUser(authResult.user);
-      setWalletConnected(true);
-      setSuccess(`🎉 Pi testnet wallet connected! Welcome, ${authResult.user.username}`);
+      setAdminPiUser(authResult.user);
+      setAdminWalletConnected(true);
+      setSuccess(`💰 Admin Pi wallet connected! Ready to distribute prizes.`);
       
     } catch (error) {
-      console.error('❌ Pi authentication failed:', error);
-      
-      if (error.message.includes('postMessage') || error.message.includes('origin')) {
-        setError('🌐 Cross-origin restriction detected. Pi testnet may require domain registration with Pi Network. Your lottery features work without Pi wallet.');
-      } else if (error.message.includes('timeout')) {
-        setError('⏱️ Pi connection timed out. Try again or continue without Pi wallet.');
-      } else if (error.message.includes('User cancelled')) {
-        setError('🚫 Pi connection cancelled.');
-      } else {
-        setError(`🔧 Pi testnet connection failed: ${error.message}`);
-      }
+      console.error('❌ Admin Pi wallet connection failed:', error);
+      setError(`Admin wallet connection failed: ${error.message}`);
     } finally {
       setLoading(false);
     }
   };
 
-  const disconnectWallet = () => {
-    setPiUser(null);
-    setWalletConnected(false);
-    setSuccess('Pi Wallet disconnected');
+  const disconnectAdminWallet = () => {
+    setAdminPiUser(null);
+    setAdminWalletConnected(false);
+    setSuccess('Admin Pi wallet disconnected');
   };
 
-  const onIncompletePaymentFound = (payment) => {
-    console.log('Incomplete payment found:', payment);
-    setError('Incomplete payment detected. Please complete or cancel it in Pi Browser.');
+  // Prize distribution functions
+  const distributePrizeToWinner = async (winner, lotteryId) => {
+    if (!adminWalletConnected) {
+      setError('Admin wallet must be connected to distribute prizes');
+      return;
+    }
+
+    try {
+      setDistributingPrizes(true);
+      
+      console.log('💰 Distributing prize:', {
+        winner: winner.winner.username || winner.winner.uid,
+        amount: winner.prize,
+        position: winner.position
+      });
+
+      // Create Pi payment
+      const paymentData = {
+        amount: winner.prize,
+        memo: `Lottery Prize - Position #${winner.position}`,
+        metadata: {
+          lotteryId,
+          winnerPosition: winner.position,
+          distributedBy: adminPiUser.uid
+        }
+      };
+
+      const payment = await window.Pi.createPayment(paymentData, {
+        onReadyForServerApproval: (paymentId) => {
+          console.log('Payment ready for approval:', paymentId);
+        },
+        onReadyForServerCompletion: (paymentId, txnId) => {
+          console.log('Payment completed:', paymentId, txnId);
+        },
+        onCancel: (paymentId) => {
+          console.log('Payment cancelled:', paymentId);
+        },
+        onError: (error, paymentId) => {
+          console.error('Payment error:', error, paymentId);
+        }
+      });
+
+      // Update lottery document with payment info
+      await updateDoc(doc(db, 'lotteries', lotteryId), {
+        [`winners.${winner.position - 1}.paid`]: true,
+        [`winners.${winner.position - 1}.paidAt`]: Timestamp.now(),
+        [`winners.${winner.position - 1}.paymentId`]: payment.identifier,
+        [`winners.${winner.position - 1}.distributedBy`]: adminPiUser.uid
+      });
+
+      // Update local state
+      setDistributionResults(prev => ({
+        ...prev,
+        [`${lotteryId}-${winner.position}`]: {
+          success: true,
+          paymentId: payment.identifier,
+          timestamp: new Date()
+        }
+      }));
+
+      setSuccess(`✅ Prize distributed to ${winner.winner.username || winner.winner.uid}: ${winner.prize}π`);
+      
+      // Reload lotteries to show updated status
+      loadLotteries();
+
+    } catch (error) {
+      console.error('Prize distribution error:', error);
+      setError(`Failed to distribute prize: ${error.message}`);
+      
+      setDistributionResults(prev => ({
+        ...prev,
+        [`${lotteryId}-${winner.position}`]: {
+          success: false,
+          error: error.message,
+          timestamp: new Date()
+        }
+      }));
+    } finally {
+      setDistributingPrizes(false);
+    }
   };
 
-  // Lottery functions with provably fair implementation
+  // Lottery management functions
   const loadLotteries = async () => {
     try {
       setError('');
@@ -286,11 +454,7 @@ function App() {
       setLotteries(lotteriesData);
     } catch (error) {
       console.error('Load lotteries error:', error);
-      if (error.code === 'permission-denied') {
-        setError('Permission denied. Please ensure you are logged in with the admin account and Firebase rules are configured correctly.');
-      } else {
-        setError('Error loading lotteries: ' + error.message);
-      }
+      setError('Error loading lotteries: ' + error.message);
     }
   };
 
@@ -313,8 +477,8 @@ function App() {
           totalPiCollected += (data.participants.length * parseFloat(data.entryFee || 0));
         }
         
-        if (data.winner) {
-          winnersDrawn++;
+        if (data.winners && data.winners.length > 0) {
+          winnersDrawn += data.winners.length;
         }
       });
 
@@ -352,50 +516,62 @@ function App() {
       }
 
       // Calculate future Bitcoin block for provably fair drawing
-      const currentTime = new Date();
-      const endTime = new Date(newLottery.endDate);
-      const timeDiffHours = (endTime - currentTime) / (1000 * 60 * 60);
-      const blocksUntilEnd = Math.ceil(timeDiffHours * 6); // ~6 blocks per hour
-      const commitmentBlock = currentBitcoinBlock + blocksUntilEnd + 1; // +1 for safety margin
+      const commitmentBlock = calculateCommitmentBlock(
+        currentBitcoinBlock, 
+        newLottery.endDate, 
+        newLottery.lotteryType
+      );
 
       const lotteriesRef = collection(db, 'lotteries');
       await addDoc(lotteriesRef, {
         ...newLottery,
         entryFee: parseFloat(newLottery.entryFee),
+        platformFee: parseFloat(newLottery.platformFee),
         maxParticipants: parseInt(newLottery.maxParticipants) || null,
+        minWinners: parseInt(newLottery.minWinners),
         endDate: Timestamp.fromDate(endDate),
         createdAt: Timestamp.now(),
         participants: [],
         status: 'active',
-        winner: null,
+        winners: [],
         // Provably Fair fields
         provablyFair: {
           commitmentBlock: commitmentBlock,
           committedAt: Timestamp.now(),
           blockDataFetched: false,
           blockHash: null,
-          verified: false
+          verified: false,
+          lotteryType: newLottery.lotteryType
+        },
+        // 2% ticket system
+        ticketSystem: {
+          maxTicketsPerUser: newLottery.maxTicketsPerUser,
+          dynamicLimit: true,
+          limitPercentage: 2
         }
       });
 
-      setSuccess(`Lottery created successfully! Winner will be chosen using Bitcoin block #${commitmentBlock} (provably fair)`);
+      setSuccess(`✅ ${newLottery.lotteryType} lottery created! Provably fair block: #${commitmentBlock}`);
+      
+      // Reset form
       setNewLottery({
         title: '',
         description: '',
         entryFee: '',
         endDate: '',
-        maxParticipants: ''
+        maxParticipants: '',
+        platformFee: 0.1,
+        platformFeePercent: 10,
+        minWinners: 3,
+        maxTicketsPerUser: 2,
+        lotteryType: 'standard'
       });
       
       loadLotteries();
       calculateStats();
     } catch (error) {
       console.error('Create lottery error:', error);
-      if (error.code === 'permission-denied') {
-        setError('Permission denied. Please ensure you are logged in with the admin account.');
-      } else {
-        setError('Error creating lottery: ' + error.message);
-      }
+      setError('Error creating lottery: ' + error.message);
     }
     setLoading(false);
   };
@@ -407,31 +583,53 @@ function App() {
       return;
     }
 
-    if (lottery.winner) {
-      setError('Winner already drawn for this lottery');
+    if (lottery.winners && lottery.winners.length > 0) {
+      setError('Winners already drawn for this lottery');
       return;
     }
 
     setLoading(true);
     try {
-      // Fetch Bitcoin block data for provably fair drawing
-      console.log(`🔗 Fetching Bitcoin block #${lottery.provablyFair.commitmentBlock} for provably fair drawing...`);
+      console.log(`🎯 Drawing winners for ${lottery.lotteryType || 'standard'} lottery...`);
       
+      // Fetch Bitcoin block data
       const blockData = await fetchBitcoinBlockHash(lottery.provablyFair.commitmentBlock);
       
-      // Generate provably fair random index
-      const randomIndex = generateProvablyFairRandom(
-        blockData.hash, 
-        lotteryId, 
-        lottery.participants.length
+      // Calculate number of winners
+      const winnerCount = calculateWinnerCount(
+        lottery.participants.length, 
+        lottery.minWinners || 1
       );
       
-      const winner = lottery.participants[randomIndex];
+      // Generate provably fair winners
+      const winners = generateProvablyFairWinners(
+        blockData.hash, 
+        lotteryId, 
+        lottery.participants, 
+        winnerCount
+      );
+      
+      // Calculate prizes
+      const prizes = calculatePrizeDistribution(
+        lottery.participants.length,
+        lottery.entryFee,
+        lottery.platformFee || 0.1,
+        winnerCount
+      );
+      
+      // Combine winners with prizes
+      const winnersWithPrizes = winners.map((winner, index) => ({
+        ...winner,
+        prize: prizes[index],
+        paid: false,
+        paidAt: null,
+        paymentId: null
+      }));
 
-      // Update lottery with winner and proof data
+      // Update lottery with winners and proof data
       const lotteryRef = doc(db, 'lotteries', lotteryId);
       await updateDoc(lotteryRef, {
-        winner: winner,
+        winners: winnersWithPrizes,
         status: 'completed',
         drawnAt: Timestamp.now(),
         provablyFair: {
@@ -440,24 +638,18 @@ function App() {
           blockHash: blockData.hash,
           blockHeight: blockData.height,
           blockTimestamp: blockData.timestamp,
-          merkleRoot: blockData.merkleRoot,
-          winnerIndex: randomIndex,
-          totalParticipants: lottery.participants.length,
           verified: true,
-          verificationData: {
-            combinedString: blockData.hash + lotteryId,
-            calculationMethod: 'SHA-256 + Modulo',
-            verifiableAt: `https://blockstream.info/block/${blockData.hash}`
-          }
+          totalParticipants: lottery.participants.length,
+          winnerCount: winnerCount
         }
       });
 
-      setSuccess(`🎉 Winner drawn using provably fair method! Winner: ${winner.username || winner.uid}. Block #${blockData.height} hash used for randomness.`);
+      setSuccess(`🎉 ${winnerCount} winners drawn using Bitcoin block #${blockData.height}! Ready for prize distribution.`);
       loadLotteries();
       calculateStats();
     } catch (error) {
       console.error('Draw winner error:', error);
-      setError('Error drawing winner: ' + error.message + '. This may be because the Bitcoin block is not yet mined or API is unavailable.');
+      setError('Error drawing winners: ' + error.message);
     }
     setLoading(false);
   };
@@ -478,8 +670,9 @@ function App() {
     }
   };
 
+  // Utility functions
   const getLotteryStatus = (lottery) => {
-    if (lottery.winner) return 'completed';
+    if (lottery.winners && lottery.winners.length > 0) return 'completed';
     if (lottery.status === 'ended') return 'ended';
     if (new Date() > lottery.endDate) return 'ended';
     return 'active';
@@ -526,9 +719,6 @@ function App() {
             <div className="login-header">
               <h2>🔐 Admin Login</h2>
               <p>Please sign in to access the admin dashboard</p>
-              <p style={{fontSize: '0.9rem', color: '#6c757d', marginTop: '10px'}}>
-                Admin Email: {process.env.REACT_APP_ADMIN_EMAIL}
-              </p>
             </div>
 
             {error && (
@@ -588,18 +778,18 @@ function App() {
     <div className="container">
       {/* Header */}
       <div className="header">
-        <h1>🎰 Provably Fair Pi Lottery Admin</h1>
-        <p>Manage transparent, verifiable lotteries with Bitcoin-based randomness</p>
+        <h1>🎰 Pi Lottery Admin Dashboard</h1>
+        <p>Manage provably fair lotteries with manual prize distribution</p>
       </div>
 
       {/* Admin Info & Logout */}
       <div className="card">
         <div className="logged-in-header">
           <div className="admin-info">
-            ✅ Logged in as: {user.email}
+            ✅ Admin: {user.email}
             {currentBitcoinBlock && (
               <div style={{fontSize: '0.9rem', color: '#6c757d', marginTop: '5px'}}>
-                📦 Current Bitcoin Block: #{currentBitcoinBlock}
+                📦 Bitcoin Block: #{currentBitcoinBlock}
               </div>
             )}
           </div>
@@ -631,11 +821,11 @@ function App() {
         </div>
         <div className="stat-card green">
           <div className="stat-number">{stats.activeParticipants}</div>
-          <div className="stat-label">Active Participants</div>
+          <div className="stat-label">Total Participants</div>
         </div>
         <div className="stat-card yellow">
           <div className="stat-number">{stats.totalPiCollected} π</div>
-          <div className="stat-label">Total Pi Collected</div>
+          <div className="stat-label">Pi Collected</div>
         </div>
         <div className="stat-card blue">
           <div className="stat-number">{stats.winnersDrawn}</div>
@@ -643,56 +833,42 @@ function App() {
         </div>
       </div>
 
-      {/* Provably Fair Info */}
+      {/* Admin Pi Wallet for Prize Distribution */}
       <div className="card">
-        <h2>🔒 Provably Fair Technology</h2>
-        <div className="warning">
-          <strong>🎯 How It Works:</strong>
-          <ul style={{marginTop: '10px', paddingLeft: '20px'}}>
-            <li><strong>Commitment:</strong> Each lottery uses a future Bitcoin block for randomness</li>
-            <li><strong>Transparency:</strong> Block number is chosen when lottery is created (before entries)</li>
-            <li><strong>Verification:</strong> Anyone can verify the winner selection using blockchain data</li>
-            <li><strong>Impossible to Manipulate:</strong> No one can predict or control Bitcoin block hashes</li>
-          </ul>
-          <p style={{marginTop: '15px'}}>
-            <strong>🔗 Verification:</strong> All lottery results can be independently verified on the Bitcoin blockchain.
-          </p>
-        </div>
-      </div>
-
-      {/* Pi Wallet Connection */}
-      <div className="card">
-        <h2>💰 Pi Testnet Wallet Connection</h2>
-        <div className={`wallet-status ${walletConnected ? 'wallet-connected' : ''}`}>
+        <h2>💰 Admin Pi Wallet (Prize Distribution)</h2>
+        <div className={`wallet-status ${adminWalletConnected ? 'wallet-connected' : ''}`}>
           <div className="wallet-indicator"></div>
           <div className="wallet-info">
-            <h4>{walletConnected ? 'Pi Testnet Wallet Connected' : 'Pi Testnet Wallet Disconnected'}</h4>
-            {piUser && (
-              <p>User: {piUser.username} ({piUser.uid})</p>
+            <h4>{adminWalletConnected ? '✅ Admin Wallet Connected' : '❌ Admin Wallet Disconnected'}</h4>
+            {adminPiUser && (
+              <p>👤 Admin: {adminPiUser.username} ({adminPiUser.uid})</p>
             )}
-            {!piSDKLoaded && (
-              <p style={{color: '#ffc107', fontSize: '0.9rem'}}>⚠️ Pi SDK loading...</p>
-            )}
+            <p style={{fontSize: '0.9rem', color: '#6c757d'}}>
+              {adminWalletConnected 
+                ? '🎯 Ready to distribute prizes manually' 
+                : '⚠️ Connect wallet to distribute prizes to winners'
+              }
+            </p>
           </div>
-          {walletConnected ? (
-            <button onClick={disconnectWallet} className="button danger">
-              🔌 Disconnect Wallet
+          {adminWalletConnected ? (
+            <button onClick={disconnectAdminWallet} className="button danger">
+              🔌 Disconnect
             </button>
           ) : (
             <button 
-              onClick={connectWallet} 
+              onClick={connectAdminWallet} 
               className="button success"
               disabled={!piSDKLoaded || loading}
             >
-              {loading ? '🔄 Connecting...' : '🧪 Connect Pi Testnet'}
+              {loading ? '🔄 Connecting...' : '💰 Connect Admin Wallet'}
             </button>
           )}
         </div>
       </div>
 
-      {/* Create New Lottery */}
+      {/* Create New Lottery with Enhanced Options */}
       <div className="card">
-        <h2>🎰 Create New Provably Fair Lottery</h2>
+        <h2>🎰 Create New Lottery</h2>
         <form onSubmit={createLottery}>
           <div className="form-row">
             <div className="form-group">
@@ -703,9 +879,24 @@ function App() {
                 value={newLottery.title}
                 onChange={(e) => setNewLottery({...newLottery, title: e.target.value})}
                 required
-                placeholder="e.g., Weekly Pi Lottery"
+                placeholder="e.g., Daily Pi Lottery"
               />
             </div>
+            <div className="form-group">
+              <label htmlFor="lotteryType">Lottery Type</label>
+              <select
+                id="lotteryType"
+                value={newLottery.lotteryType}
+                onChange={(e) => setNewLottery({...newLottery, lotteryType: e.target.value})}
+              >
+                <option value="standard">Standard Lottery</option>
+                <option value="daily">Daily Lottery (24 hours)</option>
+                <option value="weekly">Weekly Lottery (7 days)</option>
+              </select>
+            </div>
+          </div>
+
+          <div className="form-row">
             <div className="form-group">
               <label htmlFor="entryFee">Entry Fee (π)</label>
               <input
@@ -716,8 +907,24 @@ function App() {
                 value={newLottery.entryFee}
                 onChange={(e) => setNewLottery({...newLottery, entryFee: e.target.value})}
                 required
+                placeholder="1.00"
+              />
+            </div>
+            <div className="form-group">
+              <label htmlFor="platformFee">Platform Fee (π per entry)</label>
+              <input
+                type="number"
+                id="platformFee"
+                step="0.01"
+                min="0"
+                max="1"
+                value={newLottery.platformFee}
+                onChange={(e) => setNewLottery({...newLottery, platformFee: parseFloat(e.target.value) || 0})}
                 placeholder="0.10"
               />
+              <small style={{color: '#6c757d', fontSize: '0.85rem'}}>
+                Deducted from prize pool
+              </small>
             </div>
           </div>
 
@@ -745,63 +952,68 @@ function App() {
               />
             </div>
             <div className="form-group">
-              <label htmlFor="maxParticipants">Max Participants (Optional)</label>
-              <input
-                type="number"
-                id="maxParticipants"
-                min="1"
-                value={newLottery.maxParticipants}
-                onChange={(e) => setNewLottery({...newLottery, maxParticipants: e.target.value})}
-                placeholder="Leave empty for unlimited"
-              />
+              <label htmlFor="minWinners">Minimum Winners</label>
+              <select
+                id="minWinners"
+                value={newLottery.minWinners}
+                onChange={(e) => setNewLottery({...newLottery, minWinners: parseInt(e.target.value)})}
+              >
+                <option value={1}>1 Winner</option>
+                <option value={3}>3 Winners</option>
+                <option value={5}>5 Winners</option>
+                <option value={7}>7 Winners</option>
+              </select>
             </div>
           </div>
 
-          <div className="success" style={{marginTop: '15px'}}>
-            <strong>🔒 Provably Fair Commitment:</strong> A future Bitcoin block will be automatically selected for random winner selection. The block number will be determined when you create the lottery and cannot be changed afterward.
+          <div className="success" style={{margin: '15px 0'}}>
+            <h4>🎫 2% Ticket System:</h4>
+            <p>Each user can buy up to 2% of total participants as tickets (minimum 2 tickets)</p>
+            <p>🔒 Provably fair winners selected using Bitcoin blockchain</p>
           </div>
 
           <button 
             type="submit" 
             className="button success full-width"
             disabled={loading}
-            style={{marginTop: '15px'}}
           >
             {loading ? '🔄 Creating...' : '🔒 Create Provably Fair Lottery'}
           </button>
         </form>
       </div>
 
-      {/* Active Lotteries */}
+      {/* All Lotteries with Prize Distribution */}
       <div className="card">
         <h2>📋 All Lotteries</h2>
         {lotteries.length === 0 ? (
           <p style={{textAlign: 'center', color: '#6c757d', padding: '40px'}}>
-            No lotteries created yet. Create your first provably fair lottery above!
+            No lotteries created yet.
           </p>
         ) : (
           <div className="lottery-list">
             {lotteries.map((lottery) => {
               const status = getLotteryStatus(lottery);
               const participantCount = lottery.participants ? lottery.participants.length : 0;
-              const totalPrize = (participantCount * lottery.entryFee).toFixed(2);
+              const totalPrize = ((participantCount * lottery.entryFee) - (participantCount * (lottery.platformFee || 0.1))).toFixed(2);
+              const hasWinners = lottery.winners && lottery.winners.length > 0;
 
               return (
                 <div key={lottery.id} className="lottery-item">
                   <div className="lottery-header">
-                    <h3 className="lottery-title">{lottery.title}</h3>
+                    <h3 className="lottery-title">
+                      {lottery.title}
+                      {lottery.lotteryType && lottery.lotteryType !== 'standard' && (
+                        <span style={{fontSize: '0.8rem', color: '#6c757d', marginLeft: '10px'}}>
+                          ({lottery.lotteryType})
+                        </span>
+                      )}
+                    </h3>
                     <span className={`lottery-status status-${status}`}>
                       {status === 'active' && '🟢 Active'}
                       {status === 'ended' && '🔴 Ended'}
                       {status === 'completed' && '🏆 Completed'}
                     </span>
                   </div>
-
-                  {lottery.description && (
-                    <p style={{color: '#6c757d', marginBottom: '15px'}}>
-                      {lottery.description}
-                    </p>
-                  )}
 
                   <div className="lottery-details">
                     <div className="lottery-detail">
@@ -810,83 +1022,110 @@ function App() {
                     </div>
                     <div className="lottery-detail">
                       <div className="lottery-detail-label">Participants</div>
-                      <div className="lottery-detail-value">
-                        {participantCount}
-                        {lottery.maxParticipants && ` / ${lottery.maxParticipants}`}
-                      </div>
+                      <div className="lottery-detail-value">{participantCount}</div>
                     </div>
                     <div className="lottery-detail">
                       <div className="lottery-detail-label">Prize Pool</div>
                       <div className="lottery-detail-value">{totalPrize} π</div>
                     </div>
                     <div className="lottery-detail">
-                      <div className="lottery-detail-label">End Date</div>
-                      <div className="lottery-detail-value">{formatDate(lottery.endDate)}</div>
+                      <div className="lottery-detail-label">Platform Fee</div>
+                      <div className="lottery-detail-value">{(participantCount * (lottery.platformFee || 0.1)).toFixed(2)} π</div>
                     </div>
                   </div>
 
-                  {/* Provably Fair Information */}
+                  {/* Provably Fair Info */}
                   {lottery.provablyFair && (
                     <div className="success" style={{margin: '15px 0'}}>
-                      <h4 style={{margin: '0 0 10px 0'}}>🔒 Provably Fair Commitment:</h4>
-                      <p style={{margin: '5px 0'}}>
-                        <strong>Bitcoin Block:</strong> #{lottery.provablyFair.commitmentBlock}
-                      </p>
+                      <p><strong>🔒 Bitcoin Block:</strong> #{lottery.provablyFair.commitmentBlock}</p>
                       {lottery.provablyFair.blockDataFetched && (
-                        <div style={{marginTop: '10px'}}>
-                          <p><strong>Block Hash:</strong> <code style={{fontSize: '0.8rem'}}>{lottery.provablyFair.blockHash}</code></p>
-                          <p><strong>Winner Index:</strong> {lottery.provablyFair.winnerIndex} of {lottery.provablyFair.totalParticipants}</p>
-                          <p>
-                            <a 
-                              href={lottery.provablyFair.verificationData?.verifiableAt} 
-                              target="_blank" 
-                              rel="noopener noreferrer"
-                              style={{color: '#007bff', textDecoration: 'underline'}}
-                            >
-                              🔗 Verify on Bitcoin Blockchain
-                            </a>
-                          </p>
-                        </div>
+                        <p><strong>✅ Block Hash:</strong> {lottery.provablyFair.blockHash?.substring(0, 16)}...</p>
                       )}
                     </div>
                   )}
 
-                  {lottery.winner && (
-                    <div className="success" style={{margin: '15px 0'}}>
-                      🏆 Winner: {lottery.winner.username || lottery.winner.uid}
-                      <br />
-                      <small>Drawn on: {formatDate(lottery.drawnAt?.toDate?.())}</small>
+                  {/* Winners and Prize Distribution */}
+                  {hasWinners && (
+                    <div className="winners-section" style={{margin: '20px 0'}}>
+                      <h4>🏆 Winners & Prize Distribution</h4>
+                      <div className="winners-grid" style={{display: 'grid', gap: '10px', marginTop: '15px'}}>
+                        {lottery.winners.map((winner, index) => (
+                          <div key={index} className="winner-item" style={{
+                            display: 'flex', 
+                            justifyContent: 'space-between', 
+                            alignItems: 'center',
+                            padding: '10px',
+                            background: '#f8f9fa',
+                            borderRadius: '8px',
+                            border: winner.paid ? '2px solid #28a745' : '2px solid #ffc107'
+                          }}>
+                            <div className="winner-info">
+                              <span style={{fontWeight: 'bold'}}>
+                                {winner.position === 1 ? '🥇' : winner.position === 2 ? '🥈' : winner.position === 3 ? '🥉' : '🏅'} 
+                                #{winner.position}
+                              </span>
+                              <span style={{marginLeft: '10px'}}>
+                                {winner.winner.username || winner.winner.uid}
+                              </span>
+                              <span style={{marginLeft: '10px', fontWeight: 'bold', color: '#007bff'}}>
+                                {winner.prize}π
+                              </span>
+                            </div>
+                            <div className="winner-actions">
+                              {winner.paid ? (
+                                <span style={{color: '#28a745', fontWeight: 'bold', fontSize: '0.9rem'}}>
+                                  ✅ Paid
+                                  {winner.paidAt && (
+                                    <div style={{fontSize: '0.8rem', color: '#6c757d'}}>
+                                      {formatDate(winner.paidAt.toDate())}
+                                    </div>
+                                  )}
+                                </span>
+                              ) : (
+                                <button
+                                  onClick={() => distributePrizeToWinner(winner, lottery.id)}
+                                  className="button success"
+                                  disabled={!adminWalletConnected || distributingPrizes}
+                                  style={{padding: '8px 16px', fontSize: '0.9rem'}}
+                                >
+                                  {distributingPrizes ? '🔄 Sending...' : `💰 Send ${winner.prize}π`}
+                                </button>
+                              )}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                      
+                      {/* Prize Distribution Summary */}
+                      <div style={{marginTop: '15px', padding: '10px', background: '#e9ecef', borderRadius: '8px'}}>
+                        <strong>📊 Distribution Summary:</strong>
+                        <div style={{marginTop: '5px'}}>
+                          Paid: {lottery.winners.filter(w => w.paid).length}/{lottery.winners.length} winners • 
+                          Total Distributed: {lottery.winners.filter(w => w.paid).reduce((sum, w) => sum + w.prize, 0).toFixed(2)}π • 
+                          Remaining: {lottery.winners.filter(w => !w.paid).reduce((sum, w) => sum + w.prize, 0).toFixed(2)}π
+                        </div>
+                      </div>
                     </div>
                   )}
 
+                  {/* Lottery Actions */}
                   <div className="lottery-actions">
                     {status === 'active' && (
-                      <>
-                        <button 
-                          onClick={() => endLottery(lottery.id)}
-                          className="button warning"
-                        >
-                          ⏹️ End Lottery
-                        </button>
-                        {participantCount > 0 && (
-                          <button 
-                            onClick={() => drawWinner(lottery.id)}
-                            className="button success"
-                            disabled={loading}
-                          >
-                            {loading ? '🔄 Drawing...' : '🔒 Draw Provably Fair Winner'}
-                          </button>
-                        )}
-                      </>
+                      <button 
+                        onClick={() => endLottery(lottery.id)}
+                        className="button warning"
+                      >
+                        ⏹️ End Lottery
+                      </button>
                     )}
                     
-                    {status === 'ended' && participantCount > 0 && !lottery.winner && (
+                    {(status === 'ended' || status === 'active') && participantCount > 0 && !hasWinners && (
                       <button 
                         onClick={() => drawWinner(lottery.id)}
                         className="button success"
                         disabled={loading}
                       >
-                        {loading ? '🔄 Drawing...' : '🔒 Draw Provably Fair Winner'}
+                        {loading ? '🔄 Drawing...' : '🎯 Draw Winners'}
                       </button>
                     )}
 
