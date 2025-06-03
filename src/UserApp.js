@@ -1,4 +1,4 @@
-// File path: src/UserApp.js - USER INTERFACE COMPONENT
+// File path: src/UserApp.js - STREAMLINED USER INTERFACE COMPONENT
 import React, { useState, useEffect } from 'react';
 import { db } from './firebase';
 import { 
@@ -69,12 +69,16 @@ function UserApp() {
     setTimeout(initializePiSDK, 1000);
   }, []);
 
-  // Load data when wallet is connected
+  // Load active lotteries immediately on component mount
+  useEffect(() => {
+    loadActiveLotteries();
+    loadCompletedLotteries();
+  }, []);
+
+  // Load user data when wallet is connected
   useEffect(() => {
     if (walletConnected && piUser) {
-      loadActiveLotteries();
       loadMyEntries();
-      loadCompletedLotteries();
       calculateUserStats();
     }
   }, [walletConnected, piUser]);
@@ -82,8 +86,8 @@ function UserApp() {
   // Auto-refresh every 30 seconds
   useEffect(() => {
     const interval = setInterval(() => {
+      loadActiveLotteries();
       if (walletConnected) {
-        loadActiveLotteries();
         loadMyEntries();
       }
     }, 30000);
@@ -109,7 +113,7 @@ function UserApp() {
 
       setPiUser(authResult.user);
       setWalletConnected(true);
-      setSuccess(`🎉 Welcome ${authResult.user.username}! Ready to join lotteries.`);
+      setSuccess(`🎉 Welcome ${authResult.user.username}! You can now join lotteries.`);
       
     } catch (error) {
       console.error('❌ Pi wallet connection failed:', error);
@@ -122,9 +126,13 @@ function UserApp() {
   const disconnectWallet = () => {
     setPiUser(null);
     setWalletConnected(false);
-    setActiveLotteries([]);
     setMyEntries([]);
-    setCompletedLotteries([]);
+    setUserStats({
+      totalEntered: 0,
+      totalSpent: 0,
+      totalWon: 0,
+      winCount: 0
+    });
     setSuccess('Wallet disconnected');
   };
 
@@ -404,69 +412,35 @@ function UserApp() {
     setSuccess('');
   };
 
-  if (!walletConnected) {
-    return (
-      <div className="container">
-        <div className="header">
-          <h1>🎰 Pi Lottery</h1>
-          <p>Join provably fair lotteries and win Pi!</p>
-        </div>
-
-        <div className="card">
-          <div className="login-form">
-            <div className="login-header">
-              <h2>🔗 Connect Your Pi Wallet</h2>
-              <p>Connect your Pi wallet to join lotteries and track your entries</p>
-            </div>
-
-            {error && (
-              <div className="error">
-                {error}
-                <button onClick={clearMessages} style={{float: 'right', background: 'none', border: 'none', color: 'inherit', cursor: 'pointer'}}>×</button>
-              </div>
-            )}
-
-            <div className="wallet-features">
-              <h3>🎯 What You Can Do:</h3>
-              <ul style={{paddingLeft: '20px', marginBottom: '20px'}}>
-                <li>🎫 Join active lotteries with fair 2% ticket limits</li>
-                <li>🔒 Verify results with provably fair blockchain technology</li>
-                <li>🏆 Track your entries and winnings</li>
-                <li>💰 Automatic prize distribution to winners</li>
-              </ul>
-            </div>
-
-            <button 
-              onClick={connectWallet}
-              className="button success full-width"
-              disabled={!piSDKLoaded || loading}
-            >
-              {loading ? '🔄 Connecting...' : piSDKLoaded ? '🔗 Connect Pi Wallet' : '⏳ Loading Pi SDK...'}
-            </button>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div className="container">
-      {/* Header */}
-      <div className="header">
-        <h1>🎰 Pi Lottery</h1>
-        <p>Welcome {piUser.username}! Join provably fair lotteries.</p>
-      </div>
-
-      {/* User Info */}
-      <div className="card">
-        <div className="logged-in-header">
-          <div className="user-info">
-            <h3>👤 {piUser.username}</h3>
-            <p style={{color: '#6c757d', margin: '5px 0'}}>Pi ID: {piUser.uid}</p>
-          </div>
-          <button onClick={disconnectWallet} className="button secondary">
-            🔌 Disconnect
-          </button>
+      {/* Top Navigation Bar */}
+      <div className="header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+        <div>
+          <h1 style={{ margin: 0 }}>🎰 Pi Lottery</h1>
+          <p style={{ margin: '5px 0 0 0', opacity: 0.9 }}>Provably fair lotteries with Pi cryptocurrency</p>
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
+          {walletConnected ? (
+            <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
+              <div style={{ textAlign: 'right' }}>
+                <div style={{ fontWeight: 'bold', color: 'white' }}>👤 {piUser.username}</div>
+                <div style={{ fontSize: '0.8rem', opacity: 0.8 }}>Connected</div>
+              </div>
+              <button onClick={disconnectWallet} className="button secondary" style={{ padding: '8px 16px' }}>
+                🔌 Disconnect
+              </button>
+            </div>
+          ) : (
+            <button 
+              onClick={connectWallet}
+              className="button success"
+              disabled={!piSDKLoaded || loading}
+              style={{ padding: '12px 20px' }}
+            >
+              {loading ? '🔄 Connecting...' : piSDKLoaded ? '🔗 Connect Pi Wallet' : '⏳ Loading...'}
+            </button>
+          )}
         </div>
       </div>
 
@@ -484,29 +458,37 @@ function UserApp() {
         </div>
       )}
 
-      {/* User Stats */}
-      <div className="stats-grid">
-        <div className="stat-card purple">
-          <div className="stat-number">{userStats.totalEntered}</div>
-          <div className="stat-label">Tickets Bought</div>
+      {/* User Stats (only show when wallet connected) */}
+      {walletConnected && (
+        <div className="stats-grid">
+          <div className="stat-card purple">
+            <div className="stat-number">{userStats.totalEntered}</div>
+            <div className="stat-label">Tickets Bought</div>
+          </div>
+          <div className="stat-card yellow">
+            <div className="stat-number">{userStats.totalSpent} π</div>
+            <div className="stat-label">Total Spent</div>
+          </div>
+          <div className="stat-card green">
+            <div className="stat-number">{userStats.totalWon} π</div>
+            <div className="stat-label">Total Won</div>
+          </div>
+          <div className="stat-card blue">
+            <div className="stat-number">{userStats.winCount}</div>
+            <div className="stat-label">Prizes Won</div>
+          </div>
         </div>
-        <div className="stat-card yellow">
-          <div className="stat-number">{userStats.totalSpent} π</div>
-          <div className="stat-label">Total Spent</div>
-        </div>
-        <div className="stat-card green">
-          <div className="stat-number">{userStats.totalWon} π</div>
-          <div className="stat-label">Total Won</div>
-        </div>
-        <div className="stat-card blue">
-          <div className="stat-number">{userStats.winCount}</div>
-          <div className="stat-label">Prizes Won</div>
-        </div>
-      </div>
+      )}
 
-      {/* Active Lotteries */}
+      {/* Active Lotteries - Always Shown */}
       <div className="card">
-        <h2>🎲 Active Lotteries</h2>
+        <h2>🎲 Available Lotteries</h2>
+        {!walletConnected && (
+          <div className="warning" style={{ margin: '0 0 20px 0' }}>
+            <strong>🔗 Connect your Pi wallet to join lotteries and track your entries</strong>
+          </div>
+        )}
+        
         {activeLotteries.length === 0 ? (
           <p style={{textAlign: 'center', color: '#6c757d', padding: '40px'}}>
             No active lotteries at the moment. Check back soon!
@@ -576,10 +558,12 @@ function UserApp() {
                       <div className="lottery-detail-label">Participants</div>
                       <div className="lottery-detail-value">{participantCount}</div>
                     </div>
-                    <div className="lottery-detail">
-                      <div className="lottery-detail-label">Your Tickets</div>
-                      <div className="lottery-detail-value">{userTickets}/{maxUserTickets}</div>
-                    </div>
+                    {walletConnected && (
+                      <div className="lottery-detail">
+                        <div className="lottery-detail-label">Your Tickets</div>
+                        <div className="lottery-detail-value">{userTickets}/{maxUserTickets}</div>
+                      </div>
+                    )}
                     <div className="lottery-detail">
                       <div className="lottery-detail-label">Winners</div>
                       <div className="lottery-detail-value">{prizeInfo.winnerCount}</div>
@@ -589,7 +573,7 @@ function UserApp() {
                   {/* 2% Ticket System Info */}
                   <div className="warning" style={{margin: '15px 0'}}>
                     <h4>🎫 Fair Ticket System (2% Max):</h4>
-                    <p>You can buy up to {maxUserTickets} tickets ({((maxUserTickets / Math.max(participantCount, 1)) * 100).toFixed(1)}% of total)</p>
+                    <p>Users can buy up to {maxUserTickets} tickets ({((maxUserTickets / Math.max(participantCount, 1)) * 100).toFixed(1)}% of total)</p>
                     <p>This ensures fair play - no single user can dominate the lottery!</p>
                   </div>
 
@@ -601,7 +585,13 @@ function UserApp() {
                   </div>
 
                   <div className="lottery-actions">
-                    {canBuyMore ? (
+                    {!walletConnected ? (
+                      <div style={{textAlign: 'center', padding: '15px'}}>
+                        <span style={{color: '#6c757d', fontWeight: 'bold'}}>
+                          🔗 Connect Pi wallet to join this lottery
+                        </span>
+                      </div>
+                    ) : canBuyMore ? (
                       <button 
                         onClick={() => joinLottery(lottery.id, lottery)}
                         className="button success full-width"
@@ -627,14 +617,10 @@ function UserApp() {
         )}
       </div>
 
-      {/* My Entries */}
-      <div className="card">
-        <h2>📊 My Lottery Entries</h2>
-        {myEntries.length === 0 ? (
-          <p style={{textAlign: 'center', color: '#6c757d', padding: '40px'}}>
-            You haven't joined any lotteries yet. Join one above to get started!
-          </p>
-        ) : (
+      {/* My Entries (only show when wallet connected) */}
+      {walletConnected && myEntries.length > 0 && (
+        <div className="card">
+          <h2>📊 My Lottery Entries</h2>
           <div className="lottery-list">
             {myEntries.map((entry) => {
               const isWinner = entry.winners.some(w => w.winner.uid === piUser.uid);
@@ -697,17 +683,13 @@ function UserApp() {
               );
             })}
           </div>
-        )}
-      </div>
+        </div>
+      )}
 
       {/* Recent Winners */}
-      <div className="card">
-        <h2>🏆 Recent Winners</h2>
-        {completedLotteries.length === 0 ? (
-          <p style={{textAlign: 'center', color: '#6c757d', padding: '40px'}}>
-            No completed lotteries yet.
-          </p>
-        ) : (
+      {completedLotteries.length > 0 && (
+        <div className="card">
+          <h2>🏆 Recent Winners</h2>
           <div className="lottery-list">
             {completedLotteries.slice(0, 5).map((lottery) => (
               <div key={lottery.id} className="lottery-item">
@@ -763,8 +745,8 @@ function UserApp() {
               </div>
             ))}
           </div>
-        )}
-      </div>
+        </div>
+      )}
     </div>
   );
 }
