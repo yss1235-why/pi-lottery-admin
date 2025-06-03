@@ -1,4 +1,4 @@
-# File path: netlify.toml - Enhanced Production Configuration
+# File path: netlify.toml - Fixed Production Configuration
 
 [build]
   command = "npm run build:production"
@@ -11,34 +11,11 @@
   GENERATE_SOURCEMAP = "false"
   REACT_APP_DEPLOYMENT_ENV = "production"
 
-# Production build optimization
-[build.processing]
-  skip_processing = false
-
-[build.processing.css]
-  bundle = true
-  minify = true
-
-[build.processing.js]
-  bundle = true
-  minify = true
-
-[build.processing.html]
-  pretty_urls = true
-
-# URL redirects for SPA routing
+# URL redirects for SPA routing - CRITICAL FIX
 [[redirects]]
   from = "/*"
   to = "/index.html"
   status = 200
-  conditions = {Role = ["admin", "user"]}
-
-# API redirects for development
-[[redirects]]
-  from = "/api/*"
-  to = "http://localhost:3001/api/:splat"
-  status = 200
-  conditions = {Role = ["admin"]}
 
 # Security headers
 [[headers]]
@@ -69,32 +46,6 @@
   [headers.values]
     Cache-Control = "public, max-age=86400"
 
-# Environment-specific redirects
-[[redirects]]
-  from = "/admin"
-  to = "/index.html"
-  status = 200
-  conditions = {Role = ["admin"]}
-
-[[redirects]]
-  from = "/user"
-  to = "/index.html"
-  status = 200
-
-# Development context
-[context.development]
-  command = "npm run build"
-  [context.development.environment]
-    REACT_APP_DEPLOYMENT_ENV = "development"
-    REACT_APP_ENABLE_DEBUG_MODE = "true"
-
-# Staging context
-[context.staging]
-  command = "npm run build"
-  [context.staging.environment]
-    REACT_APP_DEPLOYMENT_ENV = "staging"
-    REACT_APP_ENABLE_DEBUG_MODE = "true"
-
 # Production context
 [context.production]
   command = "npm run build:production"
@@ -103,35 +54,36 @@
     REACT_APP_ENABLE_DEBUG_MODE = "false"
     GENERATE_SOURCEMAP = "false"
 
+# Development context
+[context.development]
+  command = "npm run build"
+  [context.development.environment]
+    REACT_APP_DEPLOYMENT_ENV = "development"
+    REACT_APP_ENABLE_DEBUG_MODE = "true"
+
 # Deploy previews
 [context.deploy-preview]
   command = "npm run build"
   [context.deploy-preview.environment]
     REACT_APP_DEPLOYMENT_ENV = "preview"
 
-# Branch deploys
-[context.branch-deploy]
-  command = "npm run build"
-  [context.branch-deploy.environment]
-    REACT_APP_DEPLOYMENT_ENV = "branch"
+# REMOVED PROBLEMATIC PLUGINS TEMPORARILY
+# Will add back once site is working
 
-# Plugin configuration
-[[plugins]]
-  package = "@netlify/plugin-lighthouse"
-  
-  [plugins.inputs.audits]
-    output_path = "reports/lighthouse.html"
-    
-  [plugins.inputs.settings]
-    preset = "desktop"
+# Plugin configuration (commented out for now)
+# [[plugins]]
+#   package = "@netlify/plugin-lighthouse"
+#   [plugins.inputs.audits]
+#     output_path = "reports/lighthouse.html"
+#   [plugins.inputs.settings]
+#     preset = "desktop"
 
-[[plugins]]
-  package = "netlify-plugin-submit-sitemap"
-  
-  [plugins.inputs]
-    baseUrl = "https://your-domain.netlify.app"
-    sitemapPath = "/sitemap.xml"
-    providers = [
-      "google",
-      "bing"
-    ]
+# [[plugins]]
+#   package = "netlify-plugin-submit-sitemap"
+#   [plugins.inputs]
+#     baseUrl = "https://your-domain.netlify.app"  # UPDATE THIS WITH YOUR ACTUAL DOMAIN
+#     sitemapPath = "/sitemap.xml"
+#     providers = [
+#       "google",
+#       "bing"
+#     ]
