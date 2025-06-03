@@ -1,0 +1,12 @@
+# File path: public/_redirects
+# Netlify redirects for React SPA
+
+# Redirect all routes to index.html for client-side routing
+/*    /index.html   200
+
+# Admin interface redirects
+/admin    /index.html   200
+/admin/*  /index.html   200
+
+# API redirects (if needed later)
+# /api/*  https://your-backend-api.com/api/:splat  200
