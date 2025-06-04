@@ -23,8 +23,8 @@
     X-XSS-Protection = "1; mode=block"
     X-Content-Type-Options = "nosniff"
     Referrer-Policy = "strict-origin-when-cross-origin"
-    # Fixed CSP with complete Firebase domains
-    Content-Security-Policy = "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://sdk.minepi.com https://blockstream.info https://www.gstatic.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https: blob:; connect-src 'self' https://firebase.googleapis.com https://firestore.googleapis.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://blockstream.info https://sdk.minepi.com https://socialchain.app wss://*.firebaseio.com wss://*.web.app; frame-src 'none'; object-src 'none'; base-uri 'self'; form-action 'self';"
+    # Fixed CSP with complete Firebase and Google APIs domains
+    Content-Security-Policy = "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://sdk.minepi.com https://blockstream.info https://www.gstatic.com https://apis.google.com https://www.googleapis.com https://*.googleapis.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https: blob:; connect-src 'self' https://firebase.googleapis.com https://firestore.googleapis.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://blockstream.info https://sdk.minepi.com https://socialchain.app https://www.googleapis.com https://*.googleapis.com wss://*.firebaseio.com wss://*.web.app; frame-src 'self' https://accounts.google.com https://*.google.com; object-src 'none'; base-uri 'self'; form-action 'self';"
 
 # Optimize static assets
 [[headers]]
