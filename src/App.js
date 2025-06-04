@@ -1,4 +1,4 @@
-// File path: src/App.js - Pi Browser Optimized Admin Version
+// File path: src/App.js - Improved Admin Interface with Enhanced Pi SDK
 import React, { useState, useEffect } from 'react';
 import { auth, db } from './firebase';
 import { signInWithEmailAndPassword, signOut, onAuthStateChanged } from 'firebase/auth';
@@ -13,6 +13,8 @@ import {
   Timestamp 
 } from 'firebase/firestore';
 
+import usePiSDK from './hooks/usePiSDK'; // Use the enhanced hook
+
 function App() {
   // Authentication state
   const [user, setUser] = useState(null);
@@ -22,19 +24,30 @@ function App() {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
 
-  // Pi Wallet state for ADMIN (simplified for Pi Browser)
-  const [adminPiUser, setAdminPiUser] = useState(null);
-  const [adminWalletConnected, setAdminWalletConnected] = useState(false);
-  const [piSDKReady, setPiSDKReady] = useState(false);
-  const [sdkError, setSdkError] = useState('');
+  // Enhanced Pi SDK hook for admin
+  const {
+    piUser: adminPiUser,
+    isAuthenticated: adminWalletConnected,
+    hasPaymentAccess: adminHasPaymentAccess,
+    loading: piLoading,
+    error: piError,
+    sdkReady,
+    connectionStatus,
+    authStep,
+    connectUser: connectAdminUser,
+    requestPaymentAccess: requestAdminPaymentAccess,
+    connectWallet: connectAdminWallet,
+    createPayment,
+    disconnect: disconnectAdmin,
+    testConnection,
+    getConnectionInfo,
+    clearError: clearPiError,
+    canConnect,
+    isFullyConnected: adminFullyConnected
+  } = usePiSDK();
 
   // Debug information
-  const [debugInfo, setDebugInfo] = useState({
-    sdkLoaded: false,
-    sdkVersion: 'unknown',
-    userAgent: navigator.userAgent,
-    timestamp: new Date().toISOString()
-  });
+  const [showDebugInfo, setShowDebugInfo] = useState(false);
 
   // Lottery data
   const [lotteries, setLotteries] = useState([]);
@@ -79,67 +92,6 @@ function App() {
     return () => unsubscribe();
   }, []);
 
-  // Pi SDK initialization - Simplified for Pi Browser (Admin)
-  useEffect(() => {
-    const initializePiSDK = async () => {
-      try {
-        console.log('🔧 Checking Pi SDK for admin...');
-        
-        if (window.Pi) {
-          console.log('📦 Pi SDK found, initializing for admin...');
-          
-          // Simple initialization for Pi Browser
-          await window.Pi.init({
-            version: "2.0",
-            sandbox: true
-          });
-          
-          setPiSDKReady(true);
-          setDebugInfo(prev => ({
-            ...prev,
-            sdkLoaded: true,
-            sdkVersion: window.Pi.version || '2.0'
-          }));
-          
-          console.log('✅ Pi SDK initialized for admin');
-          
-        } else {
-          console.warn('⚠️ Pi SDK not found');
-          setSdkError('Pi SDK not available');
-        }
-      } catch (error) {
-        console.error('❌ Pi SDK initialization failed:', error);
-        setSdkError(error.message);
-      }
-    };
-
-    // Listen for Pi SDK ready event
-    const handlePiSDKReady = () => {
-      console.log('📡 Pi SDK ready event received (admin)');
-      initializePiSDK();
-    };
-
-    window.addEventListener('piSDKReady', handlePiSDKReady);
-
-    // Check immediately if SDK is already loaded
-    if (window.Pi) {
-      initializePiSDK();
-    } else {
-      setTimeout(() => {
-        if (window.Pi) {
-          initializePiSDK();
-        } else {
-          console.warn('⚠️ Pi SDK still not available after delay (admin)');
-          setSdkError('Pi SDK not loaded - ensure you are using Pi Browser');
-        }
-      }, 3000);
-    }
-
-    return () => {
-      window.removeEventListener('piSDKReady', handlePiSDKReady);
-    };
-  }, []);
-
   // Get current Bitcoin block height
   useEffect(() => {
     fetchCurrentBitcoinBlock();
@@ -154,6 +106,14 @@ function App() {
       calculateStats();
     }
   }, [isAdmin]);
+
+  // Clear messages after 5 seconds
+  useEffect(() => {
+    if (success) {
+      const timer = setTimeout(() => setSuccess(''), 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [success]);
 
   // Bitcoin API functions
   const fetchCurrentBitcoinBlock = async () => {
@@ -332,8 +292,7 @@ function App() {
     try {
       await signOut(auth);
       setSuccess('Successfully logged out!');
-      setAdminPiUser(null);
-      setAdminWalletConnected(false);
+      disconnectAdmin();
       setLotteries([]);
     } catch (error) {
       setError('Error logging out');
@@ -341,55 +300,29 @@ function App() {
     }
   };
 
-  // Admin Pi wallet connection - Simplified for Pi Browser
-  const connectAdminWallet = async () => {
+  // Enhanced admin Pi wallet connection
+  const handleConnectAdminWallet = async () => {
     setError('');
     console.log('🔗 Connecting admin Pi wallet...');
     
     try {
-      if (!window.Pi) {
-        throw new Error('Pi SDK not available. Please use Pi Browser.');
-      }
-
-      if (!piSDKReady) {
+      if (!canConnect) {
         throw new Error('Pi SDK not ready. Please wait and try again.');
       }
 
-      setLoading(true);
-      
-      console.log('🔐 Starting admin Pi authentication...');
-      
-      const authResult = await window.Pi.authenticate(
-        ['payments'], 
-        {
-          onIncompletePaymentFound: (payment) => {
-            console.log('💳 Incomplete payment found:', payment);
-          }
-        }
-      );
-
-      setAdminPiUser(authResult.user);
-      setAdminWalletConnected(true);
+      await connectAdminWallet();
       setSuccess(`💰 Admin Pi wallet connected! Ready to distribute prizes.`);
       
     } catch (error) {
       console.error('❌ Admin Pi wallet connection failed:', error);
       setError(`Admin wallet connection failed: ${error.message}`);
-    } finally {
-      setLoading(false);
     }
   };
 
-  const disconnectAdminWallet = () => {
-    setAdminPiUser(null);
-    setAdminWalletConnected(false);
-    setSuccess('Admin Pi wallet disconnected');
-  };
-
-  // Prize distribution - Simplified for Pi Browser
+  // Enhanced prize distribution with new Pi SDK
   const distributePrizeToWinner = async (winner, lotteryId) => {
-    if (!adminWalletConnected) {
-      setError('Admin wallet must be connected to distribute prizes');
+    if (!adminFullyConnected) {
+      setError('Admin wallet must be fully connected to distribute prizes');
       return;
     }
 
@@ -408,48 +341,60 @@ function App() {
         metadata: {
           lotteryId,
           winnerPosition: winner.position,
-          distributedBy: adminPiUser.uid
+          distributedBy: adminPiUser.uid,
+          timestamp: Date.now()
         }
       };
 
       const paymentCallbacks = {
         onReadyForServerApproval: (paymentId) => {
           console.log('Payment ready for approval:', paymentId);
+          setSuccess(`Payment approved for ${winner.winner.username}: ${winner.prize}π`);
         },
+        
         onReadyForServerCompletion: async (paymentId, txnId) => {
           console.log('Payment completed:', paymentId, txnId);
           
-          // Update lottery document
-          await updateDoc(doc(db, 'lotteries', lotteryId), {
-            [`winners.${winner.position - 1}.paid`]: true,
-            [`winners.${winner.position - 1}.paidAt`]: Timestamp.now(),
-            [`winners.${winner.position - 1}.paymentId`]: paymentId,
-            [`winners.${winner.position - 1}.distributedBy`]: adminPiUser.uid
-          });
+          try {
+            // Update lottery document
+            await updateDoc(doc(db, 'lotteries', lotteryId), {
+              [`winners.${winner.position - 1}.paid`]: true,
+              [`winners.${winner.position - 1}.paidAt`]: Timestamp.now(),
+              [`winners.${winner.position - 1}.paymentId`]: paymentId,
+              [`winners.${winner.position - 1}.txnId`]: txnId,
+              [`winners.${winner.position - 1}.distributedBy`]: adminPiUser.uid
+            });
 
-          setDistributionResults(prev => ({
-            ...prev,
-            [`${lotteryId}-${winner.position}`]: {
-              success: true,
-              paymentId: paymentId,
-              timestamp: new Date()
-            }
-          }));
+            setDistributionResults(prev => ({
+              ...prev,
+              [`${lotteryId}-${winner.position}`]: {
+                success: true,
+                paymentId: paymentId,
+                txnId: txnId,
+                timestamp: new Date()
+              }
+            }));
 
-          setSuccess(`✅ Prize distributed to ${winner.winner.username || winner.winner.uid}: ${winner.prize}π`);
-          loadLotteries();
+            setSuccess(`✅ Prize distributed to ${winner.winner.username || winner.winner.uid}: ${winner.prize}π`);
+            loadLotteries();
+          } catch (updateError) {
+            console.error('Error updating lottery:', updateError);
+            setError('Payment successful but database update failed. Please refresh.');
+          }
         },
+        
         onCancel: (paymentId) => {
           console.log('Payment cancelled:', paymentId);
-          setError('Payment cancelled');
+          setError('Prize distribution cancelled');
         },
+        
         onError: (error, paymentId) => {
           console.error('Payment error:', error, paymentId);
-          setError(`Payment failed: ${error.message || error}`);
+          setError(`Prize distribution failed: ${error.message || error}`);
         }
       };
 
-      await window.Pi.createPayment(paymentData, paymentCallbacks);
+      await createPayment(paymentData, paymentCallbacks);
 
     } catch (error) {
       console.error('Prize distribution error:', error);
@@ -465,6 +410,17 @@ function App() {
       }));
     } finally {
       setDistributingPrizes(false);
+    }
+  };
+
+  // Enhanced test connection
+  const handleTestAdminConnection = async () => {
+    try {
+      setSuccess('Testing admin Pi connection...');
+      const result = await testConnection();
+      setSuccess(`✅ Admin connection test successful! User: ${result.user.username}`);
+    } catch (testError) {
+      setError(`❌ Admin connection test failed: ${testError.message}`);
     }
   };
 
@@ -649,7 +605,8 @@ function App() {
         prize: prizes[index],
         paid: false,
         paidAt: null,
-        paymentId: null
+        paymentId: null,
+        txnId: null
       }));
 
       const lotteryRef = doc(db, 'lotteries', lotteryId);
@@ -717,6 +674,17 @@ function App() {
   const clearMessages = () => {
     setError('');
     setSuccess('');
+    clearPiError();
+  };
+
+  // Get connection status color
+  const getConnectionStatusColor = () => {
+    switch (connectionStatus) {
+      case 'connected': return '#28a745';
+      case 'connecting': return '#ffc107';
+      case 'error': return '#dc3545';
+      default: return '#6c757d';
+    }
   };
 
   // Main loading state
@@ -730,7 +698,7 @@ function App() {
     );
   }
 
-  // Login form for non-admin users
+  // Enhanced login form for non-admin users
   if (!isAdmin) {
     return (
       <div className="container">
@@ -739,18 +707,51 @@ function App() {
           <p>Administrator Access Required</p>
         </div>
 
-        {/* Debug Info for Admin Login Issues */}
-        {(sdkError || !piSDKReady) && (
-          <div className="card" style={{border: '2px solid #ffc107', background: '#fff3cd'}}>
-            <h3>🔧 Pi Browser Debug Information (Admin)</h3>
-            <div style={{fontSize: '0.9rem', fontFamily: 'monospace'}}>
-              <p><strong>SDK Ready:</strong> {piSDKReady ? '✅ Yes' : '❌ No'}</p>
-              <p><strong>SDK Available:</strong> {window.Pi ? '✅ Yes' : '❌ No'}</p>
-              <p><strong>SDK Error:</strong> {sdkError || 'None'}</p>
-              <p><strong>User Agent:</strong> {debugInfo.userAgent}</p>
+        {/* Enhanced Debug Info for Admin Login Issues */}
+        <div className="card" style={{border: '2px solid #ffc107', background: '#fff3cd'}}>
+          <h3>🔧 Pi SDK Status (Admin)</h3>
+          <div style={{fontSize: '0.9rem', fontFamily: 'monospace'}}>
+            <div style={{display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '10px'}}>
+              <div style={{
+                width: '12px',
+                height: '12px',
+                borderRadius: '50%',
+                background: getConnectionStatusColor()
+              }}></div>
+              <span><strong>Connection:</strong> {connectionStatus}</span>
             </div>
+            <p><strong>SDK Ready:</strong> {sdkReady ? '✅ Yes' : '❌ No'}</p>
+            <p><strong>SDK Available:</strong> {window.Pi ? '✅ Yes' : '❌ No'}</p>
+            {authStep && <p><strong>Status:</strong> {authStep}</p>}
+            {piError && <p><strong>Error:</strong> {piError}</p>}
           </div>
-        )}
+          
+          {canConnect && (
+            <div style={{marginTop: '15px'}}>
+              <button 
+                onClick={handleTestAdminConnection}
+                className="button secondary"
+                style={{marginRight: '10px'}}
+              >
+                🧪 Test Pi Connection
+              </button>
+              <button 
+                onClick={() => setShowDebugInfo(!showDebugInfo)}
+                className="button secondary"
+              >
+                {showDebugInfo ? '🔽 Hide' : '🔼 Show'} Debug Info
+              </button>
+            </div>
+          )}
+          
+          {showDebugInfo && (
+            <div style={{marginTop: '15px', padding: '10px', background: '#f8f9fa', borderRadius: '4px'}}>
+              <pre style={{fontSize: '0.8rem', margin: 0, whiteSpace: 'pre-wrap'}}>
+                {JSON.stringify(getConnectionInfo(), null, 2)}
+              </pre>
+            </div>
+          )}
+        </div>
 
         <div className="card">
           <div className="login-form">
@@ -814,46 +815,62 @@ function App() {
   // Main admin dashboard
   return (
     <div className="container">
-      {/* Header */}
+      {/* Enhanced Header */}
       <div className="header">
         <h1>🎰 Pi Lottery Admin Dashboard</h1>
         <p>Manage provably fair lotteries with manual prize distribution</p>
       </div>
 
-      {/* Admin Info & Logout */}
+      {/* Enhanced Admin Info & Controls */}
       <div className="card">
         <div className="logged-in-header">
           <div className="admin-info">
-            ✅ Admin: {user.email}
+            <div style={{display: 'flex', alignItems: 'center', gap: '10px'}}>
+              <span>✅ Admin: {user.email}</span>
+              <div style={{
+                width: '8px',
+                height: '8px',
+                borderRadius: '50%',
+                background: getConnectionStatusColor(),
+                animation: connectionStatus === 'connecting' ? 'pulse 2s infinite' : 'none'
+              }}></div>
+            </div>
             {currentBitcoinBlock && (
               <div style={{fontSize: '0.9rem', color: '#6c757d', marginTop: '5px'}}>
                 📦 Bitcoin Block: #{currentBitcoinBlock}
               </div>
             )}
           </div>
-          <button onClick={handleLogout} className="button secondary">
-            🚪 Logout
-          </button>
-        </div>
-      </div>
-
-      {/* Debug Info for Pi Browser Issues */}
-      {(sdkError || !piSDKReady) && (
-        <div className="card" style={{border: '2px solid #ffc107', background: '#fff3cd'}}>
-          <h3>🔧 Pi Browser Debug Information (Admin)</h3>
-          <div style={{fontSize: '0.9rem', fontFamily: 'monospace'}}>
-            <p><strong>SDK Ready:</strong> {piSDKReady ? '✅ Yes' : '❌ No'}</p>
-            <p><strong>SDK Available:</strong> {window.Pi ? '✅ Yes' : '❌ No'}</p>
-            <p><strong>SDK Error:</strong> {sdkError || 'None'}</p>
-            <p><strong>User Agent:</strong> {debugInfo.userAgent}</p>
+          <div style={{display: 'flex', gap: '10px'}}>
+            <button 
+              onClick={() => setShowDebugInfo(!showDebugInfo)}
+              className="button secondary"
+              style={{padding: '6px 12px', fontSize: '0.9rem'}}
+            >
+              🔧 Debug
+            </button>
+            <button onClick={handleLogout} className="button secondary">
+              🚪 Logout
+            </button>
           </div>
-          {!piSDKReady && (
-            <p style={{marginTop: '10px', color: '#856404'}}>
-              <strong>💡 Note:</strong> Pi SDK is required for prize distribution. Ensure you're using Pi Browser.
-            </p>
-          )}
         </div>
-      )}
+        
+        {showDebugInfo && (
+          <div style={{
+            marginTop: '15px', 
+            padding: '15px', 
+            background: '#f8f9fa', 
+            borderRadius: '8px',
+            fontSize: '0.9rem',
+            fontFamily: 'monospace'
+          }}>
+            <h4>🔧 Admin Debug Information:</h4>
+            <pre style={{margin: '10px 0', whiteSpace: 'pre-wrap'}}>
+              {JSON.stringify(getConnectionInfo(), null, 2)}
+            </pre>
+          </div>
+        )}
+      </div>
 
       {/* Messages */}
       {error && (
@@ -866,6 +883,12 @@ function App() {
         <div className="success">
           {success}
           <button onClick={clearMessages} style={{float: 'right', background: 'none', border: 'none', color: 'inherit', cursor: 'pointer'}}>×</button>
+        </div>
+      )}
+      {piError && (
+        <div className="error">
+          Pi SDK Error: {piError}
+          <button onClick={clearPiError} style={{float: 'right', background: 'none', border: 'none', color: 'inherit', cursor: 'pointer'}}>×</button>
         </div>
       )}
 
@@ -889,36 +912,76 @@ function App() {
         </div>
       </div>
 
-      {/* Admin Pi Wallet for Prize Distribution */}
+      {/* Enhanced Admin Pi Wallet for Prize Distribution */}
       <div className="card">
         <h2>💰 Admin Pi Wallet (Prize Distribution)</h2>
-        <div className={`wallet-status ${adminWalletConnected ? 'wallet-connected' : ''}`}>
+        <div className={`wallet-status ${adminFullyConnected ? 'wallet-connected' : ''}`}>
           <div className="wallet-indicator"></div>
           <div className="wallet-info">
-            <h4>{adminWalletConnected ? '✅ Admin Wallet Connected' : '❌ Admin Wallet Disconnected'}</h4>
+            <h4>
+              {adminFullyConnected ? '✅ Admin Wallet Fully Connected' : 
+               adminWalletConnected ? '⚠️ Admin Wallet Connected (Payment Access Needed)' : 
+               '❌ Admin Wallet Disconnected'}
+            </h4>
             {adminPiUser && (
               <p>👤 Admin: {adminPiUser.username} ({adminPiUser.uid})</p>
             )}
             <p style={{fontSize: '0.9rem', color: '#6c757d'}}>
-              {adminWalletConnected 
+              {adminFullyConnected 
                 ? '🎯 Ready to distribute prizes manually' 
+                : adminWalletConnected 
+                ? '💰 Click "Enable Payments" to distribute prizes'
                 : '⚠️ Connect wallet to distribute prizes to winners'
               }
             </p>
+            {authStep && (
+              <p style={{fontSize: '0.9rem', color: '#6f42c1', fontStyle: 'italic'}}>
+                {authStep}
+              </p>
+            )}
           </div>
-          {adminWalletConnected ? (
-            <button onClick={disconnectAdminWallet} className="button danger">
-              🔌 Disconnect
-            </button>
-          ) : (
-            <button 
-              onClick={connectAdminWallet} 
-              className="button success"
-              disabled={!piSDKReady || loading}
-            >
-              {loading ? '🔄 Connecting...' : piSDKReady ? '💰 Connect Admin Wallet' : '⏳ Pi SDK Loading...'}
-            </button>
-          )}
+          
+          <div style={{display: 'flex', flexDirection: 'column', gap: '8px'}}>
+            {adminFullyConnected ? (
+              <button onClick={disconnectAdmin} className="button danger">
+                🔌 Disconnect
+              </button>
+            ) : adminWalletConnected ? (
+              <>
+                <button 
+                  onClick={requestAdminPaymentAccess}
+                  className="button warning"
+                  disabled={piLoading}
+                >
+                  {piLoading ? '🔄 Requesting...' : '💰 Enable Payments'}
+                </button>
+                <button onClick={disconnectAdmin} className="button secondary" style={{fontSize: '0.9rem'}}>
+                  🔌 Disconnect
+                </button>
+              </>
+            ) : (
+              <button 
+                onClick={handleConnectAdminWallet}
+                className="button success"
+                disabled={!canConnect || piLoading}
+              >
+                {piLoading ? `🔄 ${authStep || 'Connecting...'}` : 
+                 canConnect ? '💰 Connect Admin Wallet' : 
+                 '⏳ Pi SDK Loading...'}
+              </button>
+            )}
+            
+            {/* Test connection button for debugging */}
+            {canConnect && !piLoading && (
+              <button 
+                onClick={handleTestAdminConnection}
+                className="button secondary"
+                style={{padding: '6px 12px', fontSize: '0.9rem'}}
+              >
+                🧪 Test Connection
+              </button>
+            )}
+          </div>
         </div>
       </div>
 
@@ -1039,7 +1102,7 @@ function App() {
         </form>
       </div>
 
-      {/* All Lotteries with Prize Distribution */}
+      {/* All Lotteries with Enhanced Prize Distribution */}
       <div className="card">
         <h2>📋 All Lotteries</h2>
         {lotteries.length === 0 ? (
@@ -1101,7 +1164,7 @@ function App() {
                     </div>
                   )}
 
-                  {/* Winners and Prize Distribution */}
+                  {/* Enhanced Winners and Prize Distribution */}
                   {hasWinners && (
                     <div className="winners-section" style={{margin: '20px 0'}}>
                       <h4>🏆 Winners & Prize Distribution</h4>
@@ -1111,7 +1174,7 @@ function App() {
                             display: 'flex', 
                             justifyContent: 'space-between', 
                             alignItems: 'center',
-                            padding: '10px',
+                            padding: '15px',
                             background: '#f8f9fa',
                             borderRadius: '8px',
                             border: winner.paid ? '2px solid #28a745' : '2px solid #ffc107'
@@ -1130,22 +1193,45 @@ function App() {
                             </div>
                             <div className="winner-actions">
                               {winner.paid ? (
-                                <span style={{color: '#28a745', fontWeight: 'bold', fontSize: '0.9rem'}}>
-                                  ✅ Paid
+                                <div style={{textAlign: 'right'}}>
+                                  <span style={{color: '#28a745', fontWeight: 'bold', fontSize: '0.9rem'}}>
+                                    ✅ Paid
+                                  </span>
                                   {winner.paidAt && (
                                     <div style={{fontSize: '0.8rem', color: '#6c757d'}}>
                                       {formatDate(winner.paidAt.toDate())}
                                     </div>
                                   )}
-                                </span>
+                                  {winner.txnId && (
+                                    <div style={{fontSize: '0.7rem', color: '#6c757d', fontFamily: 'monospace'}}>
+                                      TX: {winner.txnId.substring(0, 8)}...
+                                    </div>
+                                  )}
+                                </div>
                               ) : (
                                 <button
                                   onClick={() => distributePrizeToWinner(winner, lottery.id)}
                                   className="button success"
-                                  disabled={!adminWalletConnected || distributingPrizes}
+                                  disabled={!adminFullyConnected || distributingPrizes}
                                   style={{padding: '8px 16px', fontSize: '0.9rem'}}
                                 >
-                                  {distributingPrizes ? '🔄 Sending...' : `💰 Send ${winner.prize}π`}
+                                  {distributingPrizes ? (
+                                    <span>
+                                      <span style={{
+                                        display: 'inline-block',
+                                        width: '12px',
+                                        height: '12px',
+                                        border: '2px solid #ffffff40',
+                                        borderTop: '2px solid #ffffff',
+                                        borderRadius: '50%',
+                                        animation: 'spin 1s linear infinite',
+                                        marginRight: '6px'
+                                      }}></span>
+                                      Sending...
+                                    </span>
+                                  ) : (
+                                    `💰 Send ${winner.prize}π`
+                                  )}
                                 </button>
                               )}
                             </div>
@@ -1153,13 +1239,19 @@ function App() {
                         ))}
                       </div>
                       
-                      {/* Prize Distribution Summary */}
-                      <div style={{marginTop: '15px', padding: '10px', background: '#e9ecef', borderRadius: '8px'}}>
+                      {/* Enhanced Prize Distribution Summary */}
+                      <div style={{marginTop: '15px', padding: '15px', background: '#e9ecef', borderRadius: '8px'}}>
                         <strong>📊 Distribution Summary:</strong>
-                        <div style={{marginTop: '5px'}}>
-                          Paid: {lottery.winners.filter(w => w.paid).length}/{lottery.winners.length} winners • 
-                          Total Distributed: {lottery.winners.filter(w => w.paid).reduce((sum, w) => sum + w.prize, 0).toFixed(2)}π • 
-                          Remaining: {lottery.winners.filter(w => !w.paid).reduce((sum, w) => sum + w.prize, 0).toFixed(2)}π
+                        <div style={{marginTop: '8px', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '10px'}}>
+                          <div>
+                            <span style={{color: '#28a745'}}>✅ Paid:</span> {lottery.winners.filter(w => w.paid).length}/{lottery.winners.length}
+                          </div>
+                          <div>
+                            <span style={{color: '#007bff'}}>💰 Distributed:</span> {lottery.winners.filter(w => w.paid).reduce((sum, w) => sum + w.prize, 0).toFixed(2)}π
+                          </div>
+                          <div>
+                            <span style={{color: '#ffc107'}}>⏳ Remaining:</span> {lottery.winners.filter(w => !w.paid).reduce((sum, w) => sum + w.prize, 0).toFixed(2)}π
+                          </div>
                         </div>
                       </div>
                     </div>
@@ -1198,6 +1290,19 @@ function App() {
           </div>
         )}
       </div>
+
+      {/* Add CSS for animations */}
+      <style jsx>{`
+        @keyframes spin {
+          0% { transform: rotate(0deg); }
+          100% { transform: rotate(360deg); }
+        }
+        
+        @keyframes pulse {
+          0%, 100% { opacity: 1; }
+          50% { opacity: 0.5; }
+        }
+      `}</style>
     </div>
   );
 }
