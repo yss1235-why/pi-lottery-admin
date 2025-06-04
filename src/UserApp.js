@@ -1,4 +1,4 @@
-// File path: src/UserApp.js - Fixed Build Errors
+// File path: src/UserApp.js - Complete Fixed Version
 import React, { useState, useEffect } from 'react';
 import { db } from './firebase';
 import { 
@@ -34,7 +34,7 @@ const usePiWallet = () => {
     const maxRetries = 3;
     
     return new Promise(async (resolve, reject) => {
-      let timeoutId; // Fixed: removed unnecessary reassignment
+      let timeoutId;
       let authCompleted = false;
 
       // Set timeout
@@ -235,7 +235,6 @@ const usePiWallet = () => {
     requestPaymentPermission,
     isSDKReady: !!window.Pi,
     canConnect: !!window.Pi && !loading,
-    // Expose setError for external use
     setError
   };
 };
@@ -273,7 +272,7 @@ function UserApp() {
     requestPaymentPermission,
     isSDKReady,
     canConnect,
-    setError // Now properly defined
+    setError
   } = usePiWallet();
 
   // App state
@@ -326,35 +325,74 @@ function UserApp() {
     return () => clearInterval(interval);
   }, [walletConnected]);
 
-  // Data loading functions
+  // Data loading functions with error handling for missing indexes
   const loadActiveLotteries = async () => {
     try {
       const lotteriesRef = collection(db, 'lotteries');
-      const q = query(
-        lotteriesRef, 
-        where('status', '==', 'active'),
-        orderBy('createdAt', 'desc')
-      );
-      const querySnapshot = await getDocs(q);
       
-      const lotteries = [];
-      querySnapshot.forEach((doc) => {
-        const data = doc.data();
-        const endDate = data.endDate?.toDate?.() || new Date(data.endDate);
+      // Try the indexed query first
+      try {
+        const q = query(
+          lotteriesRef, 
+          where('status', '==', 'active'),
+          orderBy('createdAt', 'desc')
+        );
+        const querySnapshot = await getDocs(q);
         
-        if (endDate > new Date()) {
-          lotteries.push({
-            id: doc.id,
-            ...data,
-            endDate,
-            createdAt: data.createdAt?.toDate?.() || new Date(data.createdAt)
+        const lotteries = [];
+        querySnapshot.forEach((doc) => {
+          const data = doc.data();
+          const endDate = data.endDate?.toDate?.() || new Date(data.endDate);
+          
+          if (endDate > new Date()) {
+            lotteries.push({
+              id: doc.id,
+              ...data,
+              endDate,
+              createdAt: data.createdAt?.toDate?.() || new Date(data.createdAt)
+            });
+          }
+        });
+        
+        setActiveLotteries(lotteries);
+        
+      } catch (indexError) {
+        if (indexError.code === 'failed-precondition' || indexError.message?.includes('index')) {
+          console.warn('⚠️ Firebase index not ready, using fallback query:', indexError.message);
+          
+          // Fallback: Get all lotteries and filter client-side
+          const fallbackSnapshot = await getDocs(lotteriesRef);
+          const lotteries = [];
+          
+          fallbackSnapshot.forEach((doc) => {
+            const data = doc.data();
+            const endDate = data.endDate?.toDate?.() || new Date(data.endDate);
+            
+            if (data.status === 'active' && endDate > new Date()) {
+              lotteries.push({
+                id: doc.id,
+                ...data,
+                endDate,
+                createdAt: data.createdAt?.toDate?.() || new Date(data.createdAt)
+              });
+            }
           });
+          
+          // Sort client-side
+          lotteries.sort((a, b) => b.createdAt - a.createdAt);
+          setActiveLotteries(lotteries);
+          
+        } else {
+          throw indexError;
         }
-      });
+      }
       
-      setActiveLotteries(lotteries);
     } catch (loadError) {
       console.error('Error loading active lotteries:', loadError);
+      // Don't show error to user for index issues
+      if (!loadError.message?.includes('index')) {
+        setError('Failed to load lotteries. Please refresh the page.');
+      }
     }
   };
 
@@ -394,25 +432,58 @@ function UserApp() {
   const loadCompletedLotteries = async () => {
     try {
       const lotteriesRef = collection(db, 'lotteries');
-      const q = query(
-        lotteriesRef,
-        where('status', '==', 'completed'),
-        orderBy('drawnAt', 'desc')
-      );
-      const querySnapshot = await getDocs(q);
       
-      const completed = [];
-      querySnapshot.forEach((doc) => {
-        const data = doc.data();
-        completed.push({
-          id: doc.id,
-          ...data,
-          endDate: data.endDate?.toDate?.() || new Date(data.endDate),
-          drawnAt: data.drawnAt?.toDate?.() || new Date(data.drawnAt)
+      // Try indexed query first
+      try {
+        const q = query(
+          lotteriesRef,
+          where('status', '==', 'completed'),
+          orderBy('drawnAt', 'desc')
+        );
+        const querySnapshot = await getDocs(q);
+        
+        const completed = [];
+        querySnapshot.forEach((doc) => {
+          const data = doc.data();
+          completed.push({
+            id: doc.id,
+            ...data,
+            endDate: data.endDate?.toDate?.() || new Date(data.endDate),
+            drawnAt: data.drawnAt?.toDate?.() || new Date(data.drawnAt)
+          });
         });
-      });
+        
+        setCompletedLotteries(completed.slice(0, 10));
+        
+      } catch (indexError) {
+        if (indexError.code === 'failed-precondition' || indexError.message?.includes('index')) {
+          console.warn('⚠️ Firebase index not ready for completed lotteries, using fallback');
+          
+          // Fallback: Get all and filter client-side
+          const fallbackSnapshot = await getDocs(lotteriesRef);
+          const completed = [];
+          
+          fallbackSnapshot.forEach((doc) => {
+            const data = doc.data();
+            if (data.status === 'completed' && data.drawnAt) {
+              completed.push({
+                id: doc.id,
+                ...data,
+                endDate: data.endDate?.toDate?.() || new Date(data.endDate),
+                drawnAt: data.drawnAt?.toDate?.() || new Date(data.drawnAt)
+              });
+            }
+          });
+          
+          // Sort client-side
+          completed.sort((a, b) => b.drawnAt - a.drawnAt);
+          setCompletedLotteries(completed.slice(0, 10));
+          
+        } else {
+          throw indexError;
+        }
+      }
       
-      setCompletedLotteries(completed.slice(0, 10));
     } catch (loadError) {
       console.error('Error loading completed lotteries:', loadError);
     }
