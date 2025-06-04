@@ -1,14 +1,18 @@
-// File path: src/hooks/usePiSDK.js - Enhanced Pi SDK Integration for Pi Browser
+// File path: src/hooks/usePiSDK.js - Enhanced for Missing Pi Browser Popup Fix
 import { useState, useEffect, useCallback, useRef } from 'react';
 
-// Track initialization for debugging
+// Track initialization and popup issues
 if (!window.PI_LOTTERY_START_TIME) {
   window.PI_LOTTERY_START_TIME = Date.now();
 }
 
+if (!window.PI_AUTH_ATTEMPTS) {
+  window.PI_AUTH_ATTEMPTS = [];
+}
+
 /**
- * Enhanced Pi SDK Hook optimized for Pi Browser
- * Includes extended timeouts, better error handling, and Pi Browser specific optimizations
+ * Enhanced Pi SDK Hook - Specifically fixes missing authentication popup issue
+ * Common in Pi Browser when SDK doesn't properly trigger native authentication
  */
 export const usePiSDK = () => {
   // State management
@@ -20,21 +24,24 @@ export const usePiSDK = () => {
   const [sdkReady, setSdkReady] = useState(false);
   
   // Connection state
-  const [connectionStatus, setConnectionStatus] = useState('disconnected'); // disconnected, connecting, connected, error
+  const [connectionStatus, setConnectionStatus] = useState('disconnected');
   const [authStep, setAuthStep] = useState('');
+  const [popupIssueDetected, setPopupIssueDetected] = useState(false);
   
   // Refs for cleanup
   const authTimeoutRef = useRef(null);
   const retryTimeoutRef = useRef(null);
   const mountedRef = useRef(true);
+  const popupTimeoutRef = useRef(null);
 
-  // Enhanced Configuration for Pi Browser
+  // Enhanced configuration for Pi Browser popup issues
   const PI_SDK_CONFIG = {
     version: "2.0",
-    sandbox: true, // Set to false for mainnet
-    timeout: 60000, // 60 seconds for mobile Pi Browser
-    maxRetries: 5, // More retries for mobile
-    retryDelay: 3000 // 3 seconds between retries
+    sandbox: true,
+    timeout: 45000, // 45 seconds - optimized for popup detection
+    maxRetries: 3,
+    retryDelay: 5000,
+    popupTimeout: 10000 // 10 seconds to detect if popup appears
   };
 
   // Check if component is still mounted
@@ -46,128 +53,259 @@ export const usePiSDK = () => {
       mountedRef.current = false;
       if (authTimeoutRef.current) clearTimeout(authTimeoutRef.current);
       if (retryTimeoutRef.current) clearTimeout(retryTimeoutRef.current);
+      if (popupTimeoutRef.current) clearTimeout(popupTimeoutRef.current);
     };
   }, []);
 
-  // Initialize Pi SDK with enhanced Pi Browser detection
+  // Enhanced Pi Browser detection
+  const detectPiBrowser = useCallback(() => {
+    const userAgent = navigator.userAgent;
+    const windowFeatures = {
+      hasPi: !!window.Pi,
+      hasWebView: userAgent.includes('wv'),
+      isAndroid: userAgent.includes('Android'),
+      isChrome: userAgent.includes('Chrome'),
+      isPiBrowser: userAgent.includes('PiBrowser') || userAgent.includes('Pi Browser')
+    };
+
+    // More comprehensive Pi Browser detection
+    const isPiBrowserLikely = 
+      windowFeatures.hasPi || 
+      windowFeatures.isPiBrowser || 
+      (windowFeatures.hasWebView && windowFeatures.isAndroid && windowFeatures.isChrome);
+
+    console.log('🔍 Browser Detection:', {
+      userAgent,
+      ...windowFeatures,
+      isPiBrowserLikely,
+      piSDKMethods: window.Pi ? Object.keys(window.Pi) : [],
+      timestamp: new Date().toISOString()
+    });
+
+    return {
+      ...windowFeatures,
+      isPiBrowserLikely,
+      confidence: windowFeatures.isPiBrowser ? 'high' : 
+                  windowFeatures.hasPi ? 'medium' : 
+                  isPiBrowserLikely ? 'low' : 'none'
+    };
+  }, []);
+
+  // Initialize Pi SDK with enhanced popup detection
   const initializePiSDK = useCallback(async () => {
     try {
-      console.log('🔍 Checking Pi SDK availability...');
+      console.log('🔍 Starting Pi SDK initialization...');
       
+      const browserInfo = detectPiBrowser();
+      console.log('📱 Browser analysis:', browserInfo);
+
       if (!window.Pi) {
-        throw new Error('Pi SDK not available. Please use Pi Browser.');
+        if (browserInfo.isPiBrowserLikely) {
+          throw new Error('Pi SDK not loaded. Try refreshing the page or restarting Pi Browser.');
+        } else {
+          throw new Error('Please use the official Pi Browser to access this app.');
+        }
       }
 
-      console.log('📦 Pi SDK object found, checking methods...');
-      
-      // Check if required methods exist
-      if (typeof window.Pi.init !== 'function') {
-        throw new Error('Pi SDK init method not available');
-      }
-      
-      if (typeof window.Pi.authenticate !== 'function') {
-        throw new Error('Pi SDK authenticate method not available');
+      // Test SDK methods availability
+      const requiredMethods = ['init', 'authenticate'];
+      const availableMethods = Object.keys(window.Pi);
+      const missingMethods = requiredMethods.filter(method => !availableMethods.includes(method));
+
+      console.log('📋 SDK Methods Check:', {
+        required: requiredMethods,
+        available: availableMethods,
+        missing: missingMethods
+      });
+
+      if (missingMethods.length > 0) {
+        throw new Error(`Pi SDK missing required methods: ${missingMethods.join(', ')}`);
       }
 
-      // Initialize SDK with Pi Browser optimized settings
-      console.log('⚙️ Initializing Pi SDK for Pi Browser...');
+      // Initialize with popup-friendly settings
+      console.log('⚙️ Initializing Pi SDK...');
       
       try {
-        await window.Pi.init({
+        const initResult = await window.Pi.init({
           version: PI_SDK_CONFIG.version,
-          sandbox: PI_SDK_CONFIG.sandbox,
-          timeout: PI_SDK_CONFIG.timeout
+          sandbox: PI_SDK_CONFIG.sandbox
         });
-        console.log('✅ Pi SDK initialized successfully');
+        console.log('✅ Pi SDK init result:', initResult);
       } catch (initError) {
-        console.warn('⚠️ SDK init failed, but continuing...', initError);
-        // Sometimes init fails but SDK still works
+        console.warn('⚠️ SDK init returned error (but may still work):', initError);
+        // Continue anyway - sometimes init "fails" but SDK still works
       }
 
       if (isMounted()) {
         setSdkReady(true);
         setError(null);
+        setPopupIssueDetected(false);
         console.log('🎯 Pi SDK ready for authentication');
       }
 
     } catch (error) {
       console.error('❌ Pi SDK initialization failed:', error);
       if (isMounted()) {
-        setError(`SDK Initialization Failed: ${error.message}`);
+        setError(error.message);
         setSdkReady(false);
       }
     }
-  }, []);
+  }, [detectPiBrowser]);
 
-  // Listen for Pi SDK ready event
+  // Listen for Pi SDK ready event with enhanced detection
   useEffect(() => {
     const handlePiSDKReady = () => {
       console.log('📡 Pi SDK ready event received');
       initializePiSDK();
     };
 
-    // Check if already available
+    // Immediate check
     if (window.Pi) {
+      console.log('📦 Pi SDK already available');
       initializePiSDK();
     } else {
+      console.log('⏳ Waiting for Pi SDK...');
+      
       // Listen for SDK ready event
       window.addEventListener('piSDKReady', handlePiSDKReady);
       
-      // Fallback check after delay
-      const fallbackCheck = setTimeout(() => {
-        if (window.Pi && !sdkReady) {
-          initializePiSDK();
-        }
-      }, 3000);
+      // Multiple fallback checks with increasing delays
+      const checkIntervals = [1000, 2000, 3000, 5000];
+      const timeouts = checkIntervals.map((delay, index) => {
+        return setTimeout(() => {
+          console.log(`🔄 Fallback check ${index + 1}/${checkIntervals.length}`);
+          if (window.Pi && !sdkReady) {
+            console.log('📦 Pi SDK found in fallback check');
+            initializePiSDK();
+          }
+        }, delay);
+      });
 
       return () => {
         window.removeEventListener('piSDKReady', handlePiSDKReady);
-        clearTimeout(fallbackCheck);
+        timeouts.forEach(timeout => clearTimeout(timeout));
       };
     }
   }, [initializePiSDK, sdkReady]);
 
-  // Enhanced authentication with Pi Browser optimization
-  const authenticateWithRetry = useCallback(async (scopes = ['username'], retryCount = 0) => {
-    console.log(`🔐 Starting authentication attempt ${retryCount + 1}/${PI_SDK_CONFIG.maxRetries + 1}...`);
-    console.log('📋 Requested scopes:', scopes);
+  // Enhanced authentication with popup detection
+  const authenticateWithPopupDetection = useCallback(async (scopes = ['username'], retryCount = 0) => {
+    const attemptId = `auth_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
     
-    return new Promise((resolve, reject) => {
-      // Clear any existing timeout
-      if (authTimeoutRef.current) {
-        clearTimeout(authTimeoutRef.current);
-      }
+    console.log(`🔐 Authentication attempt ${attemptId}:`, {
+      scopes,
+      retryCount,
+      maxRetries: PI_SDK_CONFIG.maxRetries,
+      popupTimeout: PI_SDK_CONFIG.popupTimeout
+    });
 
-      const timeout = setTimeout(() => {
+    // Record attempt for debugging
+    window.PI_AUTH_ATTEMPTS.push({
+      id: attemptId,
+      timestamp: new Date().toISOString(),
+      scopes,
+      retryCount
+    });
+
+    return new Promise((resolve, reject) => {
+      let authTimeout;
+      let popupTimeout;
+      let popupDetected = false;
+
+      // Set up popup detection timeout
+      popupTimeout = setTimeout(() => {
+        if (!popupDetected) {
+          console.warn('⚠️ No authentication popup detected after 10 seconds');
+          if (isMounted()) {
+            setPopupIssueDetected(true);
+            setAuthStep('No popup detected. Pi Browser may need to be refreshed.');
+          }
+        }
+      }, PI_SDK_CONFIG.popupTimeout);
+
+      // Set up main authentication timeout
+      authTimeout = setTimeout(() => {
         console.error(`⏰ Authentication timeout after ${PI_SDK_CONFIG.timeout / 1000} seconds`);
-        reject(new Error(`Authentication timeout after ${PI_SDK_CONFIG.timeout / 1000} seconds. Please try again.`));
+        clearTimeout(popupTimeout);
+        
+        if (!popupDetected) {
+          reject(new Error('Authentication popup did not appear. Please refresh Pi Browser and try again.'));
+        } else {
+          reject(new Error('Authentication timed out. Please try again.'));
+        }
       }, PI_SDK_CONFIG.timeout);
 
-      authTimeoutRef.current = timeout;
+      // Store timeout refs
+      authTimeoutRef.current = authTimeout;
+      popupTimeoutRef.current = popupTimeout;
 
-      // Enhanced authentication call
-      console.log('🚀 Calling Pi.authenticate...');
-      
+      // Enhanced authentication with user interaction detection
+      console.log('🚀 Calling Pi.authenticate with popup detection...');
+
       try {
-        window.Pi.authenticate(scopes, {
+        // Create authentication promise
+        const authPromise = window.Pi.authenticate(scopes, {
           onIncompletePaymentFound: (payment) => {
             console.log('💳 Incomplete payment found:', payment);
+            popupDetected = true; // Some interaction occurred
             if (isMounted()) {
               setAuthStep('Processing incomplete payment...');
             }
           }
-        }).then(authResult => {
-          console.log('✅ Authentication successful:', authResult);
-          clearTimeout(timeout);
+        });
+
+        // Monitor for user interaction (popup likely appeared)
+        const interactionEvents = ['focus', 'blur', 'visibilitychange'];
+        const handleInteraction = () => {
+          if (!popupDetected) {
+            console.log('👆 User interaction detected - popup likely appeared');
+            popupDetected = true;
+            clearTimeout(popupTimeout);
+            if (isMounted()) {
+              setPopupIssueDetected(false);
+              setAuthStep('Authentication popup detected. Please complete the request in Pi Browser.');
+            }
+          }
+        };
+
+        // Add event listeners for interaction detection
+        interactionEvents.forEach(event => {
+          window.addEventListener(event, handleInteraction, { once: true });
+        });
+
+        // Handle authentication result
+        authPromise.then(authResult => {
+          console.log('✅ Authentication successful:', {
+            username: authResult.user?.username,
+            uid: authResult.user?.uid,
+            hasAccessToken: !!authResult.accessToken
+          });
+
+          clearTimeout(authTimeout);
+          clearTimeout(popupTimeout);
+          
+          // Clean up event listeners
+          interactionEvents.forEach(event => {
+            window.removeEventListener(event, handleInteraction);
+          });
+
           resolve(authResult);
+
         }).catch(authError => {
           console.error('❌ Authentication error:', authError);
-          clearTimeout(timeout);
           
-          // Enhanced retry logic for Pi Browser
+          clearTimeout(authTimeout);
+          clearTimeout(popupTimeout);
+          
+          // Clean up event listeners
+          interactionEvents.forEach(event => {
+            window.removeEventListener(event, handleInteraction);
+          });
+
+          // Enhanced retry logic
           if (retryCount < PI_SDK_CONFIG.maxRetries) {
             const nextRetry = retryCount + 1;
-            const delay = PI_SDK_CONFIG.retryDelay * nextRetry; // Increasing delay
+            const delay = PI_SDK_CONFIG.retryDelay * nextRetry;
             
             console.log(`🔄 Retrying authentication (${nextRetry}/${PI_SDK_CONFIG.maxRetries}) in ${delay/1000}s...`);
             
@@ -176,67 +314,65 @@ export const usePiSDK = () => {
             }
             
             retryTimeoutRef.current = setTimeout(() => {
-              authenticateWithRetry(scopes, nextRetry)
+              authenticateWithPopupDetection(scopes, nextRetry)
                 .then(resolve)
                 .catch(reject);
             }, delay);
           } else {
-            console.error('❌ All authentication attempts failed');
-            reject(new Error(`Authentication failed after ${PI_SDK_CONFIG.maxRetries + 1} attempts: ${authError.message || authError}`));
+            let errorMessage = authError.message || authError.toString();
+            
+            if (!popupDetected) {
+              errorMessage = 'Authentication popup did not appear. This usually means Pi Browser needs to be refreshed or restarted.';
+            }
+            
+            reject(new Error(`Authentication failed after ${PI_SDK_CONFIG.maxRetries + 1} attempts: ${errorMessage}`));
           }
         });
+
       } catch (syncError) {
         console.error('❌ Synchronous authentication error:', syncError);
-        clearTimeout(timeout);
-        reject(new Error(`Authentication call failed: ${syncError.message}`));
+        clearTimeout(authTimeout);
+        clearTimeout(popupTimeout);
+        
+        reject(new Error(`Failed to start authentication: ${syncError.message}`));
       }
     });
   }, []);
 
-  // Connect user with Pi Browser optimization
+  // Connect user with enhanced popup detection
   const connectUser = useCallback(async () => {
     if (!sdkReady) {
-      const errorMsg = 'Pi SDK not ready. Please wait for initialization to complete.';
-      console.error('❌', errorMsg);
-      throw new Error(errorMsg);
+      throw new Error('Pi SDK not ready. Please wait for initialization to complete.');
     }
 
-    // Check if we're in Pi Browser
-    const userAgent = navigator.userAgent;
-    const isPiBrowser = userAgent.includes('PiBrowser') || 
-                       userAgent.includes('Pi Browser') || 
-                       (userAgent.includes('Chrome') && userAgent.includes('wv'));
+    const browserInfo = detectPiBrowser();
     
-    console.log('📱 Browser detection:', {
-      userAgent,
-      isPiBrowser,
-      hasWindow: typeof window !== 'undefined',
-      hasPi: !!window.Pi,
-      piMethods: window.Pi ? Object.keys(window.Pi) : []
-    });
+    console.log('🔗 Starting connection with browser info:', browserInfo);
+
+    if (browserInfo.confidence === 'none') {
+      throw new Error('Please use the official Pi Browser to connect your wallet.');
+    }
 
     setLoading(true);
     setConnectionStatus('connecting');
     setError(null);
-    setAuthStep('Connecting to Pi Network...');
+    setPopupIssueDetected(false);
+    setAuthStep('Starting Pi Network connection...');
 
     try {
-      console.log('🔗 Starting Pi Network connection...');
-      
-      // Add user interaction hint for Pi Browser
+      // Give user clear instructions
       if (isMounted()) {
-        setAuthStep('Please approve the connection request in Pi Browser...');
+        setAuthStep('Please look for the Pi Browser authentication popup...');
       }
 
-      const authResult = await authenticateWithRetry(['username']);
-      
-      console.log('🎉 Authentication result:', authResult);
+      const authResult = await authenticateWithPopupDetection(['username']);
       
       if (isMounted() && authResult && authResult.user) {
         setPiUser(authResult.user);
         setIsAuthenticated(true);
         setConnectionStatus('connected');
         setAuthStep('');
+        setPopupIssueDetected(false);
         
         console.log('✅ User connected successfully:', {
           username: authResult.user.username,
@@ -252,28 +388,23 @@ export const usePiSDK = () => {
       console.error('❌ User connection failed:', error);
       
       if (isMounted()) {
-        // Provide more helpful error messages for common Pi Browser issues
-        let errorMessage = error.message;
-        
-        if (errorMessage.includes('timeout')) {
-          errorMessage = 'Connection timed out. Please ensure you have a stable internet connection and try again.';
-        } else if (errorMessage.includes('denied') || errorMessage.includes('cancelled')) {
-          errorMessage = 'Connection was cancelled. Please try again and approve the request.';
-        } else if (errorMessage.includes('network')) {
-          errorMessage = 'Network error. Please check your internet connection and try again.';
-        }
-        
-        setError(errorMessage);
+        setError(error.message);
         setConnectionStatus('error');
         setAuthStep('');
+        
+        // Set popup issue flag for specific error types
+        if (error.message.includes('popup') || error.message.includes('appear')) {
+          setPopupIssueDetected(true);
+        }
       }
+      
       throw error;
     } finally {
       if (isMounted()) {
         setLoading(false);
       }
     }
-  }, [sdkReady, authenticateWithRetry]);
+  }, [sdkReady, detectPiBrowser, authenticateWithPopupDetection]);
 
   // Request payment access
   const requestPaymentAccess = useCallback(async () => {
@@ -283,9 +414,10 @@ export const usePiSDK = () => {
 
     setLoading(true);
     setAuthStep('Requesting payment permissions...');
+    setPopupIssueDetected(false);
 
     try {
-      const paymentAuthResult = await authenticateWithRetry(['payments']);
+      const paymentAuthResult = await authenticateWithPopupDetection(['payments']);
       
       if (isMounted() && paymentAuthResult.user) {
         setPiUser(paymentAuthResult.user);
@@ -299,6 +431,10 @@ export const usePiSDK = () => {
       if (isMounted()) {
         setError(`Payment access failed: ${error.message}`);
         setAuthStep('');
+        
+        if (error.message.includes('popup') || error.message.includes('appear')) {
+          setPopupIssueDetected(true);
+        }
       }
       throw error;
     } finally {
@@ -306,17 +442,13 @@ export const usePiSDK = () => {
         setLoading(false);
       }
     }
-  }, [isAuthenticated, authenticateWithRetry]);
+  }, [isAuthenticated, authenticateWithPopupDetection]);
 
   // Full connection (username + payments)
   const connectWallet = useCallback(async () => {
     try {
-      // Step 1: Connect user
       await connectUser();
-      
-      // Step 2: Request payment access
       await requestPaymentAccess();
-      
       return piUser;
     } catch (error) {
       console.error('❌ Full wallet connection failed:', error);
@@ -324,7 +456,7 @@ export const usePiSDK = () => {
     }
   }, [connectUser, requestPaymentAccess, piUser]);
 
-  // Create payment with enhanced error handling
+  // Create payment
   const createPayment = useCallback(async (paymentData, callbacks = {}) => {
     if (!hasPaymentAccess) {
       throw new Error('Payment access required. Please connect wallet first.');
@@ -336,7 +468,6 @@ export const usePiSDK = () => {
 
     console.log('💰 Creating Pi payment:', paymentData);
 
-    // Enhanced callbacks with error handling
     const enhancedCallbacks = {
       onReadyForServerApproval: (paymentId) => {
         console.log('📋 Payment ready for approval:', paymentId);
@@ -375,87 +506,71 @@ export const usePiSDK = () => {
     setConnectionStatus('disconnected');
     setError(null);
     setAuthStep('');
+    setPopupIssueDetected(false);
     
-    // Clear any pending timeouts
+    // Clear timeouts
     if (authTimeoutRef.current) clearTimeout(authTimeoutRef.current);
     if (retryTimeoutRef.current) clearTimeout(retryTimeoutRef.current);
+    if (popupTimeoutRef.current) clearTimeout(popupTimeoutRef.current);
     
     console.log('🔌 User disconnected');
   }, []);
 
-  // Enhanced test connection with Pi Browser diagnostics
+  // Enhanced test connection with popup detection
   const testConnection = useCallback(async () => {
     if (!sdkReady) {
       throw new Error('Pi SDK not ready');
     }
 
-    console.log('🧪 Starting Pi Browser connection test...');
+    console.log('🧪 Starting enhanced connection test...');
     
     try {
-      setAuthStep('Testing Pi Browser connection...');
+      setAuthStep('Testing Pi Browser authentication...');
+      setPopupIssueDetected(false);
       
-      // Quick SDK check
-      if (!window.Pi || typeof window.Pi.authenticate !== 'function') {
-        throw new Error('Pi SDK methods not available');
-      }
-      
-      console.log('📋 Pi SDK methods available:', Object.keys(window.Pi));
-      
-      // Set up test timeout
-      const testTimeout = new Promise((_, reject) => {
-        setTimeout(() => {
-          reject(new Error('Test connection timeout - Pi Browser may not be responding'));
-        }, 15000); // 15 seconds for test
-      });
-      
-      // Attempt authentication
-      const authPromise = window.Pi.authenticate(['username'], {
-        onIncompletePaymentFound: () => {
-          console.log('🧪 Test: Incomplete payment found during test');
-        }
-      });
-      
-      const testResult = await Promise.race([authPromise, testTimeout]);
+      const browserInfo = detectPiBrowser();
+      console.log('🔍 Browser info for test:', browserInfo);
+
+      const testResult = await authenticateWithPopupDetection(['username']);
       
       if (isMounted()) {
         setAuthStep('');
       }
       
-      console.log('✅ Pi Browser connection test successful:', {
-        username: testResult.user?.username,
-        uid: testResult.user?.uid,
-        accessToken: testResult.accessToken ? 'present' : 'missing'
-      });
-      
+      console.log('✅ Connection test successful');
       return testResult;
+      
     } catch (error) {
       if (isMounted()) {
         setAuthStep('');
+        if (error.message.includes('popup')) {
+          setPopupIssueDetected(true);
+        }
       }
-      
-      console.error('❌ Pi Browser connection test failed:', error);
-      
-      // Provide specific error messages for common issues
-      let detailedError = error.message;
-      
-      if (error.message.includes('timeout')) {
-        detailedError = 'Pi Browser is not responding to authentication requests. Try refreshing the page or restarting Pi Browser.';
-      } else if (error.message.includes('not available')) {
-        detailedError = 'Pi SDK is not properly loaded. Please ensure you are using the official Pi Browser.';
-      } else if (error.message.includes('network')) {
-        detailedError = 'Network connectivity issue. Check your internet connection.';
-      }
-      
-      throw new Error(detailedError);
+      console.error('❌ Connection test failed:', error);
+      throw error;
     }
-  }, [sdkReady]);
+  }, [sdkReady, detectPiBrowser, authenticateWithPopupDetection]);
 
-  // Enhanced connection info for debugging Pi Browser issues
+  // Pi Browser refresh helper
+  const refreshPiBrowser = useCallback(() => {
+    console.log('🔄 Attempting Pi Browser refresh...');
+    
+    // Clear all state
+    disconnect();
+    
+    // Clear any stored auth attempts
+    window.PI_AUTH_ATTEMPTS = [];
+    
+    // Force page reload after a short delay
+    setTimeout(() => {
+      window.location.reload();
+    }, 1000);
+  }, [disconnect]);
+
+  // Enhanced debugging info
   const getConnectionInfo = useCallback(() => {
-    const userAgent = navigator.userAgent;
-    const isPiBrowser = userAgent.includes('PiBrowser') || 
-                       userAgent.includes('Pi Browser') || 
-                       (userAgent.includes('Chrome') && userAgent.includes('wv'));
+    const browserInfo = detectPiBrowser();
     
     return {
       // Basic state
@@ -466,85 +581,36 @@ export const usePiSDK = () => {
       user: piUser,
       error,
       authStep,
+      popupIssueDetected,
+      
+      // Enhanced browser detection
+      browser: browserInfo,
       
       // SDK information
       sdkVersion: window.Pi?.version || 'unknown',
       sdkMethods: window.Pi ? Object.keys(window.Pi).sort() : [],
       sdkAvailable: !!window.Pi,
       
-      // Browser information
-      userAgent,
-      isPiBrowser,
-      isMobile: /Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(userAgent),
-      
-      // Environment
-      environment: process.env.NODE_ENV || 'unknown',
-      timestamp: new Date().toISOString(),
+      // Authentication attempts
+      authAttempts: window.PI_AUTH_ATTEMPTS.slice(-5), // Last 5 attempts
       
       // Configuration
-      config: {
-        timeout: PI_SDK_CONFIG.timeout,
-        maxRetries: PI_SDK_CONFIG.maxRetries,
-        retryDelay: PI_SDK_CONFIG.retryDelay,
-        sandbox: PI_SDK_CONFIG.sandbox
-      },
+      config: PI_SDK_CONFIG,
       
-      // Performance
-      uptime: Date.now() - (window.PI_LOTTERY_START_TIME || Date.now()),
-      
-      // Network status
+      // Performance and environment
+      environment: process.env.NODE_ENV || 'unknown',
+      timestamp: new Date().toISOString(),
+      uptime: Date.now() - window.PI_LOTTERY_START_TIME,
       online: navigator.onLine,
+      
+      // Network info
       connection: navigator.connection ? {
         effectiveType: navigator.connection.effectiveType,
         downlink: navigator.connection.downlink,
         rtt: navigator.connection.rtt
       } : 'unknown'
     };
-  }, [sdkReady, isAuthenticated, hasPaymentAccess, connectionStatus, piUser, error, authStep]);
-
-  // Quick fix method for common Pi Browser issues
-  const quickFix = useCallback(async () => {
-    console.log('🔧 Starting Pi Browser quick fix...');
-    
-    // Reset all state
-    setPiUser(null);
-    setIsAuthenticated(false);
-    setHasPaymentAccess(false);
-    setConnectionStatus('disconnected');
-    setError(null);
-    setAuthStep('Performing quick fix...');
-    setLoading(false);
-    
-    // Clear timeouts
-    if (authTimeoutRef.current) clearTimeout(authTimeoutRef.current);
-    if (retryTimeoutRef.current) clearTimeout(retryTimeoutRef.current);
-    
-    // Wait a moment
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    
-    // Re-initialize SDK
-    try {
-      setAuthStep('Re-initializing Pi SDK...');
-      await initializePiSDK();
-      
-      setAuthStep('Quick fix completed. Try connecting again.');
-      
-      setTimeout(() => {
-        if (isMounted()) {
-          setAuthStep('');
-        }
-      }, 3000);
-      
-      console.log('✅ Quick fix completed');
-      return true;
-      
-    } catch (error) {
-      console.error('❌ Quick fix failed:', error);
-      setError(`Quick fix failed: ${error.message}`);
-      setAuthStep('');
-      return false;
-    }
-  }, [initializePiSDK]);
+  }, [sdkReady, isAuthenticated, hasPaymentAccess, connectionStatus, piUser, error, authStep, popupIssueDetected, detectPiBrowser]);
 
   // Return hook interface
   return {
@@ -557,6 +623,7 @@ export const usePiSDK = () => {
     sdkReady,
     connectionStatus,
     authStep,
+    popupIssueDetected, // New state for popup detection
     
     // Actions
     connectUser,
@@ -565,11 +632,12 @@ export const usePiSDK = () => {
     createPayment,
     disconnect,
     testConnection,
-    quickFix,
+    refreshPiBrowser, // New method for browser refresh
     
     // Utilities
     getConnectionInfo,
     clearError: () => setError(null),
+    detectPiBrowser,
     
     // Computed values
     canConnect: sdkReady && !loading,
@@ -578,5 +646,4 @@ export const usePiSDK = () => {
   };
 };
 
-// Export default for convenience
 export default usePiSDK;
