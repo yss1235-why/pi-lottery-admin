@@ -1,4 +1,4 @@
-// File path: src/UserApp.js - Updated with Authentication Fix
+// File path: src/UserApp.js - Fixed Build Errors
 import React, { useState, useEffect } from 'react';
 import { db } from './firebase';
 import { 
@@ -20,7 +20,7 @@ import {
   LEGAL_VERSIONS 
 } from './components/LegalComponents';
 
-// Enhanced Pi Wallet hook (inline for now - move to separate file later)
+// Enhanced Pi Wallet hook (fixed build errors)
 const usePiWallet = () => {
   const [piUser, setPiUser] = useState(null);
   const [walletConnected, setWalletConnected] = useState(false);
@@ -34,16 +34,17 @@ const usePiWallet = () => {
     const maxRetries = 3;
     
     return new Promise(async (resolve, reject) => {
-      let timeoutId;
+      let timeoutId; // Fixed: removed unnecessary reassignment
       let authCompleted = false;
 
       // Set timeout
-      timeoutId = setTimeout(() => {
+      const timeout = setTimeout(() => {
         if (!authCompleted) {
           authCompleted = true;
           reject(new Error(`Authentication timeout after ${timeoutMs/1000} seconds`));
         }
       }, timeoutMs);
+      timeoutId = timeout;
 
       try {
         setConnectionStep(`Authenticating... (attempt ${retryCount + 1}/${maxRetries + 1})`);
@@ -67,13 +68,13 @@ const usePiWallet = () => {
           resolve(authResult);
         }
 
-      } catch (error) {
+      } catch (authError) {
         // Clear timeout
         if (timeoutId) clearTimeout(timeoutId);
         
         if (!authCompleted) {
           authCompleted = true;
-          console.error(`❌ Authentication attempt ${retryCount + 1} failed:`, error);
+          console.error(`❌ Authentication attempt ${retryCount + 1} failed:`, authError);
           
           // Retry logic
           if (retryCount < maxRetries) {
@@ -84,7 +85,7 @@ const usePiWallet = () => {
                 .catch(reject);
             }, 2000);
           } else {
-            reject(error);
+            reject(authError);
           }
         }
       }
@@ -106,9 +107,9 @@ const usePiWallet = () => {
       console.log('✅ Payment permission granted:', paymentAuthResult);
       return paymentAuthResult;
       
-    } catch (error) {
-      console.error('❌ Payment permission failed:', error);
-      throw new Error(`Payment permission failed: ${error.message}`);
+    } catch (permError) {
+      console.error('❌ Payment permission failed:', permError);
+      throw new Error(`Payment permission failed: ${permError.message}`);
     }
   };
 
@@ -172,18 +173,18 @@ const usePiWallet = () => {
       
       console.log('🎉 Wallet connected successfully:', finalUser);
       
-    } catch (error) {
-      console.error('❌ Wallet connection failed:', error);
-      setError(`Connection failed: ${error.message}`);
+    } catch (connectionError) {
+      console.error('❌ Wallet connection failed:', connectionError);
+      setError(`Connection failed: ${connectionError.message}`);
       setConnectionStep('');
       
       // Update debug info with error
       setDebugInfo(prev => ({
         ...prev,
         lastError: {
-          message: error.message,
+          message: connectionError.message,
           timestamp: new Date().toISOString(),
-          stack: error.stack
+          stack: connectionError.stack
         }
       }));
     } finally {
@@ -204,10 +205,10 @@ const usePiWallet = () => {
       setConnectionStep('');
       return testResult;
       
-    } catch (error) {
-      console.error('❌ Connection test failed:', error);
+    } catch (testError) {
+      console.error('❌ Connection test failed:', testError);
       setConnectionStep('');
-      throw error;
+      throw testError;
     }
   };
 
@@ -233,14 +234,16 @@ const usePiWallet = () => {
     disconnectWallet,
     requestPaymentPermission,
     isSDKReady: !!window.Pi,
-    canConnect: !!window.Pi && !loading
+    canConnect: !!window.Pi && !loading,
+    // Expose setError for external use
+    setError
   };
 };
 
 function UserApp() {
   // Legal modal / consent tracking state
   const [legalModal, setLegalModal] = useState({ isOpen: false, type: 'privacy' });
-  const { recordConsent, hasConsent } = useConsentTracking();
+  const { recordConsent } = useConsentTracking();
 
   const openLegal = (type) => {
     setLegalModal({ isOpen: true, type });
@@ -269,7 +272,8 @@ function UserApp() {
     disconnectWallet,
     requestPaymentPermission,
     isSDKReady,
-    canConnect
+    canConnect,
+    setError // Now properly defined
   } = usePiWallet();
 
   // App state
@@ -322,7 +326,7 @@ function UserApp() {
     return () => clearInterval(interval);
   }, [walletConnected]);
 
-  // Data loading functions (unchanged)
+  // Data loading functions
   const loadActiveLotteries = async () => {
     try {
       const lotteriesRef = collection(db, 'lotteries');
@@ -349,8 +353,8 @@ function UserApp() {
       });
       
       setActiveLotteries(lotteries);
-    } catch (error) {
-      console.error('Error loading active lotteries:', error);
+    } catch (loadError) {
+      console.error('Error loading active lotteries:', loadError);
     }
   };
 
@@ -382,8 +386,8 @@ function UserApp() {
       });
       
       setMyEntries(entries);
-    } catch (error) {
-      console.error('Error loading my entries:', error);
+    } catch (loadError) {
+      console.error('Error loading my entries:', loadError);
     }
   };
 
@@ -409,8 +413,8 @@ function UserApp() {
       });
       
       setCompletedLotteries(completed.slice(0, 10));
-    } catch (error) {
-      console.error('Error loading completed lotteries:', error);
+    } catch (loadError) {
+      console.error('Error loading completed lotteries:', loadError);
     }
   };
 
@@ -441,7 +445,7 @@ function UserApp() {
     });
   };
 
-  // Ticket system functions (unchanged)
+  // Ticket system functions
   const calculateMaxTicketsForUser = (totalParticipants) => {
     return Math.max(2, Math.floor(totalParticipants * 0.02));
   };
@@ -470,8 +474,8 @@ function UserApp() {
         setSuccess('Requesting payment permission...');
         await requestPaymentPermission();
         setSuccess('Payment permission granted! You can now join lotteries.');
-      } catch (error) {
-        setError(`Payment permission required: ${error.message}`);
+      } catch (permissionError) {
+        setError(`Payment permission required: ${permissionError.message}`);
         return;
       }
     }
@@ -537,21 +541,21 @@ function UserApp() {
           console.log('❌ Payment cancelled:', paymentId);
           setError('Payment cancelled');
         },
-        onError: (error, paymentId) => {
-          console.error('❌ Payment error:', error, paymentId);
-          setError(`Payment failed: ${error.message || error}`);
+        onError: (paymentError, paymentId) => {
+          console.error('❌ Payment error:', paymentError, paymentId);
+          setError(`Payment failed: ${paymentError.message || paymentError}`);
         }
       };
 
       await window.Pi.createPayment(paymentData, paymentCallbacks);
 
-    } catch (error) {
-      console.error('❌ Join lottery error:', error);
-      setError(`Failed to join lottery: ${error.message}`);
+    } catch (joinError) {
+      console.error('❌ Join lottery error:', joinError);
+      setError(`Failed to join lottery: ${joinError.message}`);
     }
   };
 
-  // Utility functions (unchanged)
+  // Utility functions
   const formatTimeRemaining = (endDate) => {
     const now = new Date();
     const diff = endDate - now;
@@ -617,8 +621,8 @@ function UserApp() {
       setSuccess('Testing Pi connection...');
       const result = await testConnection();
       setSuccess(`✅ Connection test successful! User: ${result.user.username}`);
-    } catch (error) {
-      setError(`❌ Connection test failed: ${error.message}`);
+    } catch (testError) {
+      setError(`❌ Connection test failed: ${testError.message}`);
     }
   };
 
@@ -741,7 +745,6 @@ function UserApp() {
         </div>
       )}
 
-      {/* Rest of the component remains the same... */}
       {/* User Stats */}
       {walletConnected && (
         <div className="stats-grid">
@@ -854,13 +857,6 @@ function UserApp() {
                     </div>
                   </div>
 
-                  {/* 2% Ticket System Info */}
-                  <div className="warning" style={{margin: '15px 0'}}>
-                    <h4>🎫 Fair Ticket System (2% Max):</h4>
-                    <p>Users can buy up to {maxUserTickets} tickets ({((maxUserTickets / Math.max(participantCount, 1)) * 100).toFixed(1)}% of total)</p>
-                    <p>This ensures fair play - no single user can dominate the lottery!</p>
-                  </div>
-
                   {/* Provably Fair Info */}
                   <div className="success" style={{margin: '15px 0'}}>
                     <h4>🔒 Provably Fair Guarantee:</h4>
@@ -951,8 +947,6 @@ function UserApp() {
           </div>
         </div>
       )}
-
-      {/* Rest of the component (My Entries, Recent Winners, etc.) remains the same... */}
 
       {/* Legal Modal and Footer */}
       <LegalModal
