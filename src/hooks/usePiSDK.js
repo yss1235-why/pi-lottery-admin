@@ -29,7 +29,7 @@ export const usePiSDK = () => {
   // Configuration
   const PI_SDK_CONFIG = {
     version: "2.0",
-    sandbox: true,
+    sandbox: false,
     timeout: 30000,
     maxRetries: 2, // Fewer retries for auto-connect
     retryDelay: 3000,
