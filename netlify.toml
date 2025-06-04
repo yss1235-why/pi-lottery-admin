@@ -1,5 +1,3 @@
-# File path: netlify.toml - Fixed Production Configuration
-
 [build]
   command = "npm run build:production"
   publish = "build"
@@ -11,24 +9,24 @@
   GENERATE_SOURCEMAP = "false"
   REACT_APP_DEPLOYMENT_ENV = "production"
 
-# URL redirects for SPA routing - CRITICAL FIX
+# SPA redirects - CRITICAL for React routing
 [[redirects]]
   from = "/*"
   to = "/index.html"
   status = 200
 
-# Security headers
+# Fixed CSP with all required Firebase and Pi domains
 [[headers]]
   for = "/*"
   [headers.values]
-    X-Frame-Options = ""
+    X-Frame-Options = "SAMEORIGIN"
     X-XSS-Protection = "1; mode=block"
     X-Content-Type-Options = "nosniff"
     Referrer-Policy = "strict-origin-when-cross-origin"
-    Permissions-Policy = "camera=(), microphone=(), geolocation=()"
-    # The key fix is in the CSP:
-Content-Security-Policy = "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://sdk.minepi.com https://blockstream.info https://www.gstatic.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https: blob:; connect-src 'self' https://firebase.googleapis.com https://firestore.googleapis.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://blockstream.info https://sdk.minepi.com https://socialchain.app wss://*.firebaseio.com wss://*.web.app; frame-src 'none'; object-src 'none'; base-uri 'self'; form-action 'self';"
-# Static asset caching
+    # Fixed CSP with complete Firebase domains
+    Content-Security-Policy = "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://sdk.minepi.com https://blockstream.info https://www.gstatic.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https: blob:; connect-src 'self' https://firebase.googleapis.com https://firestore.googleapis.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://blockstream.info https://sdk.minepi.com https://socialchain.app wss://*.firebaseio.com wss://*.web.app; frame-src 'none'; object-src 'none'; base-uri 'self'; form-action 'self';"
+
+# Optimize static assets
 [[headers]]
   for = "/static/*"
   [headers.values]
@@ -40,7 +38,7 @@ Content-Security-Policy = "default-src 'self'; script-src 'self' 'unsafe-inline'
   [headers.values]
     Cache-Control = "public, max-age=31536000, immutable"
 
-# Pi SDK specific headers
+# Pi SDK caching
 [[headers]]
   for = "*.js"
   [headers.values]
@@ -54,7 +52,7 @@ Content-Security-Policy = "default-src 'self'; script-src 'self' 'unsafe-inline'
     REACT_APP_ENABLE_DEBUG_MODE = "false"
     GENERATE_SOURCEMAP = "false"
 
-# Development context
+# Development context  
 [context.development]
   command = "npm run build"
   [context.development.environment]
@@ -66,24 +64,3 @@ Content-Security-Policy = "default-src 'self'; script-src 'self' 'unsafe-inline'
   command = "npm run build"
   [context.deploy-preview.environment]
     REACT_APP_DEPLOYMENT_ENV = "preview"
-
-# REMOVED PROBLEMATIC PLUGINS TEMPORARILY
-# Will add back once site is working
-
-# Plugin configuration (commented out for now)
-# [[plugins]]
-#   package = "@netlify/plugin-lighthouse"
-#   [plugins.inputs.audits]
-#     output_path = "reports/lighthouse.html"
-#   [plugins.inputs.settings]
-#     preset = "desktop"
-
-# [[plugins]]
-#   package = "netlify-plugin-submit-sitemap"
-#   [plugins.inputs]
-#     baseUrl = "https://your-domain.netlify.app"  # UPDATE THIS WITH YOUR ACTUAL DOMAIN
-#     sitemapPath = "/sitemap.xml"
-#     providers = [
-#       "google",
-#       "bing"
-#     ]
