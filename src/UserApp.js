@@ -1,19 +1,16 @@
-// File path: src/UserApp.js - Improved with Enhanced Pi SDK Integration
+// File path: src/UserApp.js - Complete with Backend Payment Integration
 import React, { useState, useEffect } from 'react';
 import { db } from './firebase';
 import { 
   collection, 
   getDocs, 
-  doc, 
-  updateDoc, 
   query, 
   where,
-  orderBy,
-  Timestamp,
-  arrayUnion
+  orderBy
 } from 'firebase/firestore';
 
-import usePiSDK from './hooks/usePiSDK'; // Use the new enhanced hook
+import usePiSDK from './hooks/usePiSDK';
+import usePiPayments from './hooks/usePiPayments'; // Add payment hook
 import { 
   LegalModal, 
   LegalFooter, 
@@ -39,7 +36,7 @@ function UserApp() {
     closeLegal();
   };
 
-  // Use enhanced Pi SDK hook
+  // Enhanced Pi SDK hook
   const {
     piUser,
     isAuthenticated,
@@ -52,7 +49,6 @@ function UserApp() {
     connectUser,
     requestPaymentAccess,
     connectWallet,
-    createPayment,
     disconnect,
     testConnection,
     getConnectionInfo,
@@ -61,6 +57,14 @@ function UserApp() {
     isFullyConnected,
     needsPaymentAccess
   } = usePiSDK();
+
+  // Payment hook for backend integration
+  const { 
+    createLotteryPayment, 
+    loading: paymentLoading, 
+    error: paymentError,
+    clearError: clearPaymentError
+  } = usePiPayments();
 
   // App state
   const [success, setSuccess] = useState('');
@@ -323,14 +327,13 @@ function UserApp() {
     return userTickets < maxTickets;
   };
 
-  // Enhanced lottery participation with new Pi SDK
+  // Updated lottery participation with backend integration
   const joinLottery = async (lotteryId, lottery) => {
     if (!isAuthenticated) {
       setSuccess('Please connect to Pi Network first');
       return;
     }
 
-    // Check if user has payment access
     if (!hasPaymentAccess) {
       try {
         setSuccess('Requesting payment permission...');
@@ -342,6 +345,7 @@ function UserApp() {
       }
     }
 
+    // Check ticket limits
     const userTickets = getUserTicketCount(lottery);
     const maxTickets = calculateMaxTicketsForUser(lottery.participants.length + 1);
     
@@ -353,67 +357,25 @@ function UserApp() {
     setJoiningLottery(true);
     setSuccess('');
     clearError();
+    clearPaymentError();
 
     try {
       console.log('💰 Joining lottery:', lottery.title);
 
-      const paymentData = {
-        amount: lottery.entryFee,
-        memo: `Lottery Entry: ${lottery.title}`,
-        metadata: {
-          lotteryId,
-          userId: piUser.uid,
-          ticketNumber: userTickets + 1,
-          timestamp: Date.now()
+      await createLotteryPayment(
+        piUser,
+        lottery,
+        // Success callback
+        (result) => {
+          setSuccess(`🎫 Ticket purchased! You now have ${userTickets + 1} tickets in "${lottery.title}"`);
+          loadActiveLotteries(); // Refresh data
+          loadMyEntries(); // Refresh user entries
+        },
+        // Error callback
+        (error) => {
+          setSuccess(`Failed to join lottery: ${error.message}`);
         }
-      };
-
-      const paymentCallbacks = {
-        onReadyForServerApproval: (paymentId) => {
-          console.log('✅ Payment approved:', paymentId);
-          setSuccess('Payment approved, processing entry...');
-        },
-        
-        onReadyForServerCompletion: async (paymentId, txnId) => {
-          console.log('🎉 Payment completed:', { paymentId, txnId });
-          
-          try {
-            // Add user to lottery participants
-            const lotteryRef = doc(db, 'lotteries', lotteryId);
-            await updateDoc(lotteryRef, {
-              participants: arrayUnion({
-                uid: piUser.uid,
-                username: piUser.username,
-                joinedAt: Timestamp.now(),
-                paymentId: paymentId,
-                txnId: txnId,
-                ticketNumber: userTickets + 1
-              })
-            });
-
-            setSuccess(`🎫 Ticket purchased! You now have ${userTickets + 1} tickets in "${lottery.title}"`);
-            
-            // Refresh data
-            loadActiveLotteries();
-            loadMyEntries();
-          } catch (updateError) {
-            console.error('❌ Error updating lottery:', updateError);
-            setSuccess('Payment successful but error updating lottery. Please refresh.');
-          }
-        },
-        
-        onCancel: (paymentId) => {
-          console.log('❌ Payment cancelled:', paymentId);
-          setSuccess('Payment cancelled');
-        },
-        
-        onError: (paymentError, paymentId) => {
-          console.error('❌ Payment error:', { paymentError, paymentId });
-          setSuccess(`Payment failed: ${paymentError.message || paymentError}`);
-        }
-      };
-
-      await createPayment(paymentData, paymentCallbacks);
+      );
 
     } catch (joinError) {
       console.error('❌ Join lottery error:', joinError);
@@ -514,6 +476,7 @@ function UserApp() {
 
   const clearMessages = () => {
     clearError();
+    clearPaymentError();
     setSuccess('');
   };
 
@@ -650,10 +613,10 @@ function UserApp() {
       </div>
 
       {/* Enhanced Connection Status Panel */}
-      {(authStep || error || (!sdkReady && !loading)) && (
+      {(authStep || error || paymentError || (!sdkReady && !loading)) && (
         <div className="card" style={{
-          background: error ? '#f8d7da' : authStep ? '#fff3cd' : '#d1ecf1',
-          border: `2px solid ${error ? '#f5c6cb' : authStep ? '#ffeaa7' : '#bee5eb'}`
+          background: (error || paymentError) ? '#f8d7da' : authStep ? '#fff3cd' : '#d1ecf1',
+          border: `2px solid ${(error || paymentError) ? '#f5c6cb' : authStep ? '#ffeaa7' : '#bee5eb'}`
         }}>
           <h3>🔗 Connection Status</h3>
           
@@ -689,6 +652,25 @@ function UserApp() {
               </button>
             </div>
           )}
+
+          {paymentError && (
+            <div style={{ color: '#721c24', marginBottom: '10px' }}>
+              💳 Payment Error: {paymentError}
+              <button 
+                onClick={clearPaymentError}
+                style={{ 
+                  marginLeft: '10px', 
+                  background: 'none', 
+                  border: 'none', 
+                  color: 'inherit', 
+                  cursor: 'pointer',
+                  textDecoration: 'underline'
+                }}
+              >
+                Clear
+              </button>
+            </div>
+          )}
           
           {!sdkReady && !loading && (
             <div style={{ color: '#0c5460' }}>
@@ -697,7 +679,7 @@ function UserApp() {
           )}
           
           {/* Enhanced Troubleshooting */}
-          {error && (
+          {(error || paymentError) && (
             <div style={{ fontSize: '0.9rem', color: '#6c757d', marginTop: '10px' }}>
               <strong>💡 Troubleshooting:</strong>
               <ul style={{ margin: '5px 0', paddingLeft: '20px' }}>
@@ -871,13 +853,13 @@ function UserApp() {
                       <button 
                         onClick={() => joinLottery(lottery.id, lottery)}
                         className="button success full-width"
-                        disabled={joiningLottery || loading}
+                        disabled={joiningLottery || loading || paymentLoading}
                         style={{
                           position: 'relative',
                           overflow: 'hidden'
                         }}
                       >
-                        {joiningLottery ? (
+                        {(joiningLottery || paymentLoading) ? (
                           <span>
                             <span style={{
                               display: 'inline-block',
@@ -1065,6 +1047,18 @@ function UserApp() {
               <h3>Pi SDK Connection Info:</h3>
               <pre style={{ whiteSpace: 'pre-wrap', margin: '10px 0' }}>
                 {JSON.stringify(getConnectionInfo(), null, 2)}
+              </pre>
+              
+              <h3>Payment System Status:</h3>
+              <pre style={{ whiteSpace: 'pre-wrap', margin: '10px 0' }}>
+                {JSON.stringify({
+                  paymentLoading,
+                  paymentError,
+                  apiUrl: process.env.NODE_ENV === 'production' ? 
+                    process.env.REACT_APP_API_URL_PRODUCTION : 
+                    process.env.REACT_APP_API_URL,
+                  environment: process.env.NODE_ENV
+                }, null, 2)}
               </pre>
               
               <div style={{ marginTop: '20px' }}>
