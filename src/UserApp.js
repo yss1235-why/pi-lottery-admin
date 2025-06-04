@@ -1,4 +1,4 @@
-// File path: src/UserApp.js - Enhanced with Pi Browser Optimizations
+// File path: src/UserApp.js - Enhanced with Pi Browser Popup Detection
 import React, { useState, useEffect } from 'react';
 import { db } from './firebase';
 import { 
@@ -18,7 +18,7 @@ import {
 } from './components/LegalComponents';
 
 function UserApp() {
-  // Legal modal / consent tracking state
+  // Legal modal state
   const [legalModal, setLegalModal] = useState({ isOpen: false, type: 'privacy' });
   const { recordConsent } = useConsentTracking();
 
@@ -36,7 +36,7 @@ function UserApp() {
     closeLegal();
   };
 
-  // Enhanced Pi SDK hook with Pi Browser optimizations
+  // Enhanced Pi SDK hook with popup detection
   const {
     piUser,
     isAuthenticated,
@@ -46,20 +46,22 @@ function UserApp() {
     sdkReady,
     connectionStatus,
     authStep,
+    popupIssueDetected, // New: detects when popup doesn't appear
     connectUser,
     requestPaymentAccess,
     connectWallet,
     disconnect,
     testConnection,
-    quickFix, // New quick fix method
+    refreshPiBrowser, // New: refresh Pi Browser
     getConnectionInfo,
     clearError,
+    detectPiBrowser, // New: browser detection
     canConnect,
     isFullyConnected,
     needsPaymentAccess
   } = usePiSDK();
 
-  // Payment hook for backend integration
+  // Payment hook
   const { 
     createLotteryPayment, 
     loading: paymentLoading, 
@@ -71,20 +73,24 @@ function UserApp() {
   const [success, setSuccess] = useState('');
   const [showDebugPanel, setShowDebugPanel] = useState(false);
   const [joiningLottery, setJoiningLottery] = useState(false);
-  const [showPiBrowserHelp, setShowPiBrowserHelp] = useState(false);
+  const [showPopupHelp, setShowPopupHelp] = useState(false);
 
   // Lottery data
   const [activeLotteries, setActiveLotteries] = useState([]);
   const [myEntries, setMyEntries] = useState([]);
-  const [completedLotteries, setCompletedLotteries] = useState([]);
-  
-  // User stats
   const [userStats, setUserStats] = useState({
     totalEntered: 0,
     totalSpent: 0,
     totalWon: 0,
     winCount: 0
   });
+
+  // Auto-show popup help when popup issue is detected
+  useEffect(() => {
+    if (popupIssueDetected) {
+      setShowPopupHelp(true);
+    }
+  }, [popupIssueDetected]);
 
   // Check for debug mode
   useEffect(() => {
@@ -94,17 +100,9 @@ function UserApp() {
     }
   }, []);
 
-  // Auto-show Pi Browser help if there are connection issues
-  useEffect(() => {
-    if (error && error.includes('timeout') && !showPiBrowserHelp) {
-      setShowPiBrowserHelp(true);
-    }
-  }, [error, showPiBrowserHelp]);
-
-  // Load data functions
+  // Load data functions (simplified for space)
   useEffect(() => {
     loadActiveLotteries();
-    loadCompletedLotteries();
   }, []);
 
   useEffect(() => {
@@ -114,7 +112,7 @@ function UserApp() {
     }
   }, [isAuthenticated, piUser]);
 
-  // Auto-refresh every 30 seconds
+  // Auto-refresh
   useEffect(() => {
     const interval = setInterval(() => {
       loadActiveLotteries();
@@ -122,7 +120,6 @@ function UserApp() {
         loadMyEntries();
       }
     }, 30000);
-
     return () => clearInterval(interval);
   }, [isAuthenticated]);
 
@@ -134,7 +131,7 @@ function UserApp() {
     }
   }, [success]);
 
-  // Data loading functions (simplified for space - same as before)
+  // Data loading functions
   const loadActiveLotteries = async () => {
     try {
       const lotteriesRef = collection(db, 'lotteries');
@@ -195,29 +192,6 @@ function UserApp() {
     }
   };
 
-  const loadCompletedLotteries = async () => {
-    try {
-      const lotteriesRef = collection(db, 'lotteries');
-      const q = query(lotteriesRef, where('status', '==', 'completed'));
-      const querySnapshot = await getDocs(q);
-      
-      const completed = [];
-      querySnapshot.forEach((doc) => {
-        const data = doc.data();
-        completed.push({
-          id: doc.id,
-          ...data,
-          endDate: data.endDate?.toDate?.() || new Date(data.endDate),
-          drawnAt: data.drawnAt?.toDate?.() || new Date(data.drawnAt)
-        });
-      });
-      
-      setCompletedLotteries(completed.slice(0, 10));
-    } catch (error) {
-      console.error('Error loading completed lotteries:', error);
-    }
-  };
-
   const calculateUserStats = () => {
     let totalEntered = 0;
     let totalSpent = 0;
@@ -245,26 +219,32 @@ function UserApp() {
     });
   };
 
-  // Enhanced connection handlers with Pi Browser support
+  // Enhanced connection handlers
   const handleConnectUser = async () => {
     try {
       clearMessages();
+      setShowPopupHelp(false);
       await connectUser();
       setSuccess(`✅ Connected to Pi Network! Welcome, ${piUser?.username || 'User'}`);
     } catch (connectError) {
       console.error('Connection failed:', connectError);
-      setShowPiBrowserHelp(true);
+      if (connectError.message.includes('popup')) {
+        setShowPopupHelp(true);
+      }
     }
   };
 
   const handleConnectWallet = async () => {
     try {
       clearMessages();
+      setShowPopupHelp(false);
       await connectWallet();
       setSuccess(`💰 Wallet connected! You can now participate in lotteries.`);
     } catch (connectError) {
       console.error('Wallet connection failed:', connectError);
-      setShowPiBrowserHelp(true);
+      if (connectError.message.includes('popup')) {
+        setShowPopupHelp(true);
+      }
     }
   };
 
@@ -274,27 +254,29 @@ function UserApp() {
       setSuccess('Testing Pi Browser connection...');
       const result = await testConnection();
       setSuccess(`✅ Connection test successful! User: ${result.user.username}`);
+      setShowPopupHelp(false);
     } catch (testError) {
       setSuccess(`❌ Connection test failed: ${testError.message}`);
-      setShowPiBrowserHelp(true);
-    }
-  };
-
-  // New quick fix handler
-  const handleQuickFix = async () => {
-    try {
-      clearMessages();
-      setSuccess('Running Pi Browser quick fix...');
-      const success = await quickFix();
-      if (success) {
-        setSuccess('✅ Quick fix completed! Try connecting again.');
+      if (testError.message.includes('popup')) {
+        setShowPopupHelp(true);
       }
-    } catch (fixError) {
-      setSuccess(`❌ Quick fix failed: ${fixError.message}`);
     }
   };
 
-  // Join lottery function (simplified for space)
+  // New handlers for popup issues
+  const handleRefreshPiBrowser = () => {
+    clearMessages();
+    setSuccess('Refreshing Pi Browser in 3 seconds...');
+    setTimeout(() => {
+      refreshPiBrowser();
+    }, 3000);
+  };
+
+  const handleForceRefresh = () => {
+    window.location.reload(true);
+  };
+
+  // Join lottery function
   const joinLottery = async (lotteryId, lottery) => {
     if (!isAuthenticated) {
       setSuccess('Please connect to Pi Network first');
@@ -366,6 +348,8 @@ function UserApp() {
     }
   };
 
+  const browserInfo = detectPiBrowser();
+
   return (
     <div className="container">
       {/* Enhanced Header */}
@@ -383,7 +367,7 @@ function UserApp() {
         </div>
         
         <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
-          {/* Enhanced Connection Status */}
+          {/* Connection Status Indicator */}
           <div style={{
             display: 'flex',
             alignItems: 'center',
@@ -409,7 +393,7 @@ function UserApp() {
             </span>
           </div>
 
-          {/* Enhanced Controls */}
+          {/* Connection Controls */}
           {isFullyConnected ? (
             <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
               <div style={{ textAlign: 'right' }}>
@@ -437,14 +421,14 @@ function UserApp() {
                  '⏳ Loading Pi SDK...'}
               </button>
               
-              {/* Pi Browser Help Button */}
-              {(error || !sdkReady) && (
+              {/* Help button for connection issues */}
+              {(error || popupIssueDetected || !browserInfo.isPiBrowserLikely) && (
                 <button 
-                  onClick={() => setShowPiBrowserHelp(true)}
+                  onClick={() => setShowPopupHelp(true)}
                   className="button warning"
                   style={{ padding: '6px 12px', fontSize: '0.9rem' }}
                 >
-                  🆘 Pi Browser Help
+                  🆘 Connection Help
                 </button>
               )}
             </div>
@@ -452,44 +436,76 @@ function UserApp() {
         </div>
       </div>
 
-      {/* Enhanced Pi Browser Help Panel */}
-      {showPiBrowserHelp && (
+      {/* Enhanced Popup Issue Help Panel */}
+      {showPopupHelp && (
         <div className="card" style={{
           background: '#fff3cd',
-          border: '2px solid #ffeaa7',
+          border: '3px solid #ffc107',
           marginBottom: '20px'
         }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
             <div style={{ flex: 1 }}>
-              <h3>🆘 Pi Browser Connection Help</h3>
+              <h3>🚨 Pi Browser Authentication Issue Detected</h3>
               
-              <div style={{ marginBottom: '15px' }}>
-                <strong>Common Solutions:</strong>
-                <ol style={{ marginTop: '8px', paddingLeft: '20px' }}>
-                  <li>Try the <strong>Quick Fix</strong> button below</li>
-                  <li>Refresh the page and try again</li>
-                  <li>Close and reopen Pi Browser</li>
-                  <li>Check your internet connection</li>
-                  <li>Update Pi Browser to the latest version</li>
-                  <li>Clear Pi Browser cache in settings</li>
-                </ol>
+              <div style={{ marginBottom: '20px' }}>
+                <div style={{
+                  background: '#f8d7da',
+                  border: '1px solid #f5c6cb',
+                  borderRadius: '8px',
+                  padding: '15px',
+                  marginBottom: '15px'
+                }}>
+                  <strong>🔍 Problem:</strong> The Pi Browser authentication popup is not appearing.
+                  <br />
+                  <strong>📱 Browser Status:</strong> {browserInfo.confidence} confidence Pi Browser detection
+                </div>
+
+                <div style={{ marginBottom: '15px' }}>
+                  <strong>🔧 Try these solutions in order:</strong>
+                  <ol style={{ marginTop: '10px', paddingLeft: '20px' }}>
+                    <li><strong>Refresh the page</strong> - Often fixes popup issues</li>
+                    <li><strong>Close and reopen Pi Browser</strong> - Clears any stuck states</li>
+                    <li><strong>Clear Pi Browser cache</strong> - Go to Pi Browser settings</li>
+                    <li><strong>Restart your device</strong> - If other methods don't work</li>
+                    <li><strong>Update Pi Browser</strong> - Ensure you have the latest version</li>
+                  </ol>
+                </div>
+
+                <div style={{
+                  background: '#d1ecf1',
+                  border: '1px solid #bee5eb',
+                  borderRadius: '8px',
+                  padding: '15px',
+                  marginBottom: '15px'
+                }}>
+                  <strong>💡 What should happen:</strong>
+                  <br />
+                  When you click "Connect Pi Wallet", you should see a popup asking you to approve the connection. 
+                  If no popup appears within 10 seconds, there's likely a Pi Browser issue.
+                </div>
               </div>
 
               <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
                 <button 
-                  onClick={handleQuickFix}
+                  onClick={handleForceRefresh}
                   className="button warning"
-                  disabled={loading}
                 >
-                  {loading ? '🔄 Fixing...' : '🔧 Quick Fix'}
+                  🔄 Refresh Page
+                </button>
+                
+                <button 
+                  onClick={handleRefreshPiBrowser}
+                  className="button danger"
+                >
+                  🔃 Restart Pi Browser
                 </button>
                 
                 <button 
                   onClick={handleTestConnection}
                   className="button secondary"
-                  disabled={!sdkReady}
+                  disabled={!sdkReady || loading}
                 >
-                  🧪 Test Connection
+                  🧪 Test Again
                 </button>
                 
                 <button 
@@ -502,7 +518,7 @@ function UserApp() {
             </div>
             
             <button 
-              onClick={() => setShowPiBrowserHelp(false)}
+              onClick={() => setShowPopupHelp(false)}
               style={{
                 background: 'none',
                 border: 'none',
@@ -513,6 +529,33 @@ function UserApp() {
             >
               ×
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* Pi Browser Compatibility Check */}
+      {!browserInfo.isPiBrowserLikely && (
+        <div className="card" style={{
+          background: '#f8d7da',
+          border: '2px solid #f5c6cb',
+          marginBottom: '20px'
+        }}>
+          <h3>⚠️ Pi Browser Required</h3>
+          <p>
+            <strong>This app requires the official Pi Browser to function properly.</strong>
+          </p>
+          <div style={{ marginTop: '15px' }}>
+            <strong>Current browser detected:</strong> {browserInfo.confidence} confidence Pi Browser
+            <br />
+            <strong>User Agent:</strong> <code style={{ fontSize: '0.8rem' }}>{navigator.userAgent}</code>
+          </div>
+          <div style={{ marginTop: '15px' }}>
+            <strong>To use this app:</strong>
+            <ol style={{ marginTop: '8px', paddingLeft: '20px' }}>
+              <li>Download and install the official Pi Browser from the Pi Network app</li>
+              <li>Open this app URL in Pi Browser</li>
+              <li>The Pi wallet connection will work properly in Pi Browser</li>
+            </ol>
           </div>
         </div>
       )}
@@ -542,6 +585,13 @@ function UserApp() {
           {(error || paymentError) && (
             <div style={{ color: '#721c24', marginBottom: '10px' }}>
               ❌ {error || paymentError}
+              
+              {(error?.includes('popup') || paymentError?.includes('popup')) && (
+                <div style={{ marginTop: '10px', fontSize: '0.9rem' }}>
+                  <strong>💡 This usually means:</strong> Pi Browser needs to be refreshed or restarted.
+                </div>
+              )}
+              
               <button 
                 onClick={clearMessages}
                 style={{ 
@@ -555,6 +605,18 @@ function UserApp() {
               >
                 Clear
               </button>
+            </div>
+          )}
+
+          {popupIssueDetected && (
+            <div style={{
+              background: '#fff3cd',
+              border: '1px solid #ffeaa7',
+              borderRadius: '6px',
+              padding: '10px',
+              marginTop: '10px'
+            }}>
+              🚨 <strong>No authentication popup detected!</strong> Click "Connection Help" above for solutions.
             </div>
           )}
         </div>
@@ -635,7 +697,13 @@ function UserApp() {
                 </div>
 
                 <div className="lottery-actions">
-                  {!isAuthenticated ? (
+                  {!browserInfo.isPiBrowserLikely ? (
+                    <div style={{textAlign: 'center', padding: '15px'}}>
+                      <span style={{color: '#721c24', fontWeight: 'bold'}}>
+                        ⚠️ Please use Pi Browser to join lotteries
+                      </span>
+                    </div>
+                  ) : !isAuthenticated ? (
                     <div style={{textAlign: 'center', padding: '15px'}}>
                       <span style={{color: '#6c757d', fontWeight: 'bold'}}>
                         🔗 Connect to Pi Network to join this lottery
@@ -681,11 +749,11 @@ function UserApp() {
           padding: '20px',
           overflow: 'auto',
           fontFamily: 'monospace',
-          fontSize: '12px'
+          fontSize: '11px'
         }}>
-          <div style={{ maxWidth: '900px', margin: '0 auto' }}>
+          <div style={{ maxWidth: '1000px', margin: '0 auto' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '20px' }}>
-              <h2>🔧 Pi Browser Debug Panel</h2>
+              <h2>🔧 Pi Browser Popup Debug Panel</h2>
               <button 
                 onClick={() => setShowDebugPanel(false)}
                 style={{
@@ -701,14 +769,14 @@ function UserApp() {
             </div>
             
             <div style={{ background: '#1a1a1a', padding: '20px', borderRadius: '8px' }}>
-              <h3>Enhanced Pi SDK Connection Info:</h3>
-              <pre style={{ whiteSpace: 'pre-wrap', margin: '10px 0', fontSize: '11px' }}>
+              <h3>Enhanced Pi SDK Connection Debug Info:</h3>
+              <pre style={{ whiteSpace: 'pre-wrap', margin: '10px 0', fontSize: '10px' }}>
                 {JSON.stringify(getConnectionInfo(), null, 2)}
               </pre>
               
               <div style={{ marginTop: '20px' }}>
                 <button 
-                  onClick={handleQuickFix}
+                  onClick={handleForceRefresh}
                   style={{
                     background: '#ffc107',
                     color: 'black',
@@ -718,7 +786,7 @@ function UserApp() {
                     marginRight: '10px'
                   }}
                 >
-                  🔧 Quick Fix
+                  🔄 Force Refresh
                 </button>
                 
                 <button 
@@ -736,7 +804,7 @@ function UserApp() {
                 </button>
                 
                 <button 
-                  onClick={() => console.log('Pi SDK Debug:', getConnectionInfo())}
+                  onClick={() => console.log('Pi Browser Debug:', getConnectionInfo())}
                   style={{
                     background: '#6c757d',
                     color: 'white',
