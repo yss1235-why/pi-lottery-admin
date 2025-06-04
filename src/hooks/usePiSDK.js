@@ -1,9 +1,8 @@
-// File path: src/hooks/usePiSDK.js - Auto-Connect Version (No Buttons Required)
+// File path: src/hooks/usePiSDK.js - Clean Auto-Connect Version
 import { useState, useEffect, useCallback, useRef } from 'react';
 
 /**
- * Auto-Connect Pi SDK Hook - Automatically attempts connection when app loads
- * The Pi Browser popup will still appear for user consent, but no button click needed
+ * Clean Pi SDK Hook - Auto-connects seamlessly in background
  */
 export const usePiSDK = () => {
   // State management
@@ -31,9 +30,9 @@ export const usePiSDK = () => {
     version: "2.0",
     sandbox: false,
     timeout: 30000,
-    maxRetries: 2, // Fewer retries for auto-connect
+    maxRetries: 2,
     retryDelay: 3000,
-    autoConnectDelay: 2000 // Wait 2 seconds after SDK ready before auto-connecting
+    autoConnectDelay: 2000
   };
 
   // Check if component is still mounted
@@ -52,13 +51,10 @@ export const usePiSDK = () => {
   // Initialize Pi SDK
   const initializePiSDK = useCallback(async () => {
     try {
-      console.log('🔍 Initializing Pi SDK for auto-connect...');
-      
       if (!window.Pi) {
         throw new Error('Pi SDK not available. Please use Pi Browser.');
       }
 
-      // Check required methods
       if (typeof window.Pi.authenticate !== 'function') {
         throw new Error('Pi SDK authenticate method not available');
       }
@@ -69,21 +65,18 @@ export const usePiSDK = () => {
           version: PI_SDK_CONFIG.version,
           sandbox: PI_SDK_CONFIG.sandbox
         });
-        console.log('✅ Pi SDK initialized for auto-connect');
       } catch (initError) {
-        console.warn('⚠️ SDK init warning (continuing anyway):', initError);
+        // Continue anyway - some environments throw warnings here
       }
 
       if (isMounted()) {
         setSdkReady(true);
         setError(null);
-        console.log('🎯 Pi SDK ready - auto-connect will start soon...');
       }
 
     } catch (error) {
-      console.error('❌ Pi SDK initialization failed:', error);
       if (isMounted()) {
-        setError(`SDK Initialization Failed: ${error.message}`);
+        setError(`SDK not available: ${error.message}`);
         setSdkReady(false);
       }
     }
@@ -92,65 +85,48 @@ export const usePiSDK = () => {
   // Auto-authenticate when SDK is ready
   const autoAuthenticate = useCallback(async (scopes = ['username'], retryCount = 0) => {
     if (autoConnectAttempted && !retryCount) {
-      console.log('🔄 Auto-connect already attempted, skipping...');
       return;
     }
 
-    console.log(`🤖 Auto-authenticating (attempt ${retryCount + 1})...`);
-    console.log('📋 Scopes:', scopes);
-
     return new Promise((resolve, reject) => {
       const timeout = setTimeout(() => {
-        console.warn(`⏰ Auto-authentication timeout after ${PI_SDK_CONFIG.timeout / 1000} seconds`);
-        reject(new Error('Auto-authentication timeout - Pi Browser may need refresh'));
+        reject(new Error('Connection timeout - please refresh'));
       }, PI_SDK_CONFIG.timeout);
 
       authTimeoutRef.current = timeout;
 
       try {
-        console.log('🚀 Starting automatic Pi authentication...');
-        
         window.Pi.authenticate(scopes, {
           onIncompletePaymentFound: (payment) => {
-            console.log('💳 Incomplete payment found during auto-connect:', payment);
             if (isMounted()) {
               setAuthStep('Processing incomplete payment...');
             }
           }
         }).then(authResult => {
-          console.log('✅ Auto-authentication successful!', {
-            username: authResult.user?.username,
-            uid: authResult.user?.uid
-          });
-          
           clearTimeout(timeout);
           setAutoConnectAttempted(true);
           resolve(authResult);
           
         }).catch(authError => {
-          console.error('❌ Auto-authentication failed:', authError);
           clearTimeout(timeout);
           
           // Check if user declined
           if (authError.message?.includes('denied') || 
               authError.message?.includes('cancelled') ||
               authError.message?.includes('rejected')) {
-            console.log('👤 User declined auto-connection');
             setUserDeclined(true);
             setAutoConnectAttempted(true);
             reject(new Error('User declined connection'));
             return;
           }
           
-          // Retry logic for auto-connect
+          // Retry logic
           if (retryCount < PI_SDK_CONFIG.maxRetries) {
             const nextRetry = retryCount + 1;
             const delay = PI_SDK_CONFIG.retryDelay * nextRetry;
             
-            console.log(`🔄 Auto-connect retry ${nextRetry}/${PI_SDK_CONFIG.maxRetries} in ${delay/1000}s...`);
-            
             if (isMounted()) {
-              setAuthStep(`Auto-connecting (attempt ${nextRetry + 1})...`);
+              setAuthStep(`Connecting (attempt ${nextRetry + 1})...`);
             }
             
             retryTimeoutRef.current = setTimeout(() => {
@@ -160,15 +136,14 @@ export const usePiSDK = () => {
             }, delay);
           } else {
             setAutoConnectAttempted(true);
-            reject(new Error(`Auto-connection failed: ${authError.message}`));
+            reject(new Error(`Connection failed: ${authError.message}`));
           }
         });
 
       } catch (syncError) {
-        console.error('❌ Auto-authentication sync error:', syncError);
         clearTimeout(timeout);
         setAutoConnectAttempted(true);
-        reject(new Error(`Auto-connect failed: ${syncError.message}`));
+        reject(new Error(`Connection failed: ${syncError.message}`));
       }
     });
   }, [autoConnectAttempted]);
@@ -176,21 +151,16 @@ export const usePiSDK = () => {
   // Start auto-connection process when SDK is ready
   useEffect(() => {
     if (sdkReady && !autoConnectAttempted && !userDeclined && !isAuthenticated) {
-      console.log('🤖 SDK ready - starting auto-connect sequence...');
-      
       if (isMounted()) {
-        setAuthStep('Starting automatic connection...');
+        setAuthStep('Connecting...');
         setConnectionStatus('connecting');
         setLoading(true);
       }
 
-      // Delay auto-connect slightly to ensure everything is ready
       autoConnectTimeoutRef.current = setTimeout(async () => {
         try {
-          console.log('🚀 Beginning auto-connect to Pi Network...');
-          
           if (isMounted()) {
-            setAuthStep('Connecting to Pi Network automatically...');
+            setAuthStep('Connecting to Pi Network...');
           }
 
           const authResult = await autoAuthenticate(['username']);
@@ -202,9 +172,7 @@ export const usePiSDK = () => {
             setAuthStep('');
             setError(null);
             
-            console.log('🎉 Auto-connection successful!');
-            
-            // Optional: Auto-request payment access too
+            // Auto-request payment access
             setTimeout(() => {
               if (isMounted() && !hasPaymentAccess) {
                 requestPaymentAccessAuto();
@@ -213,16 +181,14 @@ export const usePiSDK = () => {
           }
           
         } catch (autoError) {
-          console.error('❌ Auto-connection failed:', autoError);
-          
           if (isMounted()) {
             setConnectionStatus('error');
             setAuthStep('');
             
             if (!userDeclined) {
-              setError(`Auto-connection failed: ${autoError.message}`);
+              setError(`Connection failed: ${autoError.message}`);
             } else {
-              setError('Connection declined. You can manually connect using the button below.');
+              setError('Connection declined');
             }
           }
         } finally {
@@ -238,11 +204,9 @@ export const usePiSDK = () => {
   const requestPaymentAccessAuto = useCallback(async () => {
     if (!isAuthenticated || hasPaymentAccess) return;
 
-    console.log('💰 Auto-requesting payment access...');
-    
     try {
       if (isMounted()) {
-        setAuthStep('Requesting payment permissions...');
+        setAuthStep('Setting up payments...');
         setLoading(true);
       }
 
@@ -252,14 +216,12 @@ export const usePiSDK = () => {
         setPiUser(paymentAuthResult.user);
         setHasPaymentAccess(true);
         setAuthStep('');
-        console.log('💰 Payment access granted automatically!');
       }
       
     } catch (paymentError) {
-      console.error('❌ Auto payment access failed:', paymentError);
       if (isMounted()) {
         setAuthStep('');
-        // Don't set error for payment access failure - user can do it manually
+        // Don't show error for payment access failure
       }
     } finally {
       if (isMounted()) {
@@ -274,13 +236,11 @@ export const usePiSDK = () => {
       throw new Error('Pi SDK not ready');
     }
 
-    console.log('👆 Manual connection requested...');
-    
     setLoading(true);
     setConnectionStatus('connecting');
     setError(null);
     setUserDeclined(false);
-    setAuthStep('Connecting manually...');
+    setAuthStep('Connecting...');
 
     try {
       const authResult = await autoAuthenticate(['username']);
@@ -290,12 +250,10 @@ export const usePiSDK = () => {
         setIsAuthenticated(true);
         setConnectionStatus('connected');
         setAuthStep('');
-        console.log('✅ Manual connection successful');
         return authResult.user;
       }
       
     } catch (error) {
-      console.error('❌ Manual connection failed:', error);
       if (isMounted()) {
         setError(error.message);
         setConnectionStatus('error');
@@ -324,11 +282,9 @@ export const usePiSDK = () => {
         setPiUser(paymentAuthResult.user);
         setHasPaymentAccess(true);
         setAuthStep('');
-        console.log('💰 Payment access granted');
         return paymentAuthResult.user;
       }
     } catch (error) {
-      console.error('❌ Payment access request failed:', error);
       if (isMounted()) {
         setError(`Payment access failed: ${error.message}`);
         setAuthStep('');
@@ -347,7 +303,6 @@ export const usePiSDK = () => {
       await requestPaymentAccess();
       return piUser;
     } catch (error) {
-      console.error('❌ Full wallet connection failed:', error);
       throw error;
     }
   }, [connectUser, requestPaymentAccess, piUser]);
@@ -362,26 +317,20 @@ export const usePiSDK = () => {
       throw new Error('Invalid payment amount');
     }
 
-    console.log('💰 Creating Pi payment:', paymentData);
-
     const enhancedCallbacks = {
       onReadyForServerApproval: (paymentId) => {
-        console.log('📋 Payment ready for approval:', paymentId);
         callbacks.onReadyForServerApproval?.(paymentId);
       },
       
       onReadyForServerCompletion: (paymentId, txnId) => {
-        console.log('✅ Payment completed:', { paymentId, txnId });
         callbacks.onReadyForServerCompletion?.(paymentId, txnId);
       },
       
       onCancel: (paymentId) => {
-        console.log('❌ Payment cancelled:', paymentId);
         callbacks.onCancel?.(paymentId);
       },
       
       onError: (error, paymentId) => {
-        console.error('❌ Payment error:', { error, paymentId });
         callbacks.onError?.(error, paymentId);
       }
     };
@@ -389,7 +338,6 @@ export const usePiSDK = () => {
     try {
       return await window.Pi.createPayment(paymentData, enhancedCallbacks);
     } catch (error) {
-      console.error('❌ Create payment failed:', error);
       throw error;
     }
   }, [hasPaymentAccess]);
@@ -409,8 +357,6 @@ export const usePiSDK = () => {
     if (authTimeoutRef.current) clearTimeout(authTimeoutRef.current);
     if (retryTimeoutRef.current) clearTimeout(retryTimeoutRef.current);
     if (autoConnectTimeoutRef.current) clearTimeout(autoConnectTimeoutRef.current);
-    
-    console.log('🔌 User disconnected - auto-connect reset');
   }, []);
 
   // Test connection
@@ -427,13 +373,11 @@ export const usePiSDK = () => {
         setAuthStep('');
       }
       
-      console.log('✅ Connection test successful');
       return testResult;
     } catch (error) {
       if (isMounted()) {
         setAuthStep('');
       }
-      console.error('❌ Connection test failed:', error);
       throw error;
     }
   }, [sdkReady, autoAuthenticate]);
@@ -441,22 +385,18 @@ export const usePiSDK = () => {
   // Initialize SDK when component mounts
   useEffect(() => {
     const handlePiSDKReady = () => {
-      console.log('📡 Pi SDK ready event received');
       initializePiSDK();
     };
 
     if (window.Pi) {
-      console.log('📦 Pi SDK already available, initializing...');
       initializePiSDK();
     } else {
-      console.log('⏳ Waiting for Pi SDK...');
       window.addEventListener('piSDKReady', handlePiSDKReady);
       
       // Fallback checks
-      const timeouts = [1000, 3000, 5000].map((delay, index) => {
+      const timeouts = [1000, 3000, 5000].map((delay) => {
         return setTimeout(() => {
           if (window.Pi && !sdkReady) {
-            console.log(`📦 Pi SDK found in fallback check ${index + 1}`);
             initializePiSDK();
           }
         }, delay);
@@ -469,24 +409,19 @@ export const usePiSDK = () => {
     }
   }, [initializePiSDK, sdkReady]);
 
-  // Get connection info for debugging
+  // Get connection info for debugging (minimal)
   const getConnectionInfo = useCallback(() => {
     return {
       sdkReady,
       isAuthenticated,
       hasPaymentAccess,
       connectionStatus,
-      user: piUser,
+      user: piUser ? { username: piUser.username, uid: piUser.uid } : null,
       error,
-      authStep,
       autoConnectAttempted,
-      userDeclined,
-      sdkVersion: window.Pi?.version || 'unknown',
-      sdkMethods: window.Pi ? Object.keys(window.Pi).sort() : [],
-      config: PI_SDK_CONFIG,
-      timestamp: new Date().toISOString()
+      userDeclined
     };
-  }, [sdkReady, isAuthenticated, hasPaymentAccess, connectionStatus, piUser, error, authStep, autoConnectAttempted, userDeclined]);
+  }, [sdkReady, isAuthenticated, hasPaymentAccess, connectionStatus, piUser, error, autoConnectAttempted, userDeclined]);
 
   // Return hook interface
   return {
