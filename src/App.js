@@ -1,4 +1,4 @@
-// File path: src/App.js - COMPLETE UPDATED VERSION WITH MONTHLY LOTTERIES
+// File path: src/App.js - Pi Browser Optimized Admin Version
 import React, { useState, useEffect } from 'react';
 import { auth, db } from './firebase';
 import { signInWithEmailAndPassword, signOut, onAuthStateChanged } from 'firebase/auth';
@@ -22,10 +22,19 @@ function App() {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
 
-  // Pi Wallet state for ADMIN (for prize distribution)
+  // Pi Wallet state for ADMIN (simplified for Pi Browser)
   const [adminPiUser, setAdminPiUser] = useState(null);
   const [adminWalletConnected, setAdminWalletConnected] = useState(false);
-  const [piSDKLoaded, setPiSDKLoaded] = useState(false);
+  const [piSDKReady, setPiSDKReady] = useState(false);
+  const [sdkError, setSdkError] = useState('');
+
+  // Debug information
+  const [debugInfo, setDebugInfo] = useState({
+    sdkLoaded: false,
+    sdkVersion: 'unknown',
+    userAgent: navigator.userAgent,
+    timestamp: new Date().toISOString()
+  });
 
   // Lottery data
   const [lotteries, setLotteries] = useState([]);
@@ -36,7 +45,7 @@ function App() {
     winnersDrawn: 0
   });
 
-  // New lottery form with enhanced options
+  // New lottery form
   const [newLottery, setNewLottery] = useState({
     title: '',
     description: '',
@@ -46,8 +55,8 @@ function App() {
     platformFee: 0.1,
     platformFeePercent: 10,
     minWinners: 3,
-    maxTicketsPerUser: 2, // Starting limit
-    lotteryType: 'standard' // 'standard', 'daily', 'weekly', 'monthly'
+    maxTicketsPerUser: 2,
+    lotteryType: 'standard'
   });
 
   // Bitcoin API state
@@ -70,42 +79,70 @@ function App() {
     return () => unsubscribe();
   }, []);
 
-  // Enhanced Pi SDK initialization for admin wallet
+  // Pi SDK initialization - Simplified for Pi Browser (Admin)
   useEffect(() => {
     const initializePiSDK = async () => {
       try {
+        console.log('🔧 Checking Pi SDK for admin...');
+        
         if (window.Pi) {
-          console.log('🔧 Initializing Pi SDK for admin wallet...');
+          console.log('📦 Pi SDK found, initializing for admin...');
           
-          const config = {
+          // Simple initialization for Pi Browser
+          await window.Pi.init({
             version: "2.0",
-            sandbox: true,
-            development: true,
-            timeout: 45000,
-            environment: 'sandbox'
-          };
+            sandbox: true
+          });
           
-          await window.Pi.init(config);
-          setPiSDKLoaded(true);
+          setPiSDKReady(true);
+          setDebugInfo(prev => ({
+            ...prev,
+            sdkLoaded: true,
+            sdkVersion: window.Pi.version || '2.0'
+          }));
+          
           console.log('✅ Pi SDK initialized for admin');
           
         } else {
-          console.warn('⚠️ Pi SDK not loaded - retrying...');
-          setTimeout(initializePiSDK, 3000);
+          console.warn('⚠️ Pi SDK not found');
+          setSdkError('Pi SDK not available');
         }
       } catch (error) {
-        console.error('❌ Pi SDK initialization error:', error);
-        setPiSDKLoaded(false);
+        console.error('❌ Pi SDK initialization failed:', error);
+        setSdkError(error.message);
       }
     };
 
-    setTimeout(initializePiSDK, 1000);
+    // Listen for Pi SDK ready event
+    const handlePiSDKReady = () => {
+      console.log('📡 Pi SDK ready event received (admin)');
+      initializePiSDK();
+    };
+
+    window.addEventListener('piSDKReady', handlePiSDKReady);
+
+    // Check immediately if SDK is already loaded
+    if (window.Pi) {
+      initializePiSDK();
+    } else {
+      setTimeout(() => {
+        if (window.Pi) {
+          initializePiSDK();
+        } else {
+          console.warn('⚠️ Pi SDK still not available after delay (admin)');
+          setSdkError('Pi SDK not loaded - ensure you are using Pi Browser');
+        }
+      }, 3000);
+    }
+
+    return () => {
+      window.removeEventListener('piSDKReady', handlePiSDKReady);
+    };
   }, []);
 
   // Get current Bitcoin block height
   useEffect(() => {
     fetchCurrentBitcoinBlock();
-    // Update every 10 minutes
     const interval = setInterval(fetchCurrentBitcoinBlock, 600000);
     return () => clearInterval(interval);
   }, []);
@@ -127,7 +164,6 @@ function App() {
       console.log('📦 Current Bitcoin block:', height);
     } catch (error) {
       console.error('Error fetching Bitcoin block height:', error);
-      // Fallback calculation
       setCurrentBitcoinBlock(Math.floor((Date.now() - 1609459200000) / 600000) + 665000);
     }
   };
@@ -152,29 +188,27 @@ function App() {
     }
   };
 
-  // Calculate commitment block for different lottery types including monthly
+  // Calculate commitment block
   const calculateCommitmentBlock = (currentBlock, endDate, lotteryType) => {
     const now = new Date();
     const end = new Date(endDate);
     const hoursUntilEnd = (end - now) / (1000 * 60 * 60);
     
-    // Bitcoin averages ~6 blocks per hour
     const blocksUntilEnd = Math.ceil(hoursUntilEnd * 6);
     
-    // Safety margin based on lottery type
     let safetyMargin;
     switch (lotteryType) {
       case 'daily':
-        safetyMargin = Math.max(1, Math.min(3, Math.ceil(blocksUntilEnd * 0.05))); // 5% margin for daily
+        safetyMargin = Math.max(1, Math.min(3, Math.ceil(blocksUntilEnd * 0.05)));
         break;
       case 'weekly':
-        safetyMargin = Math.max(3, Math.min(12, Math.ceil(blocksUntilEnd * 0.1))); // 10% margin for weekly
+        safetyMargin = Math.max(3, Math.min(12, Math.ceil(blocksUntilEnd * 0.1)));
         break;
       case 'monthly':
-        safetyMargin = Math.max(6, Math.min(24, Math.ceil(blocksUntilEnd * 0.15))); // 15% margin for monthly
+        safetyMargin = Math.max(6, Math.min(24, Math.ceil(blocksUntilEnd * 0.15)));
         break;
       default:
-        safetyMargin = Math.max(1, Math.min(6, Math.ceil(blocksUntilEnd * 0.1))); // Standard margin
+        safetyMargin = Math.max(1, Math.min(6, Math.ceil(blocksUntilEnd * 0.1)));
     }
     
     const commitmentBlock = currentBlock + blocksUntilEnd + safetyMargin;
@@ -190,12 +224,7 @@ function App() {
     return commitmentBlock;
   };
 
-  // Calculate dynamic ticket limit (2% system)
-  const calculateMaxTicketsPerUser = (totalParticipants) => {
-    return Math.max(2, Math.floor(totalParticipants * 0.02));
-  };
-
-  // Provably fair random number generation for multiple winners
+  // Provably fair functions
   const generateProvablyFairWinners = (blockHash, lotteryId, participants, winnerCount) => {
     console.log('🎯 Generating provably fair winners:', {
       blockHash: blockHash.substring(0, 16) + '...',
@@ -208,18 +237,15 @@ function App() {
     const remainingParticipants = [...participants];
     
     for (let position = 1; position <= winnerCount; position++) {
-      // Create unique seed for each winner position
       const combinedString = blockHash + lotteryId + position + 'WINNER_SALT';
       
-      // Generate deterministic hash
       let hash = 0;
       for (let i = 0; i < combinedString.length; i++) {
         const char = combinedString.charCodeAt(i);
         hash = ((hash << 5) - hash) + char;
-        hash = hash & hash; // Convert to 32-bit integer
+        hash = hash & hash;
       }
       
-      // Ensure positive number and get index within remaining participant range
       const randomIndex = Math.abs(hash) % remainingParticipants.length;
       const selectedWinner = remainingParticipants[randomIndex];
       
@@ -234,14 +260,12 @@ function App() {
         }
       });
       
-      // Remove selected winner from pool (no duplicate winners)
       remainingParticipants.splice(randomIndex, 1);
     }
     
     return winners;
   };
 
-  // Calculate number of winners based on participants
   const calculateWinnerCount = (participantCount, minWinners = 1) => {
     if (participantCount < 10) return Math.max(1, minWinners);
     if (participantCount < 25) return Math.max(3, minWinners);
@@ -253,13 +277,11 @@ function App() {
     return Math.max(25, minWinners);
   };
 
-  // Calculate prize distribution
   const calculatePrizeDistribution = (participantCount, entryFee, platformFee, winnerCount) => {
     const totalCollected = participantCount * entryFee;
     const totalPlatformFee = participantCount * platformFee;
     const prizePool = totalCollected - totalPlatformFee;
     
-    // Prize distribution percentages based on winner count
     const getDistributionPercentages = (count) => {
       const distributions = {
         1: [100],
@@ -319,21 +341,32 @@ function App() {
     }
   };
 
-  // Admin Pi wallet connection for prize distribution
+  // Admin Pi wallet connection - Simplified for Pi Browser
   const connectAdminWallet = async () => {
     setError('');
-    console.log('🔗 Connecting admin Pi wallet for prize distribution...');
+    console.log('🔗 Connecting admin Pi wallet...');
     
     try {
-      if (!window.Pi || !piSDKLoaded) {
-        throw new Error('Pi SDK not loaded');
+      if (!window.Pi) {
+        throw new Error('Pi SDK not available. Please use Pi Browser.');
+      }
+
+      if (!piSDKReady) {
+        throw new Error('Pi SDK not ready. Please wait and try again.');
       }
 
       setLoading(true);
       
-      const authResult = await window.Pi.authenticate(['payments'], (payment) => {
-        console.log('Incomplete payment found:', payment);
-      });
+      console.log('🔐 Starting admin Pi authentication...');
+      
+      const authResult = await window.Pi.authenticate(
+        ['payments'], 
+        {
+          onIncompletePaymentFound: (payment) => {
+            console.log('💳 Incomplete payment found:', payment);
+          }
+        }
+      );
 
       setAdminPiUser(authResult.user);
       setAdminWalletConnected(true);
@@ -353,7 +386,7 @@ function App() {
     setSuccess('Admin Pi wallet disconnected');
   };
 
-  // Prize distribution functions
+  // Prize distribution - Simplified for Pi Browser
   const distributePrizeToWinner = async (winner, lotteryId) => {
     if (!adminWalletConnected) {
       setError('Admin wallet must be connected to distribute prizes');
@@ -369,7 +402,6 @@ function App() {
         position: winner.position
       });
 
-      // Create Pi payment
       const paymentData = {
         amount: winner.prize,
         memo: `Lottery Prize - Position #${winner.position}`,
@@ -380,43 +412,44 @@ function App() {
         }
       };
 
-      const payment = await window.Pi.createPayment(paymentData, {
+      const paymentCallbacks = {
         onReadyForServerApproval: (paymentId) => {
           console.log('Payment ready for approval:', paymentId);
         },
-        onReadyForServerCompletion: (paymentId, txnId) => {
+        onReadyForServerCompletion: async (paymentId, txnId) => {
           console.log('Payment completed:', paymentId, txnId);
+          
+          // Update lottery document
+          await updateDoc(doc(db, 'lotteries', lotteryId), {
+            [`winners.${winner.position - 1}.paid`]: true,
+            [`winners.${winner.position - 1}.paidAt`]: Timestamp.now(),
+            [`winners.${winner.position - 1}.paymentId`]: paymentId,
+            [`winners.${winner.position - 1}.distributedBy`]: adminPiUser.uid
+          });
+
+          setDistributionResults(prev => ({
+            ...prev,
+            [`${lotteryId}-${winner.position}`]: {
+              success: true,
+              paymentId: paymentId,
+              timestamp: new Date()
+            }
+          }));
+
+          setSuccess(`✅ Prize distributed to ${winner.winner.username || winner.winner.uid}: ${winner.prize}π`);
+          loadLotteries();
         },
         onCancel: (paymentId) => {
           console.log('Payment cancelled:', paymentId);
+          setError('Payment cancelled');
         },
         onError: (error, paymentId) => {
           console.error('Payment error:', error, paymentId);
+          setError(`Payment failed: ${error.message || error}`);
         }
-      });
+      };
 
-      // Update lottery document with payment info
-      await updateDoc(doc(db, 'lotteries', lotteryId), {
-        [`winners.${winner.position - 1}.paid`]: true,
-        [`winners.${winner.position - 1}.paidAt`]: Timestamp.now(),
-        [`winners.${winner.position - 1}.paymentId`]: payment.identifier,
-        [`winners.${winner.position - 1}.distributedBy`]: adminPiUser.uid
-      });
-
-      // Update local state
-      setDistributionResults(prev => ({
-        ...prev,
-        [`${lotteryId}-${winner.position}`]: {
-          success: true,
-          paymentId: payment.identifier,
-          timestamp: new Date()
-        }
-      }));
-
-      setSuccess(`✅ Prize distributed to ${winner.winner.username || winner.winner.uid}: ${winner.prize}π`);
-      
-      // Reload lotteries to show updated status
-      loadLotteries();
+      await window.Pi.createPayment(paymentData, paymentCallbacks);
 
     } catch (error) {
       console.error('Prize distribution error:', error);
@@ -502,7 +535,6 @@ function App() {
     setLoading(true);
 
     try {
-      // Validate form data
       if (!newLottery.title.trim()) {
         throw new Error('Lottery title is required');
       }
@@ -518,7 +550,6 @@ function App() {
         throw new Error('End date must be in the future');
       }
 
-      // Calculate future Bitcoin block for provably fair drawing
       const commitmentBlock = calculateCommitmentBlock(
         currentBitcoinBlock, 
         newLottery.endDate, 
@@ -537,7 +568,6 @@ function App() {
         participants: [],
         status: 'active',
         winners: [],
-        // Provably Fair fields
         provablyFair: {
           commitmentBlock: commitmentBlock,
           committedAt: Timestamp.now(),
@@ -546,7 +576,6 @@ function App() {
           verified: false,
           lotteryType: newLottery.lotteryType
         },
-        // 2% ticket system
         ticketSystem: {
           maxTicketsPerUser: newLottery.maxTicketsPerUser,
           dynamicLimit: true,
@@ -556,7 +585,6 @@ function App() {
 
       setSuccess(`✅ ${newLottery.lotteryType} lottery created! Provably fair block: #${commitmentBlock}`);
       
-      // Reset form
       setNewLottery({
         title: '',
         description: '',
@@ -595,16 +623,13 @@ function App() {
     try {
       console.log(`🎯 Drawing winners for ${lottery.lotteryType || 'standard'} lottery...`);
       
-      // Fetch Bitcoin block data
       const blockData = await fetchBitcoinBlockHash(lottery.provablyFair.commitmentBlock);
       
-      // Calculate number of winners
       const winnerCount = calculateWinnerCount(
         lottery.participants.length, 
         lottery.minWinners || 1
       );
       
-      // Generate provably fair winners
       const winners = generateProvablyFairWinners(
         blockData.hash, 
         lotteryId, 
@@ -612,7 +637,6 @@ function App() {
         winnerCount
       );
       
-      // Calculate prizes
       const prizes = calculatePrizeDistribution(
         lottery.participants.length,
         lottery.entryFee,
@@ -620,7 +644,6 @@ function App() {
         winnerCount
       );
       
-      // Combine winners with prizes
       const winnersWithPrizes = winners.map((winner, index) => ({
         ...winner,
         prize: prizes[index],
@@ -629,7 +652,6 @@ function App() {
         paymentId: null
       }));
 
-      // Update lottery with winners and proof data
       const lotteryRef = doc(db, 'lotteries', lotteryId);
       await updateDoc(lotteryRef, {
         winners: winnersWithPrizes,
@@ -717,6 +739,19 @@ function App() {
           <p>Administrator Access Required</p>
         </div>
 
+        {/* Debug Info for Admin Login Issues */}
+        {(sdkError || !piSDKReady) && (
+          <div className="card" style={{border: '2px solid #ffc107', background: '#fff3cd'}}>
+            <h3>🔧 Pi Browser Debug Information (Admin)</h3>
+            <div style={{fontSize: '0.9rem', fontFamily: 'monospace'}}>
+              <p><strong>SDK Ready:</strong> {piSDKReady ? '✅ Yes' : '❌ No'}</p>
+              <p><strong>SDK Available:</strong> {window.Pi ? '✅ Yes' : '❌ No'}</p>
+              <p><strong>SDK Error:</strong> {sdkError || 'None'}</p>
+              <p><strong>User Agent:</strong> {debugInfo.userAgent}</p>
+            </div>
+          </div>
+        )}
+
         <div className="card">
           <div className="login-form">
             <div className="login-header">
@@ -802,6 +837,24 @@ function App() {
         </div>
       </div>
 
+      {/* Debug Info for Pi Browser Issues */}
+      {(sdkError || !piSDKReady) && (
+        <div className="card" style={{border: '2px solid #ffc107', background: '#fff3cd'}}>
+          <h3>🔧 Pi Browser Debug Information (Admin)</h3>
+          <div style={{fontSize: '0.9rem', fontFamily: 'monospace'}}>
+            <p><strong>SDK Ready:</strong> {piSDKReady ? '✅ Yes' : '❌ No'}</p>
+            <p><strong>SDK Available:</strong> {window.Pi ? '✅ Yes' : '❌ No'}</p>
+            <p><strong>SDK Error:</strong> {sdkError || 'None'}</p>
+            <p><strong>User Agent:</strong> {debugInfo.userAgent}</p>
+          </div>
+          {!piSDKReady && (
+            <p style={{marginTop: '10px', color: '#856404'}}>
+              <strong>💡 Note:</strong> Pi SDK is required for prize distribution. Ensure you're using Pi Browser.
+            </p>
+          )}
+        </div>
+      )}
+
       {/* Messages */}
       {error && (
         <div className="error">
@@ -861,15 +914,15 @@ function App() {
             <button 
               onClick={connectAdminWallet} 
               className="button success"
-              disabled={!piSDKLoaded || loading}
+              disabled={!piSDKReady || loading}
             >
-              {loading ? '🔄 Connecting...' : '💰 Connect Admin Wallet'}
+              {loading ? '🔄 Connecting...' : piSDKReady ? '💰 Connect Admin Wallet' : '⏳ Pi SDK Loading...'}
             </button>
           )}
         </div>
       </div>
 
-      {/* Create New Lottery with Enhanced Options */}
+      {/* Create New Lottery */}
       <div className="card">
         <h2>🎰 Create New Lottery</h2>
         <form onSubmit={createLottery}>
