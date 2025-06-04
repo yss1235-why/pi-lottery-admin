@@ -1,4 +1,4 @@
-// File path: src/UserApp.js - Complete Fixed Version
+// File path: src/UserApp.js - Improved with Enhanced Pi SDK Integration
 import React, { useState, useEffect } from 'react';
 import { db } from './firebase';
 import { 
@@ -13,231 +13,12 @@ import {
   arrayUnion
 } from 'firebase/firestore';
 
+import usePiSDK from './hooks/usePiSDK'; // Use the new enhanced hook
 import { 
   LegalModal, 
   LegalFooter, 
-  useConsentTracking,
-  LEGAL_VERSIONS 
+  useConsentTracking 
 } from './components/LegalComponents';
-
-// Enhanced Pi Wallet hook (fixed build errors)
-const usePiWallet = () => {
-  const [piUser, setPiUser] = useState(null);
-  const [walletConnected, setWalletConnected] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
-  const [connectionStep, setConnectionStep] = useState('');
-  const [debugInfo, setDebugInfo] = useState({});
-
-  // Authentication with timeout and retry
-  const connectWithTimeout = async (timeoutMs = 25000, retryCount = 0) => {
-    const maxRetries = 3;
-    
-    return new Promise(async (resolve, reject) => {
-      let timeoutId;
-      let authCompleted = false;
-
-      // Set timeout
-      const timeout = setTimeout(() => {
-        if (!authCompleted) {
-          authCompleted = true;
-          reject(new Error(`Authentication timeout after ${timeoutMs/1000} seconds`));
-        }
-      }, timeoutMs);
-      timeoutId = timeout;
-
-      try {
-        setConnectionStep(`Authenticating... (attempt ${retryCount + 1}/${maxRetries + 1})`);
-        
-        console.log(`🔐 Starting authentication attempt ${retryCount + 1}`);
-        
-        // Try authentication with minimal scope first
-        const authResult = await window.Pi.authenticate(['username'], {
-          onIncompletePaymentFound: (payment) => {
-            console.log('💳 Incomplete payment found:', payment);
-            setConnectionStep('Found incomplete payment, processing...');
-          }
-        });
-
-        // Clear timeout if successful
-        if (timeoutId) clearTimeout(timeoutId);
-        
-        if (!authCompleted) {
-          authCompleted = true;
-          console.log('✅ Authentication successful:', authResult);
-          resolve(authResult);
-        }
-
-      } catch (authError) {
-        // Clear timeout
-        if (timeoutId) clearTimeout(timeoutId);
-        
-        if (!authCompleted) {
-          authCompleted = true;
-          console.error(`❌ Authentication attempt ${retryCount + 1} failed:`, authError);
-          
-          // Retry logic
-          if (retryCount < maxRetries) {
-            console.log(`🔄 Retrying authentication in 2 seconds...`);
-            setTimeout(() => {
-              connectWithTimeout(timeoutMs, retryCount + 1)
-                .then(resolve)
-                .catch(reject);
-            }, 2000);
-          } else {
-            reject(authError);
-          }
-        }
-      }
-    });
-  };
-
-  // Enhanced permission request
-  const requestPaymentPermission = async () => {
-    try {
-      setConnectionStep('Requesting payment permissions...');
-      
-      // Request payment permission separately
-      const paymentAuthResult = await window.Pi.authenticate(['payments'], {
-        onIncompletePaymentFound: (payment) => {
-          console.log('💳 Incomplete payment during permission request:', payment);
-        }
-      });
-
-      console.log('✅ Payment permission granted:', paymentAuthResult);
-      return paymentAuthResult;
-      
-    } catch (permError) {
-      console.error('❌ Payment permission failed:', permError);
-      throw new Error(`Payment permission failed: ${permError.message}`);
-    }
-  };
-
-  // Main connection function
-  const connectWallet = async () => {
-    setError('');
-    setLoading(true);
-    setConnectionStep('Initializing...');
-    
-    try {
-      // Step 1: Verify Pi SDK
-      if (!window.Pi) {
-        throw new Error('Pi SDK not available');
-      }
-
-      setConnectionStep('Checking Pi SDK status...');
-      
-      // Step 2: Initialize if needed
-      try {
-        await window.Pi.init({ 
-          version: "2.0", 
-          sandbox: true,
-          timeout: 20000  // 20 second timeout
-        });
-        console.log('✅ Pi SDK initialized');
-      } catch (initError) {
-        console.warn('⚠️ SDK init warning (might already be initialized):', initError);
-        // Continue anyway - SDK might already be initialized
-      }
-
-      setConnectionStep('Connecting to Pi Network...');
-      
-      // Step 3: Authenticate with timeout
-      const authResult = await connectWithTimeout(25000); // 25 second timeout
-      
-      setConnectionStep('Authentication successful!');
-      
-      // Step 4: Request payment permission if needed
-      let finalUser = authResult.user;
-      try {
-        const paymentAuth = await requestPaymentPermission();
-        finalUser = paymentAuth.user;
-        console.log('✅ Payment permissions granted');
-      } catch (permError) {
-        console.warn('⚠️ Payment permission failed, continuing with basic auth:', permError);
-        // Continue with basic auth - user can try payments later
-      }
-
-      // Step 5: Success
-      setPiUser(finalUser);
-      setWalletConnected(true);
-      setConnectionStep('');
-      
-      // Update debug info
-      setDebugInfo({
-        connectedAt: new Date().toISOString(),
-        user: finalUser,
-        hasPaymentPermission: !!finalUser.accessToken,
-        authMethod: 'timeout_retry'
-      });
-      
-      console.log('🎉 Wallet connected successfully:', finalUser);
-      
-    } catch (connectionError) {
-      console.error('❌ Wallet connection failed:', connectionError);
-      setError(`Connection failed: ${connectionError.message}`);
-      setConnectionStep('');
-      
-      // Update debug info with error
-      setDebugInfo(prev => ({
-        ...prev,
-        lastError: {
-          message: connectionError.message,
-          timestamp: new Date().toISOString(),
-          stack: connectionError.stack
-        }
-      }));
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Quick connection test (username only)
-  const testConnection = async () => {
-    try {
-      setConnectionStep('Testing connection...');
-      
-      const testResult = await window.Pi.authenticate(['username'], {
-        onIncompletePaymentFound: () => console.log('Test: incomplete payment found')
-      });
-      
-      console.log('✅ Connection test successful:', testResult);
-      setConnectionStep('');
-      return testResult;
-      
-    } catch (testError) {
-      console.error('❌ Connection test failed:', testError);
-      setConnectionStep('');
-      throw testError;
-    }
-  };
-
-  // Disconnect wallet
-  const disconnectWallet = () => {
-    setPiUser(null);
-    setWalletConnected(false);
-    setError('');
-    setConnectionStep('');
-    setDebugInfo({});
-    console.log('🔌 Wallet disconnected');
-  };
-
-  return {
-    piUser,
-    walletConnected,
-    loading,
-    error,
-    connectionStep,
-    debugInfo,
-    connectWallet,
-    testConnection,
-    disconnectWallet,
-    requestPaymentPermission,
-    isSDKReady: !!window.Pi,
-    canConnect: !!window.Pi && !loading,
-    setError
-  };
-};
 
 function UserApp() {
   // Legal modal / consent tracking state
@@ -258,26 +39,33 @@ function UserApp() {
     closeLegal();
   };
 
-  // Use enhanced Pi wallet hook
+  // Use enhanced Pi SDK hook
   const {
     piUser,
-    walletConnected,
+    isAuthenticated,
+    hasPaymentAccess,
     loading,
     error,
-    connectionStep,
-    debugInfo,
+    sdkReady,
+    connectionStatus,
+    authStep,
+    connectUser,
+    requestPaymentAccess,
     connectWallet,
+    createPayment,
+    disconnect,
     testConnection,
-    disconnectWallet,
-    requestPaymentPermission,
-    isSDKReady,
+    getConnectionInfo,
+    clearError,
     canConnect,
-    setError
-  } = usePiWallet();
+    isFullyConnected,
+    needsPaymentAccess
+  } = usePiSDK();
 
   // App state
   const [success, setSuccess] = useState('');
   const [showDebugPanel, setShowDebugPanel] = useState(false);
+  const [joiningLottery, setJoiningLottery] = useState(false);
 
   // Lottery data
   const [activeLotteries, setActiveLotteries] = useState([]);
@@ -307,25 +95,33 @@ function UserApp() {
   }, []);
 
   useEffect(() => {
-    if (walletConnected && piUser) {
+    if (isAuthenticated && piUser) {
       loadMyEntries();
       calculateUserStats();
     }
-  }, [walletConnected, piUser]);
+  }, [isAuthenticated, piUser]);
 
   // Auto-refresh every 30 seconds
   useEffect(() => {
     const interval = setInterval(() => {
       loadActiveLotteries();
-      if (walletConnected) {
+      if (isAuthenticated) {
         loadMyEntries();
       }
     }, 30000);
 
     return () => clearInterval(interval);
-  }, [walletConnected]);
+  }, [isAuthenticated]);
 
-  // Data loading functions with error handling for missing indexes
+  // Clear messages after 5 seconds
+  useEffect(() => {
+    if (success) {
+      const timer = setTimeout(() => setSuccess(''), 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [success]);
+
+  // Data loading functions with improved error handling
   const loadActiveLotteries = async () => {
     try {
       const lotteriesRef = collection(db, 'lotteries');
@@ -358,7 +154,7 @@ function UserApp() {
         
       } catch (indexError) {
         if (indexError.code === 'failed-precondition' || indexError.message?.includes('index')) {
-          console.warn('⚠️ Firebase index not ready, using fallback query:', indexError.message);
+          console.warn('⚠️ Firebase index not ready, using fallback query');
           
           // Fallback: Get all lotteries and filter client-side
           const fallbackSnapshot = await getDocs(lotteriesRef);
@@ -389,9 +185,8 @@ function UserApp() {
       
     } catch (loadError) {
       console.error('Error loading active lotteries:', loadError);
-      // Don't show error to user for index issues
       if (!loadError.message?.includes('index')) {
-        setError('Failed to load lotteries. Please refresh the page.');
+        setSuccess('⚠️ Failed to load lotteries. Please refresh the page.');
       }
     }
   };
@@ -433,7 +228,6 @@ function UserApp() {
     try {
       const lotteriesRef = collection(db, 'lotteries');
       
-      // Try indexed query first
       try {
         const q = query(
           lotteriesRef,
@@ -459,7 +253,6 @@ function UserApp() {
         if (indexError.code === 'failed-precondition' || indexError.message?.includes('index')) {
           console.warn('⚠️ Firebase index not ready for completed lotteries, using fallback');
           
-          // Fallback: Get all and filter client-side
           const fallbackSnapshot = await getDocs(lotteriesRef);
           const completed = [];
           
@@ -475,10 +268,8 @@ function UserApp() {
             }
           });
           
-          // Sort client-side
           completed.sort((a, b) => b.drawnAt - a.drawnAt);
           setCompletedLotteries(completed.slice(0, 10));
-          
         } else {
           throw indexError;
         }
@@ -532,21 +323,21 @@ function UserApp() {
     return userTickets < maxTickets;
   };
 
-  // Enhanced lottery participation with payment permission check
+  // Enhanced lottery participation with new Pi SDK
   const joinLottery = async (lotteryId, lottery) => {
-    if (!walletConnected) {
-      setError('Please connect your Pi wallet first');
+    if (!isAuthenticated) {
+      setSuccess('Please connect to Pi Network first');
       return;
     }
 
-    // Check if user has payment permission
-    if (!debugInfo.hasPaymentPermission) {
+    // Check if user has payment access
+    if (!hasPaymentAccess) {
       try {
         setSuccess('Requesting payment permission...');
-        await requestPaymentPermission();
+        await requestPaymentAccess();
         setSuccess('Payment permission granted! You can now join lotteries.');
       } catch (permissionError) {
-        setError(`Payment permission required: ${permissionError.message}`);
+        setSuccess(`Payment permission required: ${permissionError.message}`);
         return;
       }
     }
@@ -555,15 +346,16 @@ function UserApp() {
     const maxTickets = calculateMaxTicketsForUser(lottery.participants.length + 1);
     
     if (userTickets >= maxTickets) {
-      setError(`You've reached your ticket limit (${maxTickets} tickets max)`);
+      setSuccess(`You've reached your ticket limit (${maxTickets} tickets max)`);
       return;
     }
 
-    try {
-      setSuccess('');
-      setError('');
+    setJoiningLottery(true);
+    setSuccess('');
+    clearError();
 
-      console.log('💰 Creating Pi payment for lottery entry...');
+    try {
+      console.log('💰 Joining lottery:', lottery.title);
 
       const paymentData = {
         amount: lottery.entryFee,
@@ -571,18 +363,19 @@ function UserApp() {
         metadata: {
           lotteryId,
           userId: piUser.uid,
-          ticketNumber: userTickets + 1
+          ticketNumber: userTickets + 1,
+          timestamp: Date.now()
         }
       };
 
-      console.log('💳 Payment data:', paymentData);
-
       const paymentCallbacks = {
         onReadyForServerApproval: (paymentId) => {
-          console.log('✅ Payment ready for approval:', paymentId);
+          console.log('✅ Payment approved:', paymentId);
+          setSuccess('Payment approved, processing entry...');
         },
+        
         onReadyForServerCompletion: async (paymentId, txnId) => {
-          console.log('🎉 Payment completed:', paymentId, txnId);
+          console.log('🎉 Payment completed:', { paymentId, txnId });
           
           try {
             // Add user to lottery participants
@@ -598,31 +391,64 @@ function UserApp() {
               })
             });
 
-            setSuccess(`🎫 Ticket purchased! You now have ${userTickets + 1} tickets in this lottery.`);
+            setSuccess(`🎫 Ticket purchased! You now have ${userTickets + 1} tickets in "${lottery.title}"`);
             
             // Refresh data
             loadActiveLotteries();
             loadMyEntries();
           } catch (updateError) {
             console.error('❌ Error updating lottery:', updateError);
-            setError('Payment successful but error updating lottery. Please refresh.');
+            setSuccess('Payment successful but error updating lottery. Please refresh.');
           }
         },
+        
         onCancel: (paymentId) => {
           console.log('❌ Payment cancelled:', paymentId);
-          setError('Payment cancelled');
+          setSuccess('Payment cancelled');
         },
+        
         onError: (paymentError, paymentId) => {
-          console.error('❌ Payment error:', paymentError, paymentId);
-          setError(`Payment failed: ${paymentError.message || paymentError}`);
+          console.error('❌ Payment error:', { paymentError, paymentId });
+          setSuccess(`Payment failed: ${paymentError.message || paymentError}`);
         }
       };
 
-      await window.Pi.createPayment(paymentData, paymentCallbacks);
+      await createPayment(paymentData, paymentCallbacks);
 
     } catch (joinError) {
       console.error('❌ Join lottery error:', joinError);
-      setError(`Failed to join lottery: ${joinError.message}`);
+      setSuccess(`Failed to join lottery: ${joinError.message}`);
+    } finally {
+      setJoiningLottery(false);
+    }
+  };
+
+  // Enhanced connection handlers
+  const handleConnectUser = async () => {
+    try {
+      await connectUser();
+      setSuccess(`✅ Connected to Pi Network! Welcome, ${piUser?.username || 'User'}`);
+    } catch (connectError) {
+      console.error('Connection failed:', connectError);
+    }
+  };
+
+  const handleConnectWallet = async () => {
+    try {
+      await connectWallet();
+      setSuccess(`💰 Wallet connected! You can now participate in lotteries.`);
+    } catch (connectError) {
+      console.error('Wallet connection failed:', connectError);
+    }
+  };
+
+  const handleTestConnection = async () => {
+    try {
+      setSuccess('Testing Pi connection...');
+      const result = await testConnection();
+      setSuccess(`✅ Connection test successful! User: ${result.user.username}`);
+    } catch (testError) {
+      setSuccess(`❌ Connection test failed: ${testError.message}`);
     }
   };
 
@@ -678,34 +504,73 @@ function UserApp() {
     const percentages = getPercentages(winnerCount);
     const prizes = percentages.map(p => (prizePool * p / 100).toFixed(2));
 
-    return { prizePool, winnerCount, prizes, winChance: (winnerCount / Math.max(participantCount, 1) * 100).toFixed(1) };
+    return { 
+      prizePool, 
+      winnerCount, 
+      prizes, 
+      winChance: (winnerCount / Math.max(participantCount, 1) * 100).toFixed(1) 
+    };
   };
 
   const clearMessages = () => {
-    setError('');
+    clearError();
     setSuccess('');
   };
 
-  // Enhanced connection test function
-  const handleTestConnection = async () => {
-    try {
-      setSuccess('Testing Pi connection...');
-      const result = await testConnection();
-      setSuccess(`✅ Connection test successful! User: ${result.user.username}`);
-    } catch (testError) {
-      setError(`❌ Connection test failed: ${testError.message}`);
+  // Get status color for connection
+  const getStatusColor = () => {
+    switch (connectionStatus) {
+      case 'connected': return '#28a745';
+      case 'connecting': return '#ffc107';
+      case 'error': return '#dc3545';
+      default: return '#6c757d';
     }
   };
 
   return (
     <div className="container">
-      {/* Header with Enhanced Connection Status */}
-      <div className="header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+      {/* Enhanced Header with Better Connection Status */}
+      <div className="header" style={{ 
+        display: 'flex', 
+        justifyContent: 'space-between', 
+        alignItems: 'center', 
+        marginBottom: '20px',
+        position: 'relative'
+      }}>
         <div>
           <h1 style={{ margin: 0 }}>🎰 Pi Lottery</h1>
-          <p style={{ margin: '5px 0 0 0', opacity: 0.9 }}>Provably fair lotteries with Pi cryptocurrency</p>
+          <p style={{ margin: '5px 0 0 0', opacity: 0.9 }}>
+            Provably fair lotteries with Pi cryptocurrency
+          </p>
         </div>
+        
         <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
+          {/* Enhanced Connection Status Indicator */}
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
+            padding: '8px 12px',
+            background: 'rgba(255,255,255,0.1)',
+            borderRadius: '20px',
+            fontSize: '0.9rem'
+          }}>
+            <div style={{
+              width: '8px',
+              height: '8px',
+              borderRadius: '50%',
+              background: getStatusColor(),
+              animation: connectionStatus === 'connecting' ? 'pulse 2s infinite' : 'none'
+            }}></div>
+            <span style={{ color: 'white' }}>
+              {connectionStatus === 'connected' && isFullyConnected && '🔗 Fully Connected'}
+              {connectionStatus === 'connected' && needsPaymentAccess && '⚠️ Payment Access Needed'}
+              {connectionStatus === 'connecting' && '🔄 Connecting...'}
+              {connectionStatus === 'error' && '❌ Connection Error'}
+              {connectionStatus === 'disconnected' && '⭕ Disconnected'}
+            </span>
+          </div>
+
           {/* Debug button */}
           <button 
             onClick={() => setShowDebugPanel(true)}
@@ -722,31 +587,55 @@ function UserApp() {
             🔧 Debug
           </button>
           
-          {walletConnected ? (
+          {/* Enhanced Connection Controls */}
+          {isFullyConnected ? (
             <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
               <div style={{ textAlign: 'right' }}>
-                <div style={{ fontWeight: 'bold', color: 'white' }}>👤 {piUser.username}</div>
+                <div style={{ fontWeight: 'bold', color: 'white' }}>
+                  👤 {piUser.username}
+                </div>
                 <div style={{ fontSize: '0.8rem', opacity: 0.8 }}>
-                  {debugInfo.hasPaymentPermission ? 'Full Access' : 'Basic Access'}
+                  💰 Payment Ready
                 </div>
               </div>
-              <button onClick={disconnectWallet} className="button secondary" style={{ padding: '8px 16px' }}>
+              <button onClick={disconnect} className="button danger" style={{ padding: '8px 16px' }}>
+                🔌 Disconnect
+              </button>
+            </div>
+          ) : isAuthenticated && needsPaymentAccess ? (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              <div style={{ textAlign: 'right', marginBottom: '5px' }}>
+                <div style={{ fontWeight: 'bold', color: 'white', fontSize: '0.9rem' }}>
+                  👤 {piUser.username}
+                </div>
+              </div>
+              <button 
+                onClick={requestPaymentAccess}
+                className="button warning"
+                disabled={loading}
+                style={{ padding: '10px 16px' }}
+              >
+                {loading ? '🔄 Requesting...' : '💰 Enable Payments'}
+              </button>
+              <button onClick={disconnect} className="button secondary" style={{ padding: '6px 12px', fontSize: '0.9rem' }}>
                 🔌 Disconnect
               </button>
             </div>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
               <button 
-                onClick={connectWallet}
+                onClick={handleConnectWallet}
                 className="button success"
-                disabled={!isSDKReady || loading}
+                disabled={!canConnect}
                 style={{ padding: '12px 20px' }}
               >
-                {loading ? `🔄 ${connectionStep || 'Connecting...'}` : isSDKReady ? '🔗 Connect Pi Wallet' : '⏳ Loading Pi SDK...'}
+                {loading ? `🔄 ${authStep || 'Connecting...'}` : 
+                 canConnect ? '🔗 Connect Pi Wallet' : 
+                 '⏳ Loading Pi SDK...'}
               </button>
               
               {/* Test connection button */}
-              {isSDKReady && !walletConnected && !loading && (
+              {sdkReady && !isAuthenticated && !loading && (
                 <button 
                   onClick={handleTestConnection}
                   className="button secondary"
@@ -760,14 +649,15 @@ function UserApp() {
         </div>
       </div>
 
-      {/* Connection Status Panel */}
-      {(connectionStep || error || (!isSDKReady && !loading)) && (
+      {/* Enhanced Connection Status Panel */}
+      {(authStep || error || (!sdkReady && !loading)) && (
         <div className="card" style={{
-          background: error ? '#f8d7da' : connectionStep ? '#fff3cd' : '#d1ecf1',
-          border: `2px solid ${error ? '#f5c6cb' : connectionStep ? '#ffeaa7' : '#bee5eb'}`
+          background: error ? '#f8d7da' : authStep ? '#fff3cd' : '#d1ecf1',
+          border: `2px solid ${error ? '#f5c6cb' : authStep ? '#ffeaa7' : '#bee5eb'}`
         }}>
           <h3>🔗 Connection Status</h3>
-          {connectionStep && (
+          
+          {authStep && (
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '10px' }}>
               <div style={{
                 width: '20px',
@@ -777,31 +667,45 @@ function UserApp() {
                 borderRadius: '50%',
                 animation: 'spin 1s linear infinite'
               }}></div>
-              <span>{connectionStep}</span>
+              <span>{authStep}</span>
             </div>
           )}
           
           {error && (
             <div style={{ color: '#721c24', marginBottom: '10px' }}>
               ❌ {error}
+              <button 
+                onClick={clearError}
+                style={{ 
+                  marginLeft: '10px', 
+                  background: 'none', 
+                  border: 'none', 
+                  color: 'inherit', 
+                  cursor: 'pointer',
+                  textDecoration: 'underline'
+                }}
+              >
+                Clear
+              </button>
             </div>
           )}
           
-          {!isSDKReady && !loading && (
+          {!sdkReady && !loading && (
             <div style={{ color: '#0c5460' }}>
-              ⚠️ Pi SDK not ready. Ensure you're using Pi Browser.
+              ⚠️ Pi SDK not ready. Please ensure you're using Pi Browser.
             </div>
           )}
           
-          {/* Troubleshooting tips */}
+          {/* Enhanced Troubleshooting */}
           {error && (
             <div style={{ fontSize: '0.9rem', color: '#6c757d', marginTop: '10px' }}>
-              <strong>💡 Try these solutions:</strong>
+              <strong>💡 Troubleshooting:</strong>
               <ul style={{ margin: '5px 0', paddingLeft: '20px' }}>
-                <li>Clear Pi Browser cache and restart the app</li>
+                <li>Try refreshing the page</li>
+                <li>Ensure you're using the latest Pi Browser</li>
                 <li>Check your internet connection</li>
                 <li>Log out and back into the Pi app</li>
-                <li>Test connection with the "Test Connection" button first</li>
+                <li>Clear Pi Browser cache and restart</li>
               </ul>
             </div>
           )}
@@ -812,12 +716,18 @@ function UserApp() {
       {success && (
         <div className="success">
           {success}
-          <button onClick={clearMessages} style={{float: 'right', background: 'none', border: 'none', color: 'inherit', cursor: 'pointer'}}>×</button>
+          <button onClick={clearMessages} style={{
+            float: 'right', 
+            background: 'none', 
+            border: 'none', 
+            color: 'inherit', 
+            cursor: 'pointer'
+          }}>×</button>
         </div>
       )}
 
       {/* User Stats */}
-      {walletConnected && (
+      {isAuthenticated && (
         <div className="stats-grid">
           <div className="stat-card purple">
             <div className="stat-number">{userStats.totalEntered}</div>
@@ -841,9 +751,12 @@ function UserApp() {
       {/* Active Lotteries */}
       <div className="card">
         <h2>🎲 Available Lotteries</h2>
-        {!walletConnected && (
+        {!isFullyConnected && (
           <div className="warning" style={{ margin: '0 0 20px 0' }}>
-            <strong>🔗 Connect your Pi wallet to join lotteries and track your entries</strong>
+            <strong>
+              {!isAuthenticated && '🔗 Connect to Pi Network to join lotteries'}
+              {isAuthenticated && needsPaymentAccess && '💰 Enable payment access to join lotteries'}
+            </strong>
           </div>
         )}
         
@@ -885,7 +798,12 @@ function UserApp() {
                   {/* Live Prize Pool */}
                   <div className="success" style={{margin: '15px 0'}}>
                     <h4>💰 Current Prize Pool: {prizeInfo.prizePool.toFixed(2)}π</h4>
-                    <div style={{display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))', gap: '10px', marginTop: '10px'}}>
+                    <div style={{
+                      display: 'grid', 
+                      gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))', 
+                      gap: '10px', 
+                      marginTop: '10px'
+                    }}>
                       {prizeInfo.prizes.slice(0, 5).map((prize, index) => (
                         <div key={index} style={{textAlign: 'center'}}>
                           <div style={{fontWeight: 'bold'}}>
@@ -916,7 +834,7 @@ function UserApp() {
                       <div className="lottery-detail-label">Participants</div>
                       <div className="lottery-detail-value">{participantCount}</div>
                     </div>
-                    {walletConnected && (
+                    {isAuthenticated && (
                       <div className="lottery-detail">
                         <div className="lottery-detail-label">Your Tickets</div>
                         <div className="lottery-detail-value">{userTickets}/{maxUserTickets}</div>
@@ -935,20 +853,47 @@ function UserApp() {
                     <p>Winners selected using future Bitcoin block hash - impossible to manipulate!</p>
                   </div>
 
+                  {/* Enhanced Action Buttons */}
                   <div className="lottery-actions">
-                    {!walletConnected ? (
+                    {!isAuthenticated ? (
                       <div style={{textAlign: 'center', padding: '15px'}}>
                         <span style={{color: '#6c757d', fontWeight: 'bold'}}>
-                          🔗 Connect Pi wallet to join this lottery
+                          🔗 Connect to Pi Network to join this lottery
+                        </span>
+                      </div>
+                    ) : needsPaymentAccess ? (
+                      <div style={{textAlign: 'center', padding: '15px'}}>
+                        <span style={{color: '#856404', fontWeight: 'bold'}}>
+                          💰 Enable payment access to join lotteries
                         </span>
                       </div>
                     ) : canBuyMore ? (
                       <button 
                         onClick={() => joinLottery(lottery.id, lottery)}
                         className="button success full-width"
-                        disabled={loading}
+                        disabled={joiningLottery || loading}
+                        style={{
+                          position: 'relative',
+                          overflow: 'hidden'
+                        }}
                       >
-                        {loading ? '🔄 Processing...' : `🎫 Buy Ticket (${lottery.entryFee}π)`}
+                        {joiningLottery ? (
+                          <span>
+                            <span style={{
+                              display: 'inline-block',
+                              width: '16px',
+                              height: '16px',
+                              border: '2px solid #ffffff40',
+                              borderTop: '2px solid #ffffff',
+                              borderRadius: '50%',
+                              animation: 'spin 1s linear infinite',
+                              marginRight: '8px'
+                            }}></span>
+                            Processing Payment...
+                          </span>
+                        ) : (
+                          `🎫 Buy Ticket (${lottery.entryFee}π)`
+                        )}
                       </button>
                     ) : (
                       <div style={{textAlign: 'center', padding: '15px'}}>
@@ -968,7 +913,122 @@ function UserApp() {
         )}
       </div>
 
-      {/* Debug Panel */}
+      {/* My Entries Section */}
+      {myEntries.length > 0 && (
+        <div className="card">
+          <h2>🎫 My Lottery Entries</h2>
+          <div className="lottery-list">
+            {myEntries.map((entry) => (
+              <div key={entry.lotteryId} className="lottery-item">
+                <div className="lottery-header">
+                  <h3 className="lottery-title">{entry.lotteryTitle}</h3>
+                  <span className={`lottery-status status-${entry.status}`}>
+                    {entry.status === 'active' && `⏰ ${formatTimeRemaining(entry.endDate)}`}
+                    {entry.status === 'ended' && '🔴 Ended'}
+                    {entry.status === 'completed' && '🏆 Completed'}
+                  </span>
+                </div>
+                
+                <div className="lottery-details">
+                  <div className="lottery-detail">
+                    <div className="lottery-detail-label">My Tickets</div>
+                    <div className="lottery-detail-value">{entry.ticketCount}</div>
+                  </div>
+                  <div className="lottery-detail">
+                    <div className="lottery-detail-label">Total Spent</div>
+                    <div className="lottery-detail-value">{(entry.ticketCount * entry.entryFee).toFixed(2)}π</div>
+                  </div>
+                  <div className="lottery-detail">
+                    <div className="lottery-detail-label">Total Participants</div>
+                    <div className="lottery-detail-value">{entry.totalParticipants}</div>
+                  </div>
+                  <div className="lottery-detail">
+                    <div className="lottery-detail-label">My Win Chance</div>
+                    <div className="lottery-detail-value">
+                      {((entry.ticketCount / entry.totalParticipants) * 100).toFixed(1)}%
+                    </div>
+                  </div>
+                </div>
+
+                {/* Show results if completed */}
+                {entry.status === 'completed' && entry.winners.length > 0 && (
+                  <div className="winners-display">
+                    <h4>🏆 Results:</h4>
+                    {entry.winners.some(w => w.winner.uid === piUser.uid) ? (
+                      <div className="success" style={{padding: '15px', textAlign: 'center'}}>
+                        <strong>🎉 Congratulations! You won!</strong>
+                        {entry.winners
+                          .filter(w => w.winner.uid === piUser.uid)
+                          .map((win, index) => (
+                            <div key={index} style={{marginTop: '10px'}}>
+                              Position #{win.position}: {win.prize}π
+                            </div>
+                          ))
+                        }
+                      </div>
+                    ) : (
+                      <div style={{padding: '15px', textAlign: 'center', color: '#6c757d'}}>
+                        No win this time. Better luck next lottery!
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Recent Winners */}
+      {completedLotteries.length > 0 && (
+        <div className="card">
+          <h2>🏆 Recent Winners</h2>
+          <div className="lottery-list">
+            {completedLotteries.slice(0, 5).map((lottery) => (
+              <div key={lottery.id} className="lottery-item winner-item">
+                <div className="lottery-header">
+                  <h3 className="lottery-title">{lottery.title}</h3>
+                  <span className="lottery-status status-completed">
+                    🏆 Completed
+                  </span>
+                </div>
+                
+                {lottery.winners && lottery.winners.length > 0 && (
+                  <div className="winners-display">
+                    <h4>Winners:</h4>
+                    <div style={{display: 'grid', gap: '8px'}}>
+                      {lottery.winners.slice(0, 3).map((winner, index) => (
+                        <div key={index} style={{
+                          display: 'flex', 
+                          justifyContent: 'space-between',
+                          padding: '8px',
+                          background: '#f8f9fa',
+                          borderRadius: '6px'
+                        }}>
+                          <span>
+                            {winner.position === 1 ? '🥇' : winner.position === 2 ? '🥈' : winner.position === 3 ? '🥉' : '🏅'} 
+                            #{winner.position} - {winner.winner.username}
+                          </span>
+                          <span style={{fontWeight: 'bold', color: '#007bff'}}>
+                            {winner.prize}π
+                          </span>
+                        </div>
+                      ))}
+                      {lottery.winners.length > 3 && (
+                        <div style={{textAlign: 'center', color: '#6c757d', fontSize: '0.9rem'}}>
+                          +{lottery.winners.length - 3} more winners
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Enhanced Debug Panel */}
       {showDebugPanel && (
         <div style={{
           position: 'fixed',
@@ -986,7 +1046,7 @@ function UserApp() {
         }}>
           <div style={{ maxWidth: '800px', margin: '0 auto' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '20px' }}>
-              <h2>🔧 Pi Browser Debug Panel</h2>
+              <h2>🔧 Enhanced Pi SDK Debug Panel</h2>
               <button 
                 onClick={() => setShowDebugPanel(false)}
                 style={{
@@ -1002,18 +1062,39 @@ function UserApp() {
             </div>
             
             <div style={{ background: '#1a1a1a', padding: '20px', borderRadius: '8px' }}>
-              <h3>Connection Debug Info:</h3>
+              <h3>Pi SDK Connection Info:</h3>
               <pre style={{ whiteSpace: 'pre-wrap', margin: '10px 0' }}>
-                {JSON.stringify({
-                  piSDKAvailable: isSDKReady,
-                  walletConnected,
-                  connectionStep,
-                  error,
-                  debugInfo,
-                  userAgent: navigator.userAgent,
-                  timestamp: new Date().toISOString()
-                }, null, 2)}
+                {JSON.stringify(getConnectionInfo(), null, 2)}
               </pre>
+              
+              <div style={{ marginTop: '20px' }}>
+                <button 
+                  onClick={handleTestConnection}
+                  style={{
+                    background: '#007bff',
+                    color: 'white',
+                    border: 'none',
+                    padding: '8px 16px',
+                    borderRadius: '4px',
+                    marginRight: '10px'
+                  }}
+                >
+                  🧪 Test Connection
+                </button>
+                
+                <button 
+                  onClick={() => console.log('Pi SDK:', window.Pi)}
+                  style={{
+                    background: '#6c757d',
+                    color: 'white',
+                    border: 'none',
+                    padding: '8px 16px',
+                    borderRadius: '4px'
+                  }}
+                >
+                  📋 Log Pi SDK to Console
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -1029,6 +1110,19 @@ function UserApp() {
       />
 
       <LegalFooter onOpenLegal={openLegal} />
+
+      {/* Add CSS for animations */}
+      <style jsx>{`
+        @keyframes spin {
+          0% { transform: rotate(0deg); }
+          100% { transform: rotate(360deg); }
+        }
+        
+        @keyframes pulse {
+          0%, 100% { opacity: 1; }
+          50% { opacity: 0.5; }
+        }
+      `}</style>
     </div>
   );
 }
