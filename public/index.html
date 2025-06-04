@@ -1,4 +1,3 @@
-<!-- File path: public/index.html - Pi Browser Optimized Complete -->
 <!DOCTYPE html>
 <html lang="en">
   <head>
@@ -8,114 +7,210 @@
     <meta name="theme-color" content="#6f42c1" />
     <meta name="description" content="Pi Lottery - Provably Fair Lotteries with 2% Ticket System" />
     
-    <!-- Pi Browser Compatibility -->
+    <!-- Pi Browser Compatibility Headers -->
     <meta name="pi-network-app" content="true" />
     <meta name="pi-app-version" content="2.0.0" />
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="default" />
     
+    <!-- Security and Compatibility -->
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline' 'unsafe-eval' https: data: blob:; script-src 'self' 'unsafe-inline' 'unsafe-eval' https: data:; connect-src 'self' https: wss:;">
+    
     <title>Pi Lottery - Fair & Transparent</title>
     
-    <!-- Simplified Pi SDK Configuration for Pi Browser -->
+    <!-- Enhanced Pi SDK Configuration -->
     <script>
-      console.log('🔧 Configuring Pi SDK for Pi Browser...');
+      console.log('🚀 Initializing Pi Lottery Platform...');
       
-      // Simple Pi SDK Configuration - Pi Browser compatible
-      window.PI_SDK_CONFIG = {
-        version: "2.0",
-        sandbox: true
+      // Enhanced Pi SDK Configuration
+      window.PI_LOTTERY_CONFIG = {
+        version: "2.0.0",
+        environment: "production",
+        piSDK: {
+          version: "2.0",
+          sandbox: true,
+          timeout: 30000,
+          retries: 3
+        },
+        debug: false
       };
       
-      // Track SDK loading status
+      // Enhanced SDK Status Tracking
       window.piSDKStatus = {
         loaded: false,
+        initialized: false,
         error: null,
-        attempts: 0
+        attempts: 0,
+        startTime: Date.now(),
+        events: []
       };
       
-      // Simple error handler
-      window.piSDKErrorHandler = function(error) {
-        console.error('🚨 Pi SDK Error:', error);
-        window.piSDKStatus.error = error.toString();
+      // Utility Functions
+      window.piSDKUtils = {
+        log: function(message, type = 'info') {
+          const timestamp = new Date().toISOString();
+          const logMessage = `[${timestamp}] [Pi SDK] ${message}`;
+          
+          console[type](logMessage);
+          window.piSDKStatus.events.push({ timestamp, message, type });
+          
+          // Update UI if available
+          const statusDiv = document.getElementById('pi-sdk-status');
+          if (statusDiv) {
+            statusDiv.innerHTML = message;
+          }
+        },
         
-        // Show error to user
-        const errorDiv = document.getElementById('pi-sdk-error');
-        if (errorDiv) {
-          errorDiv.style.display = 'block';
-          errorDiv.innerHTML = '⚠️ Pi SDK Error: ' + error.toString();
+        updateUI: function(elementId, content, className = '') {
+          const element = document.getElementById(elementId);
+          if (element) {
+            element.innerHTML = content;
+            if (className) {
+              element.className = `pi-status ${className}`;
+            }
+          }
+        },
+        
+        showError: function(error) {
+          window.piSDKStatus.error = error.toString();
+          this.updateUI('pi-sdk-loading', '', 'hidden');
+          this.updateUI('pi-sdk-error', `❌ Pi SDK Error: ${error}`, 'error');
+          this.log(`SDK Error: ${error}`, 'error');
+        },
+        
+        showSuccess: function() {
+          this.updateUI('pi-sdk-loading', '', 'hidden');
+          this.updateUI('pi-sdk-success', '✅ Pi SDK Ready', 'success');
+          this.log('SDK Ready and Available', 'info');
         }
       };
       
-      // Check if Pi SDK is loaded
+      // Enhanced SDK Ready Check
       window.checkPiSDK = function() {
         window.piSDKStatus.attempts++;
+        window.piSDKUtils.log(`Checking Pi SDK (attempt ${window.piSDKStatus.attempts}/10)`);
         
         if (window.Pi) {
-          console.log('✅ Pi SDK loaded successfully');
           window.piSDKStatus.loaded = true;
+          window.piSDKUtils.log('Pi SDK object found, testing functionality...');
           
-          // Hide loading, show success
-          const loading = document.getElementById('pi-sdk-loading');
-          const success = document.getElementById('pi-sdk-success');
-          if (loading) loading.style.display = 'none';
-          if (success) {
-            success.style.display = 'block';
-            success.innerHTML = '✅ Pi SDK Ready';
+          // Test SDK functionality
+          try {
+            if (typeof window.Pi.init === 'function') {
+              window.piSDKUtils.showSuccess();
+              window.piSDKUtils.log('Pi SDK is functional and ready');
+              
+              // Notify React app
+              window.dispatchEvent(new CustomEvent('piSDKReady', {
+                detail: {
+                  version: window.Pi.version,
+                  loadTime: Date.now() - window.piSDKStatus.startTime
+                }
+              }));
+              
+              return;
+            } else {
+              throw new Error('Pi SDK object exists but missing required methods');
+            }
+          } catch (testError) {
+            window.piSDKUtils.showError(`SDK test failed: ${testError.message}`);
+            return;
           }
-          
-          // Notify React app
-          window.dispatchEvent(new CustomEvent('piSDKReady'));
-          
-        } else if (window.piSDKStatus.attempts < 10) {
-          console.warn(`⚠️ Pi SDK not loaded (attempt ${window.piSDKStatus.attempts}/10)`);
-          setTimeout(window.checkPiSDK, 2000);
+        }
+        
+        // Retry logic
+        if (window.piSDKStatus.attempts < 10) {
+          const nextAttempt = Math.min(window.piSDKStatus.attempts * 1000, 5000);
+          window.piSDKUtils.log(`SDK not ready, retrying in ${nextAttempt/1000}s...`);
+          setTimeout(window.checkPiSDK, nextAttempt);
         } else {
-          console.error('❌ Pi SDK failed to load after 10 attempts');
-          window.piSDKStatus.error = 'SDK failed to load';
-          window.piSDKErrorHandler('SDK failed to load after 10 attempts');
+          window.piSDKUtils.showError('SDK failed to load after 10 attempts');
         }
       };
+      
+      // SDK Loading Handler
+      window.handlePiSDKLoad = function() {
+        window.piSDKUtils.log('Pi SDK script loaded successfully');
+        setTimeout(window.checkPiSDK, 500);
+      };
+      
+      // SDK Error Handler
+      window.handlePiSDKError = function(error) {
+        window.piSDKUtils.showError(`Script loading failed: ${error}`);
+      };
+      
+      // Page Load Handler
+      window.addEventListener('load', function() {
+        window.piSDKUtils.log('Page loaded, checking SDK status...');
+        
+        // Fallback check if SDK wasn't detected
+        setTimeout(function() {
+          if (!window.piSDKStatus.loaded) {
+            window.piSDKUtils.log('SDK not detected after page load, initiating check...', 'warn');
+            window.checkPiSDK();
+          }
+        }, 2000);
+      });
+      
+      // Enhanced Error Handling
+      window.addEventListener('error', function(event) {
+        if (event.filename && event.filename.includes('pi-sdk')) {
+          window.piSDKUtils.showError(`SDK script error: ${event.message}`);
+        }
+      });
+      
+      // Unhandled Promise Rejection Handler
+      window.addEventListener('unhandledrejection', function(event) {
+        if (event.reason && event.reason.toString().includes('Pi')) {
+          window.piSDKUtils.log(`Possible Pi SDK related error: ${event.reason}`, 'warn');
+        }
+      });
     </script>
     
-    <!-- Pi SDK - Simple loading -->
-    <script 
-      src="https://sdk.minepi.com/pi-sdk.js" 
-      onload="console.log('📦 Pi SDK script loaded'); setTimeout(window.checkPiSDK, 1000);"
-      onerror="console.error('❌ Pi SDK script failed to load'); window.piSDKErrorHandler('Script failed to load');"
-    ></script>
-    
-    <!-- Basic styles -->
+    <!-- Enhanced Styles -->
     <style>
+      :root {
+        --pi-primary: #6f42c1;
+        --pi-success: #28a745;
+        --pi-warning: #ffc107;
+        --pi-danger: #dc3545;
+        --pi-info: #17a2b8;
+      }
+      
       .pi-status {
         position: fixed;
         top: 10px;
         right: 10px;
-        padding: 10px;
+        padding: 12px 16px;
         border-radius: 8px;
         font-size: 14px;
-        font-weight: bold;
+        font-weight: 600;
         z-index: 10000;
-        max-width: 300px;
+        max-width: 350px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        transition: all 0.3s ease;
       }
       
-      #pi-sdk-loading {
+      .pi-status.loading {
         background: #fff3cd;
         color: #856404;
         border: 1px solid #ffeaa7;
       }
       
-      #pi-sdk-success {
+      .pi-status.success {
         background: #d4edda;
         color: #155724;
         border: 1px solid #c3e6cb;
-        display: none;
       }
       
-      #pi-sdk-error {
+      .pi-status.error {
         background: #f8d7da;
         color: #721c24;
         border: 1px solid #f5c6cb;
+      }
+      
+      .pi-status.hidden {
         display: none;
       }
       
@@ -124,122 +219,343 @@
         width: 16px;
         height: 16px;
         border: 2px solid #f3f3f3;
-        border-top: 2px solid #6f42c1;
+        border-top: 2px solid var(--pi-primary);
         border-radius: 50%;
-        animation: spin 1s linear infinite;
+        animation: piSpin 1s linear infinite;
         margin-right: 8px;
+        vertical-align: middle;
       }
       
-      @keyframes spin {
+      @keyframes piSpin {
         0% { transform: rotate(0deg); }
         100% { transform: rotate(360deg); }
       }
       
-      /* Initial loading screen */
+      /* Enhanced Initial Loading Screen */
       #initial-loading {
         position: fixed;
-        top: 50%;
-        left: 50%;
-        transform: translate(-50%, -50%);
-        text-align: center;
-        font-family: Arial, sans-serif;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: linear-gradient(135deg, var(--pi-primary), #8b5cf6);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
         z-index: 1000;
+        color: white;
+        text-align: center;
       }
       
       .loading-spinner {
         display: inline-block;
-        width: 40px;
-        height: 40px;
-        border: 4px solid #f3f3f3;
-        border-top: 4px solid #6f42c1;
+        width: 60px;
+        height: 60px;
+        border: 6px solid rgba(255,255,255,0.3);
+        border-top: 6px solid white;
         border-radius: 50%;
-        animation: spin 1s linear infinite;
+        animation: piSpin 1s linear infinite;
+        margin-bottom: 30px;
+      }
+      
+      .loading-progress {
+        width: 300px;
+        height: 4px;
+        background: rgba(255,255,255,0.3);
+        border-radius: 2px;
+        overflow: hidden;
+        margin-top: 20px;
+      }
+      
+      .loading-progress-bar {
+        height: 100%;
+        background: white;
+        border-radius: 2px;
+        animation: loadingProgress 3s ease-in-out infinite;
+      }
+      
+      @keyframes loadingProgress {
+        0% { width: 0%; }
+        50% { width: 70%; }
+        100% { width: 100%; }
+      }
+      
+      .loading-tips {
+        margin-top: 30px;
+        font-size: 14px;
+        opacity: 0.8;
+        max-width: 400px;
+        line-height: 1.5;
+      }
+      
+      /* Platform Status Indicators */
+      .platform-status {
+        position: fixed;
+        bottom: 10px;
+        left: 10px;
+        display: flex;
+        gap: 8px;
+        z-index: 10001;
+      }
+      
+      .status-indicator {
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        background: #6c757d;
+        transition: background-color 0.3s ease;
+      }
+      
+      .status-indicator.active {
+        background: var(--pi-success);
+        animation: statusPulse 2s infinite;
+      }
+      
+      @keyframes statusPulse {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.5; }
+      }
+      
+      /* Responsive Design */
+      @media (max-width: 768px) {
+        .pi-status {
+          top: 5px;
+          right: 5px;
+          left: 5px;
+          max-width: none;
+          font-size: 13px;
+          padding: 10px 12px;
+        }
+        
+        #initial-loading {
+          padding: 20px;
+        }
+        
+        .loading-spinner {
+          width: 50px;
+          height: 50px;
+          border-width: 5px;
+        }
+        
+        .loading-progress {
+          width: 250px;
+        }
       }
     </style>
   </head>
   
   <body>
     <noscript>
-      <div style="text-align: center; padding: 50px; font-family: Arial, sans-serif;">
-        <h2>🚫 JavaScript Required</h2>
-        <p>Pi Lottery requires JavaScript to function properly.</p>
-        <p>Please enable JavaScript in your browser and refresh this page.</p>
+      <div style="
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        height: 100vh;
+        text-align: center;
+        padding: 20px;
+        font-family: Arial, sans-serif;
+        background: #f8f9fa;
+      ">
+        <h2 style="color: #dc3545; margin-bottom: 20px;">🚫 JavaScript Required</h2>
+        <p style="color: #6c757d; max-width: 400px; line-height: 1.6;">
+          Pi Lottery requires JavaScript to function properly. Please enable JavaScript in your browser settings and refresh this page.
+        </p>
+        <div style="
+          margin-top: 20px;
+          padding: 15px;
+          background: #fff3cd;
+          border: 1px solid #ffeaa7;
+          border-radius: 8px;
+          color: #856404;
+        ">
+          <strong>For Pi Browser users:</strong> Ensure JavaScript is enabled in Pi Browser settings.
+        </div>
       </div>
     </noscript>
     
-    <!-- Pi SDK Status Indicators -->
-    <div id="pi-sdk-loading" class="pi-status">
+    <!-- Enhanced Pi SDK Status Indicators -->
+    <div id="pi-sdk-loading" class="pi-status loading">
       <span class="pi-loading-animation"></span>
-      Loading Pi SDK...
+      <span id="pi-sdk-status">Loading Pi SDK...</span>
     </div>
-    <div id="pi-sdk-success" class="pi-status"></div>
-    <div id="pi-sdk-error" class="pi-status"></div>
+    <div id="pi-sdk-success" class="pi-status success" style="display: none;"></div>
+    <div id="pi-sdk-error" class="pi-status error" style="display: none;"></div>
     
-    <!-- Loading indicator while app initializes -->
+    <!-- Platform Status Indicators -->
+    <div class="platform-status">
+      <div id="status-sdk" class="status-indicator" title="Pi SDK Status"></div>
+      <div id="status-firebase" class="status-indicator" title="Firebase Status"></div>
+      <div id="status-app" class="status-indicator" title="App Status"></div>
+    </div>
+    
+    <!-- Enhanced Loading Screen -->
     <div id="initial-loading">
       <div class="loading-spinner"></div>
-      <h3 style="margin-top: 20px; color: #6f42c1;">🎰 Loading Pi Lottery...</h3>
-      <p style="color: #6c757d;">Initializing platform...</p>
-      <div id="loading-status" style="margin-top: 10px; font-size: 14px; color: #6c757d;">
-        Checking Pi SDK...
+      <h2 style="margin: 0 0 10px 0; font-size: 2rem;">🎰 Pi Lottery</h2>
+      <p style="margin: 0 0 20px 0; font-size: 1.1rem; opacity: 0.9;">
+        Provably Fair Lotteries
+      </p>
+      
+      <div id="loading-status" style="font-size: 16px; font-weight: 500;">
+        Initializing platform...
+      </div>
+      
+      <div class="loading-progress">
+        <div class="loading-progress-bar"></div>
+      </div>
+      
+      <div class="loading-tips">
+        <strong>💡 Did you know?</strong><br>
+        Our lotteries use Bitcoin blockchain for provably fair winner selection. 
+        This makes it impossible for anyone to manipulate the results!
       </div>
     </div>
     
     <!-- Main app container -->
     <div id="root"></div>
     
-    <!-- Enhanced loading management -->
+    <!-- Pi SDK Loading with Enhanced Error Handling -->
+    <script 
+      src="https://sdk.minepi.com/pi-sdk.js" 
+      onload="window.handlePiSDKLoad()"
+      onerror="window.handlePiSDKError('Script failed to load')"
+      async
+    ></script>
+    
+    <!-- Enhanced Loading Management -->
     <script>
-      // Update loading status
-      function updateLoadingStatus(message) {
+      // Status tracking
+      let statusTracking = {
+        sdkReady: false,
+        appMounted: false,
+        startTime: Date.now()
+      };
+      
+      // Update loading status with animation
+      function updateLoadingStatus(message, progress = null) {
         const status = document.getElementById('loading-status');
         if (status) {
           status.innerHTML = message;
         }
+        
+        // Update progress if provided
+        if (progress !== null) {
+          const progressBar = document.querySelector('.loading-progress-bar');
+          if (progressBar) {
+            progressBar.style.width = `${Math.min(progress, 100)}%`;
+          }
+        }
+        
+        window.piSDKUtils?.log(`Loading: ${message}`);
       }
       
-      // Pi SDK ready handler
-      window.addEventListener('piSDKReady', function() {
-        updateLoadingStatus('✅ Pi SDK ready, starting app...');
+      // Update status indicators
+      function updateStatusIndicator(id, active) {
+        const indicator = document.getElementById(id);
+        if (indicator) {
+          if (active) {
+            indicator.classList.add('active');
+          } else {
+            indicator.classList.remove('active');
+          }
+        }
+      }
+      
+      // Enhanced Pi SDK ready handler
+      window.addEventListener('piSDKReady', function(event) {
+        statusTracking.sdkReady = true;
+        updateStatusIndicator('status-sdk', true);
+        updateLoadingStatus('✅ Pi SDK ready, starting app...', 70);
+        
+        const loadTime = event.detail?.loadTime || 'unknown';
+        console.log(`🚀 Pi SDK ready in ${loadTime}ms`);
       });
       
-      // Hide loading when React app mounts
-      const observer = new MutationObserver((mutations) => {
+      // Monitor app mounting
+      const rootObserver = new MutationObserver((mutations) => {
         mutations.forEach((mutation) => {
           if (mutation.type === 'childList' && mutation.addedNodes.length > 0) {
             const root = document.getElementById('root');
-            if (root && root.children.length > 0) {
-              const loading = document.getElementById('initial-loading');
-              if (loading) {
-                loading.style.display = 'none';
-              }
-              observer.disconnect();
+            if (root && root.children.length > 0 && !statusTracking.appMounted) {
+              statusTracking.appMounted = true;
+              updateStatusIndicator('status-app', true);
+              updateLoadingStatus('🎰 Pi Lottery loaded successfully!', 100);
+              
+              // Hide loading screen with animation
+              setTimeout(() => {
+                const loading = document.getElementById('initial-loading');
+                if (loading) {
+                  loading.style.opacity = '0';
+                  loading.style.transition = 'opacity 0.5s ease';
+                  setTimeout(() => {
+                    loading.style.display = 'none';
+                  }, 500);
+                }
+              }, 500);
+              
+              rootObserver.disconnect();
             }
           }
         });
       });
       
-      observer.observe(document.getElementById('root'), {
+      rootObserver.observe(document.getElementById('root'), {
         childList: true,
         subtree: true
       });
       
-      // Auto-hide loading after 15 seconds
+      // Progress simulation and status updates
+      let progressSimulation = setInterval(() => {
+        if (!statusTracking.sdkReady) {
+          const elapsed = Date.now() - statusTracking.startTime;
+          
+          if (elapsed < 3000) {
+            updateLoadingStatus('🔍 Detecting Pi Browser...', 20);
+          } else if (elapsed < 6000) {
+            updateLoadingStatus('📦 Loading Pi SDK...', 40);
+          } else if (elapsed < 10000) {
+            updateLoadingStatus('⚠️ Taking longer than expected...', 50);
+          } else {
+            updateLoadingStatus('❌ Connection issues detected', 50);
+            clearInterval(progressSimulation);
+          }
+        } else {
+          clearInterval(progressSimulation);
+        }
+      }, 2000);
+      
+      // Auto-hide loading after maximum time
       setTimeout(() => {
         const loading = document.getElementById('initial-loading');
-        if (loading) {
+        if (loading && loading.style.display !== 'none') {
+          console.warn('⚠️ Auto-hiding loading screen after timeout');
           loading.style.display = 'none';
         }
-      }, 15000);
+        clearInterval(progressSimulation);
+      }, 20000);
       
-      // Check page load
+      // Check page visibility for better UX
+      document.addEventListener('visibilitychange', function() {
+        if (document.visibilityState === 'visible' && !statusTracking.sdkReady) {
+          console.log('🔄 Page became visible, checking Pi SDK...');
+          window.checkPiSDK?.();
+        }
+      });
+      
+      // Performance monitoring
       window.addEventListener('load', () => {
-        updateLoadingStatus('📄 Page loaded, checking Pi SDK...');
-        setTimeout(() => {
-          if (!window.piSDKStatus.loaded) {
-            updateLoadingStatus('⚠️ Pi SDK taking longer than expected...');
-          }
-        }, 5000);
+        updateStatusIndicator('status-firebase', true); // Assume Firebase loads with app
+        updateLoadingStatus('📄 Page loaded, checking components...', 60);
+        
+        // Log performance metrics
+        if (window.performance && window.performance.timing) {
+          const timing = window.performance.timing;
+          const loadTime = timing.loadEventEnd - timing.navigationStart;
+          console.log(`📊 Page load time: ${loadTime}ms`);
+        }
       });
     </script>
   </body>
