@@ -1,4 +1,4 @@
-// File path: src/hooks/usePiPayments.js - Secure Version with Environment Variables
+// File path: src/hooks/usePiPayments.js - Fixed Version with Proper Timeouts
 import { useState } from 'react';
 
 const usePiPayments = () => {
@@ -20,9 +20,9 @@ const usePiPayments = () => {
       region,
       localPort,
       isDevelopment: process.env.NODE_ENV === 'development',
-      apiTimeout: parseInt(process.env.REACT_APP_API_TIMEOUT) || 30000,
-      enableRetry: process.env.REACT_APP_ENABLE_API_RETRY === 'true',
-      maxRetries: parseInt(process.env.REACT_APP_MAX_API_RETRIES) || 3
+      apiTimeout: 45000, // Increased to 45 seconds for cold starts
+      enableRetry: true, // Always enable retry
+      maxRetries: 2 // Reduced retries to avoid long waits
     };
   };
 
@@ -39,20 +39,23 @@ const usePiPayments = () => {
     return `https://${config.region}-${config.projectId}.cloudfunctions.net`;
   };
 
-  // Enhanced API call helper with retry logic
+  // FIXED: Enhanced API call helper with proper timeout handling
   const apiCall = async (functionName, data, options = {}) => {
     const config = getConfig();
     const baseUrl = getFunctionsBaseUrl();
     const url = `${baseUrl}/${functionName}`;
     
+    console.log(`🔗 Calling Firebase Function: ${url}`);
+    console.log(`📤 Request data:`, data);
+    
     const requestOptions = {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        'Accept': 'application/json',
         ...options.headers
       },
-      body: JSON.stringify(data),
-      timeout: config.apiTimeout
+      body: JSON.stringify(data)
     };
 
     let lastError;
@@ -62,8 +65,12 @@ const usePiPayments = () => {
       try {
         console.log(`🔗 API Call (attempt ${attempt}/${maxAttempts}): ${functionName}`);
         
+        // FIXED: Proper timeout implementation with AbortController
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), config.apiTimeout);
+        const timeoutId = setTimeout(() => {
+          console.log(`⏰ Request timeout (${config.apiTimeout}ms) for ${functionName}`);
+          controller.abort();
+        }, config.apiTimeout);
         
         const response = await fetch(url, {
           ...requestOptions,
@@ -72,13 +79,20 @@ const usePiPayments = () => {
 
         clearTimeout(timeoutId);
 
+        console.log(`📡 Response status: ${response.status} for ${functionName}`);
+
         if (!response.ok) {
-          const errorData = await response.json().catch(() => ({ error: response.statusText }));
+          let errorData;
+          try {
+            errorData = await response.json();
+          } catch {
+            errorData = { error: response.statusText };
+          }
           throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
         }
 
         const result = await response.json();
-        console.log(`✅ API Success (attempt ${attempt}): ${functionName}`);
+        console.log(`✅ API Success (attempt ${attempt}): ${functionName}`, result);
         return result;
 
       } catch (fetchError) {
@@ -86,7 +100,7 @@ const usePiPayments = () => {
         console.warn(`⚠️ API Error (attempt ${attempt}/${maxAttempts}): ${fetchError.message}`);
         
         if (attempt < maxAttempts) {
-          const delay = Math.min(1000 * Math.pow(2, attempt - 1), 5000); // Exponential backoff
+          const delay = Math.min(2000 * attempt, 5000); // 2s, 4s max
           console.log(`⏳ Retrying in ${delay}ms...`);
           await new Promise(resolve => setTimeout(resolve, delay));
         }
@@ -96,7 +110,7 @@ const usePiPayments = () => {
     throw new Error(`API call failed after ${maxAttempts} attempts: ${lastError.message}`);
   };
 
-  // Create lottery payment with enhanced error handling
+  // FIXED: Create lottery payment with better error handling
   const createLotteryPayment = async (piUser, lottery, onSuccess, onError) => {
     if (!piUser || !lottery) {
       throw new Error('User and lottery data required');
@@ -114,6 +128,12 @@ const usePiPayments = () => {
     setError(null);
 
     try {
+      console.log('💰 Starting payment process for:', {
+        user: piUser.username,
+        lottery: lottery.title,
+        amount: lottery.entryFee
+      });
+
       const paymentData = {
         amount: parseFloat(lottery.entryFee),
         memo: `${process.env.REACT_APP_PLATFORM_NAME || 'Pi Lottery'}: ${lottery.title}`,
@@ -137,6 +157,7 @@ const usePiPayments = () => {
           console.log('💰 Payment ready for approval:', paymentId);
           
           try {
+            console.log('🔄 Calling approvePayment function...');
             const approvalResult = await apiCall('approvePayment', {
               paymentId,
               lotteryId: lottery.id,
@@ -154,6 +175,7 @@ const usePiPayments = () => {
           console.log('🎉 Payment completion ready:', { paymentId, txnId });
           
           try {
+            console.log('🔄 Calling completePayment function...');
             const completionResult = await apiCall('completePayment', {
               paymentId,
               txnId,
@@ -188,6 +210,7 @@ const usePiPayments = () => {
         throw new Error('Pi SDK not available. Please use Pi Browser.');
       }
 
+      console.log('💳 Creating Pi payment with data:', paymentData);
       const payment = await window.Pi.createPayment(paymentData, paymentCallbacks);
       console.log('💳 Payment created successfully:', payment);
       
@@ -261,13 +284,20 @@ const usePiPayments = () => {
       const config = getConfig();
       const baseUrl = getFunctionsBaseUrl();
       
+      console.log('🔍 Testing health check:', `${baseUrl}/healthCheck`);
+      
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 10000);
+      
       const response = await fetch(`${baseUrl}/healthCheck`, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json'
         },
-        timeout: 10000
+        signal: controller.signal
       });
+
+      clearTimeout(timeoutId);
 
       if (!response.ok) {
         throw new Error(`Health check failed: ${response.status}`);
