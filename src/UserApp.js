@@ -1,4 +1,4 @@
-// File path: src/UserApp.js - Enhanced with Pi Browser Popup Detection
+// File path: src/UserApp.js - Auto-Connect Version (No Button Required)
 import React, { useState, useEffect } from 'react';
 import { db } from './firebase';
 import { 
@@ -36,7 +36,7 @@ function UserApp() {
     closeLegal();
   };
 
-  // Enhanced Pi SDK hook with popup detection
+  // Auto-connect Pi SDK hook
   const {
     piUser,
     isAuthenticated,
@@ -46,19 +46,17 @@ function UserApp() {
     sdkReady,
     connectionStatus,
     authStep,
-    popupIssueDetected, // New: detects when popup doesn't appear
-    connectUser,
+    autoConnectAttempted,
+    userDeclined,
+    connectUser, // Manual fallback
     requestPaymentAccess,
-    connectWallet,
     disconnect,
     testConnection,
-    refreshPiBrowser, // New: refresh Pi Browser
     getConnectionInfo,
     clearError,
-    detectPiBrowser, // New: browser detection
-    canConnect,
     isFullyConnected,
-    needsPaymentAccess
+    needsPaymentAccess,
+    isAutoConnecting
   } = usePiSDK();
 
   // Payment hook
@@ -73,7 +71,7 @@ function UserApp() {
   const [success, setSuccess] = useState('');
   const [showDebugPanel, setShowDebugPanel] = useState(false);
   const [joiningLottery, setJoiningLottery] = useState(false);
-  const [showPopupHelp, setShowPopupHelp] = useState(false);
+  const [showManualOptions, setShowManualOptions] = useState(false);
 
   // Lottery data
   const [activeLotteries, setActiveLotteries] = useState([]);
@@ -85,12 +83,12 @@ function UserApp() {
     winCount: 0
   });
 
-  // Auto-show popup help when popup issue is detected
+  // Show manual options if auto-connect fails or user declines
   useEffect(() => {
-    if (popupIssueDetected) {
-      setShowPopupHelp(true);
+    if ((autoConnectAttempted && !isAuthenticated) || userDeclined || error) {
+      setShowManualOptions(true);
     }
-  }, [popupIssueDetected]);
+  }, [autoConnectAttempted, isAuthenticated, userDeclined, error]);
 
   // Check for debug mode
   useEffect(() => {
@@ -100,7 +98,7 @@ function UserApp() {
     }
   }, []);
 
-  // Load data functions (simplified for space)
+  // Load data
   useEffect(() => {
     loadActiveLotteries();
   }, []);
@@ -123,7 +121,7 @@ function UserApp() {
     return () => clearInterval(interval);
   }, [isAuthenticated]);
 
-  // Clear messages after 5 seconds
+  // Clear messages
   useEffect(() => {
     if (success) {
       const timer = setTimeout(() => setSuccess(''), 5000);
@@ -219,67 +217,34 @@ function UserApp() {
     });
   };
 
-  // Enhanced connection handlers
-  const handleConnectUser = async () => {
+  // Manual connection handlers (fallback)
+  const handleManualConnect = async () => {
     try {
       clearMessages();
-      setShowPopupHelp(false);
+      setShowManualOptions(false);
       await connectUser();
       setSuccess(`✅ Connected to Pi Network! Welcome, ${piUser?.username || 'User'}`);
     } catch (connectError) {
-      console.error('Connection failed:', connectError);
-      if (connectError.message.includes('popup')) {
-        setShowPopupHelp(true);
-      }
-    }
-  };
-
-  const handleConnectWallet = async () => {
-    try {
-      clearMessages();
-      setShowPopupHelp(false);
-      await connectWallet();
-      setSuccess(`💰 Wallet connected! You can now participate in lotteries.`);
-    } catch (connectError) {
-      console.error('Wallet connection failed:', connectError);
-      if (connectError.message.includes('popup')) {
-        setShowPopupHelp(true);
-      }
+      console.error('Manual connection failed:', connectError);
+      setShowManualOptions(true);
     }
   };
 
   const handleTestConnection = async () => {
     try {
       clearMessages();
-      setSuccess('Testing Pi Browser connection...');
+      setSuccess('Testing Pi connection...');
       const result = await testConnection();
-      setSuccess(`✅ Connection test successful! User: ${result.user.username}`);
-      setShowPopupHelp(false);
+      setSuccess(`✅ Test successful! User: ${result.user.username}`);
     } catch (testError) {
-      setSuccess(`❌ Connection test failed: ${testError.message}`);
-      if (testError.message.includes('popup')) {
-        setShowPopupHelp(true);
-      }
+      setSuccess(`❌ Test failed: ${testError.message}`);
     }
-  };
-
-  // New handlers for popup issues
-  const handleRefreshPiBrowser = () => {
-    clearMessages();
-    setSuccess('Refreshing Pi Browser in 3 seconds...');
-    setTimeout(() => {
-      refreshPiBrowser();
-    }, 3000);
-  };
-
-  const handleForceRefresh = () => {
-    window.location.reload(true);
   };
 
   // Join lottery function
   const joinLottery = async (lotteryId, lottery) => {
     if (!isAuthenticated) {
-      setSuccess('Please connect to Pi Network first');
+      setSuccess('Please wait for connection to complete');
       return;
     }
 
@@ -348,11 +313,9 @@ function UserApp() {
     }
   };
 
-  const browserInfo = detectPiBrowser();
-
   return (
     <div className="container">
-      {/* Enhanced Header */}
+      {/* Header */}
       <div className="header" style={{ 
         display: 'flex', 
         justifyContent: 'space-between', 
@@ -367,7 +330,7 @@ function UserApp() {
         </div>
         
         <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
-          {/* Connection Status Indicator */}
+          {/* Auto-Connect Status Indicator */}
           <div style={{
             display: 'flex',
             alignItems: 'center',
@@ -382,18 +345,18 @@ function UserApp() {
               height: '8px',
               borderRadius: '50%',
               background: getStatusColor(),
-              animation: connectionStatus === 'connecting' ? 'pulse 2s infinite' : 'none'
+              animation: isAutoConnecting ? 'pulse 2s infinite' : 'none'
             }}></div>
             <span style={{ color: 'white' }}>
-              {connectionStatus === 'connected' && isFullyConnected && '🔗 Fully Connected'}
-              {connectionStatus === 'connected' && needsPaymentAccess && '⚠️ Payment Access Needed'}
-              {connectionStatus === 'connecting' && '🔄 Connecting...'}
-              {connectionStatus === 'error' && '❌ Connection Error'}
-              {connectionStatus === 'disconnected' && '⭕ Disconnected'}
+              {isFullyConnected && '🔗 Auto-Connected'}
+              {isAutoConnecting && '🤖 Auto-Connecting...'}
+              {connectionStatus === 'error' && '❌ Connection Failed'}
+              {userDeclined && '👤 Connection Declined'}
+              {!sdkReady && '⏳ Loading...'}
             </span>
           </div>
 
-          {/* Connection Controls */}
+          {/* User Info or Manual Connect Option */}
           {isFullyConnected ? (
             <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
               <div style={{ textAlign: 'right' }}>
@@ -401,175 +364,52 @@ function UserApp() {
                   👤 {piUser.username}
                 </div>
                 <div style={{ fontSize: '0.8rem', opacity: 0.8 }}>
-                  💰 Payment Ready
+                  🤖 Auto-Connected
                 </div>
               </div>
               <button onClick={disconnect} className="button danger" style={{ padding: '8px 16px' }}>
                 🔌 Disconnect
               </button>
             </div>
-          ) : (
+          ) : showManualOptions ? (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
               <button 
-                onClick={handleConnectWallet}
-                className="button success"
-                disabled={!canConnect || loading}
-                style={{ padding: '12px 20px' }}
+                onClick={handleManualConnect}
+                className="button warning"
+                disabled={loading}
+                style={{ padding: '10px 16px' }}
               >
-                {loading ? `🔄 ${authStep || 'Connecting...'}` : 
-                 canConnect ? '🔗 Connect Pi Wallet' : 
-                 '⏳ Loading Pi SDK...'}
+                {loading ? '🔄 Connecting...' : '👆 Manual Connect'}
               </button>
-              
-              {/* Help button for connection issues */}
-              {(error || popupIssueDetected || !browserInfo.isPiBrowserLikely) && (
-                <button 
-                  onClick={() => setShowPopupHelp(true)}
-                  className="button warning"
-                  style={{ padding: '6px 12px', fontSize: '0.9rem' }}
-                >
-                  🆘 Connection Help
-                </button>
-              )}
+              <button 
+                onClick={() => setShowDebugPanel(true)}
+                className="button secondary"
+                style={{ padding: '6px 12px', fontSize: '0.9rem' }}
+              >
+                🔍 Debug Info
+              </button>
+            </div>
+          ) : (
+            <div style={{ textAlign: 'right', color: 'white', fontSize: '0.9rem' }}>
+              <div>🤖 Auto-connecting...</div>
+              <div style={{ fontSize: '0.8rem', opacity: 0.8 }}>
+                No button needed!
+              </div>
             </div>
           )}
         </div>
       </div>
 
-      {/* Enhanced Popup Issue Help Panel */}
-      {showPopupHelp && (
+      {/* Auto-Connect Status Panel */}
+      {isAutoConnecting && (
         <div className="card" style={{
-          background: '#fff3cd',
-          border: '3px solid #ffc107',
+          background: '#d1ecf1',
+          border: '2px solid #bee5eb',
           marginBottom: '20px'
         }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-            <div style={{ flex: 1 }}>
-              <h3>🚨 Pi Browser Authentication Issue Detected</h3>
-              
-              <div style={{ marginBottom: '20px' }}>
-                <div style={{
-                  background: '#f8d7da',
-                  border: '1px solid #f5c6cb',
-                  borderRadius: '8px',
-                  padding: '15px',
-                  marginBottom: '15px'
-                }}>
-                  <strong>🔍 Problem:</strong> The Pi Browser authentication popup is not appearing.
-                  <br />
-                  <strong>📱 Browser Status:</strong> {browserInfo.confidence} confidence Pi Browser detection
-                </div>
-
-                <div style={{ marginBottom: '15px' }}>
-                  <strong>🔧 Try these solutions in order:</strong>
-                  <ol style={{ marginTop: '10px', paddingLeft: '20px' }}>
-                    <li><strong>Refresh the page</strong> - Often fixes popup issues</li>
-                    <li><strong>Close and reopen Pi Browser</strong> - Clears any stuck states</li>
-                    <li><strong>Clear Pi Browser cache</strong> - Go to Pi Browser settings</li>
-                    <li><strong>Restart your device</strong> - If other methods don't work</li>
-                    <li><strong>Update Pi Browser</strong> - Ensure you have the latest version</li>
-                  </ol>
-                </div>
-
-                <div style={{
-                  background: '#d1ecf1',
-                  border: '1px solid #bee5eb',
-                  borderRadius: '8px',
-                  padding: '15px',
-                  marginBottom: '15px'
-                }}>
-                  <strong>💡 What should happen:</strong>
-                  <br />
-                  When you click "Connect Pi Wallet", you should see a popup asking you to approve the connection. 
-                  If no popup appears within 10 seconds, there's likely a Pi Browser issue.
-                </div>
-              </div>
-
-              <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
-                <button 
-                  onClick={handleForceRefresh}
-                  className="button warning"
-                >
-                  🔄 Refresh Page
-                </button>
-                
-                <button 
-                  onClick={handleRefreshPiBrowser}
-                  className="button danger"
-                >
-                  🔃 Restart Pi Browser
-                </button>
-                
-                <button 
-                  onClick={handleTestConnection}
-                  className="button secondary"
-                  disabled={!sdkReady || loading}
-                >
-                  🧪 Test Again
-                </button>
-                
-                <button 
-                  onClick={() => setShowDebugPanel(true)}
-                  className="button secondary"
-                >
-                  🔍 Show Debug Info
-                </button>
-              </div>
-            </div>
-            
-            <button 
-              onClick={() => setShowPopupHelp(false)}
-              style={{
-                background: 'none',
-                border: 'none',
-                fontSize: '1.5rem',
-                cursor: 'pointer',
-                padding: '5px'
-              }}
-            >
-              ×
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* Pi Browser Compatibility Check */}
-      {!browserInfo.isPiBrowserLikely && (
-        <div className="card" style={{
-          background: '#f8d7da',
-          border: '2px solid #f5c6cb',
-          marginBottom: '20px'
-        }}>
-          <h3>⚠️ Pi Browser Required</h3>
-          <p>
-            <strong>This app requires the official Pi Browser to function properly.</strong>
-          </p>
-          <div style={{ marginTop: '15px' }}>
-            <strong>Current browser detected:</strong> {browserInfo.confidence} confidence Pi Browser
-            <br />
-            <strong>User Agent:</strong> <code style={{ fontSize: '0.8rem' }}>{navigator.userAgent}</code>
-          </div>
-          <div style={{ marginTop: '15px' }}>
-            <strong>To use this app:</strong>
-            <ol style={{ marginTop: '8px', paddingLeft: '20px' }}>
-              <li>Download and install the official Pi Browser from the Pi Network app</li>
-              <li>Open this app URL in Pi Browser</li>
-              <li>The Pi wallet connection will work properly in Pi Browser</li>
-            </ol>
-          </div>
-        </div>
-      )}
-
-      {/* Connection Status Panel */}
-      {(authStep || error || paymentError) && (
-        <div className="card" style={{
-          background: (error || paymentError) ? '#f8d7da' : '#fff3cd',
-          border: `2px solid ${(error || paymentError) ? '#f5c6cb' : '#ffeaa7'}`
-        }}>
-          <h3>🔗 Connection Status</h3>
-          
-          {authStep && (
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '10px' }}>
+          <div style={{ textAlign: 'center' }}>
+            <h3>🤖 Connecting Automatically</h3>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px', marginBottom: '15px' }}>
               <div style={{
                 width: '20px',
                 height: '20px',
@@ -578,47 +418,105 @@ function UserApp() {
                 borderRadius: '50%',
                 animation: 'spin 1s linear infinite'
               }}></div>
-              <span>{authStep}</span>
+              <span>{authStep || 'Connecting to Pi Network...'}</span>
             </div>
-          )}
-          
-          {(error || paymentError) && (
-            <div style={{ color: '#721c24', marginBottom: '10px' }}>
-              ❌ {error || paymentError}
-              
-              {(error?.includes('popup') || paymentError?.includes('popup')) && (
-                <div style={{ marginTop: '10px', fontSize: '0.9rem' }}>
-                  <strong>💡 This usually means:</strong> Pi Browser needs to be refreshed or restarted.
-                </div>
-              )}
-              
-              <button 
-                onClick={clearMessages}
-                style={{ 
-                  marginLeft: '10px', 
-                  background: 'none', 
-                  border: 'none', 
-                  color: 'inherit', 
-                  cursor: 'pointer',
-                  textDecoration: 'underline'
-                }}
-              >
-                Clear
-              </button>
-            </div>
-          )}
-
-          {popupIssueDetected && (
+            
             <div style={{
               background: '#fff3cd',
               border: '1px solid #ffeaa7',
-              borderRadius: '6px',
-              padding: '10px',
-              marginTop: '10px'
+              borderRadius: '8px',
+              padding: '15px',
+              margin: '15px 0'
             }}>
-              🚨 <strong>No authentication popup detected!</strong> Click "Connection Help" above for solutions.
+              <strong>🔔 Look for the Pi Browser popup!</strong>
+              <br />
+              A popup will appear asking you to approve the connection.
+              <br />
+              <em>You still need to give your consent - this is for your security.</em>
             </div>
-          )}
+            
+            <div style={{ fontSize: '0.9rem', color: '#6c757d' }}>
+              If no popup appears within 30 seconds, manual options will be shown.
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* User Declined Panel */}
+      {userDeclined && (
+        <div className="card" style={{
+          background: '#f8d7da',
+          border: '2px solid #f5c6cb',
+          marginBottom: '20px'
+        }}>
+          <h3>👤 Connection Declined</h3>
+          <p>
+            You declined the Pi Network connection. This is completely fine!
+            <br />
+            You can manually connect anytime using the button above.
+          </p>
+          <div style={{ marginTop: '15px' }}>
+            <button 
+              onClick={handleManualConnect}
+              className="button success"
+              disabled={loading}
+            >
+              {loading ? '🔄 Connecting...' : '🔗 Connect Now'}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Connection Error Panel */}
+      {error && autoConnectAttempted && (
+        <div className="card" style={{
+          background: '#f8d7da',
+          border: '2px solid #f5c6cb',
+          marginBottom: '20px'
+        }}>
+          <h3>❌ Auto-Connect Failed</h3>
+          <div style={{ color: '#721c24', marginBottom: '15px' }}>
+            <strong>Error:</strong> {error}
+          </div>
+          
+          <div style={{
+            background: '#fff3cd',
+            border: '1px solid #ffeaa7',
+            borderRadius: '8px',
+            padding: '15px',
+            marginBottom: '15px'
+          }}>
+            <strong>💡 This might help:</strong>
+            <ul style={{ marginTop: '8px', paddingLeft: '20px' }}>
+              <li>Refresh the page</li>
+              <li>Close and reopen Pi Browser</li>
+              <li>Try the manual connect button</li>
+            </ul>
+          </div>
+          
+          <div style={{ display: 'flex', gap: '10px' }}>
+            <button 
+              onClick={handleManualConnect}
+              className="button warning"
+              disabled={loading}
+            >
+              {loading ? '🔄 Connecting...' : '👆 Try Manual Connect'}
+            </button>
+            
+            <button 
+              onClick={handleTestConnection}
+              className="button secondary"
+            >
+              🧪 Test Connection
+            </button>
+            
+            <button 
+              onClick={() => window.location.reload()}
+              className="button secondary"
+            >
+              🔄 Refresh Page
+            </button>
+          </div>
         </div>
       )}
 
@@ -661,11 +559,16 @@ function UserApp() {
       {/* Active Lotteries */}
       <div className="card">
         <h2>🎲 Available Lotteries</h2>
+        
+        {/* Connection Status for Lotteries */}
         {!isFullyConnected && (
           <div className="warning" style={{ margin: '0 0 20px 0' }}>
             <strong>
-              {!isAuthenticated && '🔗 Connect to Pi Network to join lotteries'}
-              {isAuthenticated && needsPaymentAccess && '💰 Enable payment access to join lotteries'}
+              {isAutoConnecting && '🤖 Auto-connecting to Pi Network... Please wait.'}
+              {userDeclined && '👤 Connection declined. Click "Connect Now" above to join lotteries.'}
+              {error && autoConnectAttempted && '❌ Connection failed. Try manual connect above.'}
+              {!isAuthenticated && !isAutoConnecting && !error && '🔗 Connecting to Pi Network...'}
+              {isAuthenticated && needsPaymentAccess && '💰 Payment access needed for lottery participation'}
             </strong>
           </div>
         )}
@@ -697,22 +600,24 @@ function UserApp() {
                 </div>
 
                 <div className="lottery-actions">
-                  {!browserInfo.isPiBrowserLikely ? (
+                  {isAutoConnecting ? (
                     <div style={{textAlign: 'center', padding: '15px'}}>
-                      <span style={{color: '#721c24', fontWeight: 'bold'}}>
-                        ⚠️ Please use Pi Browser to join lotteries
+                      <span style={{color: '#6c757d', fontWeight: 'bold'}}>
+                        🤖 Auto-connecting... Please wait
                       </span>
                     </div>
                   ) : !isAuthenticated ? (
                     <div style={{textAlign: 'center', padding: '15px'}}>
-                      <span style={{color: '#6c757d', fontWeight: 'bold'}}>
-                        🔗 Connect to Pi Network to join this lottery
+                      <span style={{color: '#721c24', fontWeight: 'bold'}}>
+                        {userDeclined ? '👤 Connection declined - use manual connect above' :
+                         error ? '❌ Connection failed - try manual connect above' :
+                         '🔗 Waiting for Pi Network connection...'}
                       </span>
                     </div>
                   ) : needsPaymentAccess ? (
                     <div style={{textAlign: 'center', padding: '15px'}}>
                       <span style={{color: '#856404', fontWeight: 'bold'}}>
-                        💰 Enable payment access to join lotteries
+                        💰 Payment access will be requested automatically
                       </span>
                     </div>
                   ) : (
@@ -735,7 +640,7 @@ function UserApp() {
         )}
       </div>
 
-      {/* Enhanced Debug Panel */}
+      {/* Debug Panel */}
       {showDebugPanel && (
         <div style={{
           position: 'fixed',
@@ -753,7 +658,7 @@ function UserApp() {
         }}>
           <div style={{ maxWidth: '1000px', margin: '0 auto' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '20px' }}>
-              <h2>🔧 Pi Browser Popup Debug Panel</h2>
+              <h2>🔧 Auto-Connect Debug Panel</h2>
               <button 
                 onClick={() => setShowDebugPanel(false)}
                 style={{
@@ -769,14 +674,14 @@ function UserApp() {
             </div>
             
             <div style={{ background: '#1a1a1a', padding: '20px', borderRadius: '8px' }}>
-              <h3>Enhanced Pi SDK Connection Debug Info:</h3>
+              <h3>Auto-Connect Debug Info:</h3>
               <pre style={{ whiteSpace: 'pre-wrap', margin: '10px 0', fontSize: '10px' }}>
                 {JSON.stringify(getConnectionInfo(), null, 2)}
               </pre>
               
               <div style={{ marginTop: '20px' }}>
                 <button 
-                  onClick={handleForceRefresh}
+                  onClick={handleManualConnect}
                   style={{
                     background: '#ffc107',
                     color: 'black',
@@ -786,7 +691,7 @@ function UserApp() {
                     marginRight: '10px'
                   }}
                 >
-                  🔄 Force Refresh
+                  👆 Manual Connect
                 </button>
                 
                 <button 
@@ -804,7 +709,7 @@ function UserApp() {
                 </button>
                 
                 <button 
-                  onClick={() => console.log('Pi Browser Debug:', getConnectionInfo())}
+                  onClick={() => console.log('Auto-Connect Debug:', getConnectionInfo())}
                   style={{
                     background: '#6c757d',
                     color: 'white',
