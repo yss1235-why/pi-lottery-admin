@@ -1,8 +1,8 @@
-// File path: src/hooks/usePiSDK.js - Clean Auto-Connect Version
+// File path: src/hooks/usePiSDK.js - Fixed Payment Access
 import { useState, useEffect, useCallback, useRef } from 'react';
 
 /**
- * Clean Pi SDK Hook - Auto-connects seamlessly in background
+ * Fixed Pi SDK Hook - Handles payment access properly
  */
 export const usePiSDK = () => {
   // State management
@@ -82,11 +82,13 @@ export const usePiSDK = () => {
     }
   }, []);
 
-  // Auto-authenticate when SDK is ready
+  // Auto-authenticate - FIXED to handle different response structures
   const autoAuthenticate = useCallback(async (scopes = ['username'], retryCount = 0) => {
-    if (autoConnectAttempted && !retryCount) {
+    if (autoConnectAttempted && !retryCount && scopes.includes('username')) {
       return;
     }
+
+    console.log('🔐 Authenticating with scopes:', scopes);
 
     return new Promise((resolve, reject) => {
       const timeout = setTimeout(() => {
@@ -98,16 +100,23 @@ export const usePiSDK = () => {
       try {
         window.Pi.authenticate(scopes, {
           onIncompletePaymentFound: (payment) => {
+            console.log('💳 Incomplete payment found:', payment);
             if (isMounted()) {
               setAuthStep('Processing incomplete payment...');
             }
           }
         }).then(authResult => {
+          console.log('✅ Auth result received:', authResult);
           clearTimeout(timeout);
-          setAutoConnectAttempted(true);
+          
+          if (scopes.includes('username')) {
+            setAutoConnectAttempted(true);
+          }
+          
           resolve(authResult);
           
         }).catch(authError => {
+          console.error('❌ Auth error:', authError);
           clearTimeout(timeout);
           
           // Check if user declined
@@ -115,13 +124,15 @@ export const usePiSDK = () => {
               authError.message?.includes('cancelled') ||
               authError.message?.includes('rejected')) {
             setUserDeclined(true);
-            setAutoConnectAttempted(true);
+            if (scopes.includes('username')) {
+              setAutoConnectAttempted(true);
+            }
             reject(new Error('User declined connection'));
             return;
           }
           
-          // Retry logic
-          if (retryCount < PI_SDK_CONFIG.maxRetries) {
+          // Retry logic for username scope only
+          if (retryCount < PI_SDK_CONFIG.maxRetries && scopes.includes('username')) {
             const nextRetry = retryCount + 1;
             const delay = PI_SDK_CONFIG.retryDelay * nextRetry;
             
@@ -135,14 +146,19 @@ export const usePiSDK = () => {
                 .catch(reject);
             }, delay);
           } else {
-            setAutoConnectAttempted(true);
+            if (scopes.includes('username')) {
+              setAutoConnectAttempted(true);
+            }
             reject(new Error(`Connection failed: ${authError.message}`));
           }
         });
 
       } catch (syncError) {
+        console.error('❌ Sync error:', syncError);
         clearTimeout(timeout);
-        setAutoConnectAttempted(true);
+        if (scopes.includes('username')) {
+          setAutoConnectAttempted(true);
+        }
         reject(new Error(`Connection failed: ${syncError.message}`));
       }
     });
@@ -172,7 +188,9 @@ export const usePiSDK = () => {
             setAuthStep('');
             setError(null);
             
-            // Auto-request payment access
+            console.log('🎉 Auto-connection successful!');
+            
+            // Auto-request payment access after a short delay
             setTimeout(() => {
               if (isMounted() && !hasPaymentAccess) {
                 requestPaymentAccessAuto();
@@ -181,6 +199,7 @@ export const usePiSDK = () => {
           }
           
         } catch (autoError) {
+          console.error('❌ Auto-connection failed:', autoError);
           if (isMounted()) {
             setConnectionStatus('error');
             setAuthStep('');
@@ -200,9 +219,11 @@ export const usePiSDK = () => {
     }
   }, [sdkReady, autoConnectAttempted, userDeclined, isAuthenticated, autoAuthenticate]);
 
-  // Auto-request payment access
+  // FIXED: Auto-request payment access
   const requestPaymentAccessAuto = useCallback(async () => {
     if (!isAuthenticated || hasPaymentAccess) return;
+
+    console.log('💰 Auto-requesting payment access...');
 
     try {
       if (isMounted()) {
@@ -212,16 +233,29 @@ export const usePiSDK = () => {
 
       const paymentAuthResult = await autoAuthenticate(['payments']);
       
-      if (isMounted() && paymentAuthResult.user) {
-        setPiUser(paymentAuthResult.user);
+      console.log('💰 Payment auth result:', paymentAuthResult);
+      
+      // FIXED: Handle different response structures
+      if (isMounted()) {
+        // If we get here, payment access was granted
         setHasPaymentAccess(true);
         setAuthStep('');
+        
+        // Keep existing user data if payment result doesn't include user
+        if (paymentAuthResult && paymentAuthResult.user) {
+          setPiUser(paymentAuthResult.user);
+        }
+        // If no user in payment result, keep existing piUser
+        
+        console.log('✅ Payment access granted automatically!');
       }
       
     } catch (paymentError) {
+      console.error('❌ Auto payment access failed:', paymentError);
       if (isMounted()) {
         setAuthStep('');
-        // Don't show error for payment access failure
+        // Don't show error for auto payment access failure
+        console.log('ℹ️ Payment access will be requested when needed');
       }
     } finally {
       if (isMounted()) {
@@ -267,10 +301,13 @@ export const usePiSDK = () => {
     }
   }, [sdkReady, autoAuthenticate]);
 
+  // FIXED: Request payment access
   const requestPaymentAccess = useCallback(async () => {
     if (!isAuthenticated) {
       throw new Error('User must be connected first');
     }
+
+    console.log('💰 Manually requesting payment access...');
 
     setLoading(true);
     setAuthStep('Requesting payment permissions...');
@@ -278,13 +315,24 @@ export const usePiSDK = () => {
     try {
       const paymentAuthResult = await autoAuthenticate(['payments']);
       
-      if (isMounted() && paymentAuthResult.user) {
-        setPiUser(paymentAuthResult.user);
+      console.log('💰 Manual payment auth result:', paymentAuthResult);
+      
+      // FIXED: Handle payment access properly
+      if (isMounted()) {
+        // If we get here without error, payment access was granted
         setHasPaymentAccess(true);
         setAuthStep('');
-        return paymentAuthResult.user;
+        
+        // Update user data if provided, otherwise keep existing
+        if (paymentAuthResult && paymentAuthResult.user) {
+          setPiUser(paymentAuthResult.user);
+        }
+        
+        console.log('✅ Payment access granted manually!');
+        return piUser; // Return existing user
       }
     } catch (error) {
+      console.error('❌ Manual payment access failed:', error);
       if (isMounted()) {
         setError(`Payment access failed: ${error.message}`);
         setAuthStep('');
@@ -295,7 +343,7 @@ export const usePiSDK = () => {
         setLoading(false);
       }
     }
-  }, [isAuthenticated, autoAuthenticate]);
+  }, [isAuthenticated, autoAuthenticate, piUser]);
 
   const connectWallet = useCallback(async () => {
     try {
@@ -317,20 +365,26 @@ export const usePiSDK = () => {
       throw new Error('Invalid payment amount');
     }
 
+    console.log('💰 Creating Pi payment:', paymentData);
+
     const enhancedCallbacks = {
       onReadyForServerApproval: (paymentId) => {
+        console.log('📋 Payment ready for approval:', paymentId);
         callbacks.onReadyForServerApproval?.(paymentId);
       },
       
       onReadyForServerCompletion: (paymentId, txnId) => {
+        console.log('✅ Payment completed:', { paymentId, txnId });
         callbacks.onReadyForServerCompletion?.(paymentId, txnId);
       },
       
       onCancel: (paymentId) => {
+        console.log('❌ Payment cancelled:', paymentId);
         callbacks.onCancel?.(paymentId);
       },
       
       onError: (error, paymentId) => {
+        console.error('❌ Payment error:', { error, paymentId });
         callbacks.onError?.(error, paymentId);
       }
     };
@@ -338,6 +392,7 @@ export const usePiSDK = () => {
     try {
       return await window.Pi.createPayment(paymentData, enhancedCallbacks);
     } catch (error) {
+      console.error('❌ Create payment failed:', error);
       throw error;
     }
   }, [hasPaymentAccess]);
@@ -357,6 +412,8 @@ export const usePiSDK = () => {
     if (authTimeoutRef.current) clearTimeout(authTimeoutRef.current);
     if (retryTimeoutRef.current) clearTimeout(retryTimeoutRef.current);
     if (autoConnectTimeoutRef.current) clearTimeout(autoConnectTimeoutRef.current);
+    
+    console.log('🔌 User disconnected');
   }, []);
 
   // Test connection
