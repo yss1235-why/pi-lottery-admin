@@ -26,8 +26,8 @@
     X-Content-Type-Options = "nosniff"
     Referrer-Policy = "strict-origin-when-cross-origin"
     Permissions-Policy = "camera=(), microphone=(), geolocation=()"
-    Content-Security-Policy = "default-src 'self'; script-src 'self' 'unsafe-inline' https://sdk.minepi.com https://blockstream.info; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; connect-src 'self' https://firebase.googleapis.com https://blockstream.info https://sdk.minepi.com https://socialchain.app; frame-src 'none';"
-
+    # The key fix is in the CSP:
+Content-Security-Policy = "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://sdk.minepi.com https://blockstream.info https://www.gstatic.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https: blob:; connect-src 'self' https://firebase.googleapis.com https://firestore.googleapis.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://blockstream.info https://sdk.minepi.com https://socialchain.app wss://*.firebaseio.com wss://*.web.app; frame-src 'none'; object-src 'none'; base-uri 'self'; form-action 'self';"
 # Static asset caching
 [[headers]]
   for = "/static/*"
