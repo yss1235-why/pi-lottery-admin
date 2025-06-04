@@ -1,4 +1,4 @@
-// File path: src/UserApp.js - STREAMLINED USER INTERFACE COMPONENT
+// File path: src/UserApp.js - Pi Browser Optimized Version
 import React, { useState, useEffect } from 'react';
 import { db } from './firebase';
 import { 
@@ -39,15 +39,24 @@ function UserApp() {
     closeLegal();
   };
 
-  // Pi Wallet state
+  // Pi Wallet state - Simplified for Pi Browser
   const [piUser, setPiUser] = useState(null);
   const [walletConnected, setWalletConnected] = useState(false);
-  const [piSDKLoaded, setPiSDKLoaded] = useState(false);
+  const [piSDKReady, setPiSDKReady] = useState(false);
+  const [sdkError, setSdkError] = useState('');
 
   // App state
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+
+  // Debug information for Pi Browser
+  const [debugInfo, setDebugInfo] = useState({
+    sdkLoaded: false,
+    sdkVersion: 'unknown',
+    userAgent: navigator.userAgent,
+    timestamp: new Date().toISOString()
+  });
 
   // Lottery data
   const [activeLotteries, setActiveLotteries] = useState([]);
@@ -62,45 +71,78 @@ function UserApp() {
     winCount: 0
   });
 
-  // Pi SDK initialization
+  // Pi SDK initialization - Simplified for Pi Browser
   useEffect(() => {
     const initializePiSDK = async () => {
       try {
+        console.log('🔧 Checking Pi SDK availability...');
+        
+        // Check if Pi SDK is available
         if (window.Pi) {
-          console.log('🔧 Initializing Pi SDK for users...');
+          console.log('📦 Pi SDK found, initializing...');
           
-          const config = {
+          // Simple initialization for Pi Browser
+          await window.Pi.init({
             version: "2.0",
-            sandbox: true,
-            development: true,
-            timeout: 45000,
-            environment: 'sandbox'
-          };
+            sandbox: true
+          });
           
-          await window.Pi.init(config);
-          setPiSDKLoaded(true);
-          console.log('✅ Pi SDK loaded for users');
+          setPiSDKReady(true);
+          setDebugInfo(prev => ({
+            ...prev,
+            sdkLoaded: true,
+            sdkVersion: window.Pi.version || '2.0'
+          }));
+          
+          console.log('✅ Pi SDK initialized successfully');
+          setSuccess('🎯 Pi SDK ready! You can now connect your wallet.');
           
         } else {
-          console.warn('⚠️ Pi SDK not loaded - retrying...');
-          setTimeout(initializePiSDK, 3000);
+          console.warn('⚠️ Pi SDK not found');
+          setSdkError('Pi SDK not available');
+          setError('Pi SDK not loaded. Please ensure you are using Pi Browser.');
         }
       } catch (error) {
-        console.error('❌ Pi SDK initialization error:', error);
-        setPiSDKLoaded(false);
+        console.error('❌ Pi SDK initialization failed:', error);
+        setSdkError(error.message);
+        setError(`Pi SDK initialization failed: ${error.message}`);
       }
     };
 
-    setTimeout(initializePiSDK, 1000);
+    // Listen for Pi SDK ready event
+    const handlePiSDKReady = () => {
+      console.log('📡 Pi SDK ready event received');
+      initializePiSDK();
+    };
+
+    window.addEventListener('piSDKReady', handlePiSDKReady);
+
+    // Check immediately if SDK is already loaded
+    if (window.Pi) {
+      initializePiSDK();
+    } else {
+      // Wait a bit for SDK to load
+      setTimeout(() => {
+        if (window.Pi) {
+          initializePiSDK();
+        } else {
+          console.warn('⚠️ Pi SDK still not available after delay');
+          setSdkError('Pi SDK not loaded - ensure you are using Pi Browser');
+        }
+      }, 3000);
+    }
+
+    return () => {
+      window.removeEventListener('piSDKReady', handlePiSDKReady);
+    };
   }, []);
 
-  // Load active lotteries immediately on component mount
+  // Load data functions
   useEffect(() => {
     loadActiveLotteries();
     loadCompletedLotteries();
   }, []);
 
-  // Load user data when wallet is connected
   useEffect(() => {
     if (walletConnected && piUser) {
       loadMyEntries();
@@ -120,29 +162,59 @@ function UserApp() {
     return () => clearInterval(interval);
   }, [walletConnected]);
 
-  // Pi wallet connection
+  // Pi wallet connection - Simplified for Pi Browser
   const connectWallet = async () => {
     setError('');
-    console.log('🔗 Connecting user Pi wallet...');
+    setSuccess('');
+    console.log('🔗 Attempting to connect Pi wallet...');
     
     try {
-      if (!window.Pi || !piSDKLoaded) {
-        throw new Error('Pi SDK not loaded');
+      if (!window.Pi) {
+        throw new Error('Pi SDK not available. Please use Pi Browser.');
+      }
+
+      if (!piSDKReady) {
+        throw new Error('Pi SDK not ready. Please wait and try again.');
       }
 
       setLoading(true);
       
-      const authResult = await window.Pi.authenticate(['payments'], (payment) => {
-        console.log('Incomplete payment found:', payment);
-      });
+      console.log('🔐 Starting Pi authentication...');
+      
+      // Simple authentication for Pi Browser
+      const authResult = await window.Pi.authenticate(
+        ['payments'], 
+        {
+          onIncompletePaymentFound: (payment) => {
+            console.log('💳 Incomplete payment found:', payment);
+          }
+        }
+      );
+
+      console.log('✅ Authentication successful:', authResult);
 
       setPiUser(authResult.user);
       setWalletConnected(true);
       setSuccess(`🎉 Welcome ${authResult.user.username}! You can now join lotteries.`);
       
+      // Track successful connection
+      setDebugInfo(prev => ({
+        ...prev,
+        connectionSuccess: true,
+        userConnected: authResult.user.username,
+        connectionTime: new Date().toISOString()
+      }));
+      
     } catch (error) {
       console.error('❌ Pi wallet connection failed:', error);
       setError(`Connection failed: ${error.message}`);
+      
+      // Track connection failure
+      setDebugInfo(prev => ({
+        ...prev,
+        connectionError: error.message,
+        errorTime: new Date().toISOString()
+      }));
     } finally {
       setLoading(false);
     }
@@ -161,7 +233,7 @@ function UserApp() {
     setSuccess('Wallet disconnected');
   };
 
-  // Data loading functions
+  // Data loading functions (unchanged)
   const loadActiveLotteries = async () => {
     try {
       const lotteriesRef = collection(db, 'lotteries');
@@ -177,7 +249,6 @@ function UserApp() {
         const data = doc.data();
         const endDate = data.endDate?.toDate?.() || new Date(data.endDate);
         
-        // Only show lotteries that haven't ended
         if (endDate > new Date()) {
           lotteries.push({
             id: doc.id,
@@ -249,7 +320,7 @@ function UserApp() {
         });
       });
       
-      setCompletedLotteries(completed.slice(0, 10)); // Show last 10
+      setCompletedLotteries(completed.slice(0, 10));
     } catch (error) {
       console.error('Error loading completed lotteries:', error);
     }
@@ -265,7 +336,6 @@ function UserApp() {
       totalEntered += entry.ticketCount;
       totalSpent += entry.ticketCount * entry.entryFee;
       
-      // Check if user won
       if (entry.winners && entry.winners.length > 0) {
         const userWins = entry.winners.filter(w => w.winner.uid === piUser.uid);
         if (userWins.length > 0) {
@@ -283,7 +353,7 @@ function UserApp() {
     });
   };
 
-  // Ticket system functions
+  // Ticket system functions (unchanged)
   const calculateMaxTicketsForUser = (totalParticipants) => {
     return Math.max(2, Math.floor(totalParticipants * 0.02));
   };
@@ -295,11 +365,11 @@ function UserApp() {
 
   const canBuyMoreTickets = (lottery) => {
     const userTickets = getUserTicketCount(lottery);
-    const maxTickets = calculateMaxTicketsForUser(lottery.participants.length + 1); // +1 for potential new ticket
+    const maxTickets = calculateMaxTicketsForUser(lottery.participants.length + 1);
     return userTickets < maxTickets;
   };
 
-  // Lottery participation
+  // Lottery participation - Simplified for Pi Browser
   const joinLottery = async (lotteryId, lottery) => {
     if (!walletConnected) {
       setError('Please connect your Pi wallet first');
@@ -317,8 +387,11 @@ function UserApp() {
     try {
       setLoading(true);
       setError('');
+      setSuccess('');
 
-      // Create Pi payment
+      console.log('💰 Creating Pi payment for lottery entry...');
+
+      // Simplified payment creation for Pi Browser
       const paymentData = {
         amount: lottery.entryFee,
         memo: `Lottery Entry: ${lottery.title}`,
@@ -329,53 +402,60 @@ function UserApp() {
         }
       };
 
-      console.log('💰 Creating Pi payment:', paymentData);
+      console.log('💳 Payment data:', paymentData);
 
-      const payment = await window.Pi.createPayment(paymentData, {
+      const paymentCallbacks = {
         onReadyForServerApproval: (paymentId) => {
-          console.log('Payment ready for approval:', paymentId);
+          console.log('✅ Payment ready for approval:', paymentId);
         },
         onReadyForServerCompletion: async (paymentId, txnId) => {
-          console.log('Payment completed:', paymentId, txnId);
+          console.log('🎉 Payment completed:', paymentId, txnId);
           
-          // Add user to lottery participants
-          const lotteryRef = doc(db, 'lotteries', lotteryId);
-          await updateDoc(lotteryRef, {
-            participants: arrayUnion({
-              uid: piUser.uid,
-              username: piUser.username,
-              joinedAt: Timestamp.now(),
-              paymentId: paymentId,
-              txnId: txnId,
-              ticketNumber: userTickets + 1
-            })
-          });
+          try {
+            // Add user to lottery participants
+            const lotteryRef = doc(db, 'lotteries', lotteryId);
+            await updateDoc(lotteryRef, {
+              participants: arrayUnion({
+                uid: piUser.uid,
+                username: piUser.username,
+                joinedAt: Timestamp.now(),
+                paymentId: paymentId,
+                txnId: txnId,
+                ticketNumber: userTickets + 1
+              })
+            });
 
-          setSuccess(`🎫 Ticket purchased! You now have ${userTickets + 1} tickets in this lottery.`);
-          
-          // Refresh data
-          loadActiveLotteries();
-          loadMyEntries();
+            setSuccess(`🎫 Ticket purchased! You now have ${userTickets + 1} tickets in this lottery.`);
+            
+            // Refresh data
+            loadActiveLotteries();
+            loadMyEntries();
+          } catch (updateError) {
+            console.error('❌ Error updating lottery:', updateError);
+            setError('Payment successful but error updating lottery. Please refresh.');
+          }
         },
         onCancel: (paymentId) => {
-          console.log('Payment cancelled:', paymentId);
+          console.log('❌ Payment cancelled:', paymentId);
           setError('Payment cancelled');
         },
         onError: (error, paymentId) => {
-          console.error('Payment error:', error, paymentId);
-          setError(`Payment failed: ${error.message}`);
+          console.error('❌ Payment error:', error, paymentId);
+          setError(`Payment failed: ${error.message || error}`);
         }
-      });
+      };
+
+      await window.Pi.createPayment(paymentData, paymentCallbacks);
 
     } catch (error) {
-      console.error('Join lottery error:', error);
+      console.error('❌ Join lottery error:', error);
       setError(`Failed to join lottery: ${error.message}`);
     } finally {
       setLoading(false);
     }
   };
 
-  // Utility functions
+  // Utility functions (unchanged)
   const formatTimeRemaining = (endDate) => {
     const now = new Date();
     const diff = endDate - now;
@@ -397,7 +477,6 @@ function UserApp() {
     const platformFee = participantCount * (lottery.platformFee || 0.1);
     const prizePool = totalCollected - platformFee;
     
-    // Calculate winner count
     const getWinnerCount = (count) => {
       if (count < 10) return 1;
       if (count < 25) return 3;
@@ -411,7 +490,6 @@ function UserApp() {
 
     const winnerCount = getWinnerCount(participantCount);
     
-    // Prize percentages
     const getPercentages = (count) => {
       const distributions = {
         1: [100],
@@ -439,7 +517,29 @@ function UserApp() {
 
   return (
     <div className="container">
-      {/* Top Navigation Bar */}
+      {/* Debug Info Panel for Pi Browser (only show if there are issues) */}
+      {(sdkError || !piSDKReady) && (
+        <div className="card" style={{border: '2px solid #ffc107', background: '#fff3cd'}}>
+          <h3>🔧 Pi Browser Debug Information</h3>
+          <div style={{fontSize: '0.9rem', fontFamily: 'monospace'}}>
+            <p><strong>SDK Ready:</strong> {piSDKReady ? '✅ Yes' : '❌ No'}</p>
+            <p><strong>SDK Available:</strong> {window.Pi ? '✅ Yes' : '❌ No'}</p>
+            <p><strong>SDK Error:</strong> {sdkError || 'None'}</p>
+            <p><strong>User Agent:</strong> {debugInfo.userAgent}</p>
+            <p><strong>Timestamp:</strong> {debugInfo.timestamp}</p>
+            {debugInfo.connectionError && (
+              <p><strong>Connection Error:</strong> {debugInfo.connectionError}</p>
+            )}
+          </div>
+          {!piSDKReady && (
+            <p style={{marginTop: '10px', color: '#856404'}}>
+              <strong>💡 Tip:</strong> Make sure you're using the official Pi Browser app and have a stable internet connection.
+            </p>
+          )}
+        </div>
+      )}
+
+      {/* Header */}
       <div className="header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
         <div>
           <h1 style={{ margin: 0 }}>🎰 Pi Lottery</h1>
@@ -460,10 +560,10 @@ function UserApp() {
             <button 
               onClick={connectWallet}
               className="button success"
-              disabled={!piSDKLoaded || loading}
+              disabled={!piSDKReady || loading}
               style={{ padding: '12px 20px' }}
             >
-              {loading ? '🔄 Connecting...' : piSDKLoaded ? '🔗 Connect Pi Wallet' : '⏳ Loading...'}
+              {loading ? '🔄 Connecting...' : piSDKReady ? '🔗 Connect Pi Wallet' : '⏳ Loading Pi SDK...'}
             </button>
           )}
         </div>
@@ -483,7 +583,7 @@ function UserApp() {
         </div>
       )}
 
-      {/* User Stats (only show when wallet connected) */}
+      {/* User Stats */}
       {walletConnected && (
         <div className="stats-grid">
           <div className="stat-card purple">
@@ -505,7 +605,7 @@ function UserApp() {
         </div>
       )}
 
-      {/* Active Lotteries - Always Shown */}
+      {/* Active Lotteries */}
       <div className="card">
         <h2>🎲 Available Lotteries</h2>
         {!walletConnected && (
@@ -642,7 +742,7 @@ function UserApp() {
         )}
       </div>
 
-      {/* My Entries (only show when wallet connected) */}
+      {/* My Entries */}
       {walletConnected && myEntries.length > 0 && (
         <div className="card">
           <h2>📊 My Lottery Entries</h2>
