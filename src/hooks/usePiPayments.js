@@ -1,21 +1,28 @@
-// src/hooks/usePiPayments.js - Simple Payment Integration Hook
+// src/hooks/usePiPayments.js - Updated for Firebase Functions
 import { useState } from 'react';
 
 const usePiPayments = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
-  // Get API URL based on environment
-  const getApiUrl = () => {
-    if (process.env.NODE_ENV === 'production') {
-      return process.env.REACT_APP_API_URL_PRODUCTION || 'https://your-backend-domain.com';
+  // Get Firebase Functions URL
+  const getFunctionsBaseUrl = () => {
+    // Replace with your actual Firebase project ID
+    const projectId = process.env.REACT_APP_FIREBASE_PROJECT_ID || 'pi-lottery-901c4';
+    
+    if (process.env.NODE_ENV === 'development') {
+      // Local Firebase emulator
+      return 'http://localhost:5001/' + projectId + '/us-central1';
     }
-    return process.env.REACT_APP_API_URL || 'http://localhost:8000';
+    
+    // Production Firebase Functions
+    return `https://us-central1-${projectId}.cloudfunctions.net`;
   };
 
   // API call helper
-  const apiCall = async (endpoint, data) => {
-    const response = await fetch(`${getApiUrl()}${endpoint}`, {
+  const apiCall = async (functionName, data) => {
+    const baseUrl = getFunctionsBaseUrl();
+    const response = await fetch(`${baseUrl}/${functionName}`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -58,15 +65,15 @@ const usePiPayments = () => {
           console.log('💰 Payment ready for approval:', paymentId);
           
           try {
-            await apiCall('/api/payments/approve', {
+            await apiCall('approvePayment', {
               paymentId,
               lotteryId: lottery.id,
               userUid: piUser.uid
             });
             
-            console.log('✅ Payment approved by backend');
+            console.log('✅ Payment approved by Firebase Functions');
           } catch (approvalError) {
-            console.error('❌ Backend approval failed:', approvalError);
+            console.error('❌ Firebase Functions approval failed:', approvalError);
             if (onError) onError(approvalError);
           }
         },
@@ -75,7 +82,7 @@ const usePiPayments = () => {
           console.log('🎉 Payment completion ready:', { paymentId, txnId });
           
           try {
-            const result = await apiCall('/api/payments/complete', {
+            const result = await apiCall('completePayment', {
               paymentId,
               txnId,
               lotteryId: lottery.id,
@@ -127,7 +134,7 @@ const usePiPayments = () => {
     try {
       console.log('💰 Distributing prize to:', winner);
 
-      const result = await apiCall('/api/prizes/distribute', {
+      const result = await apiCall('distributePrize', {
         recipientUid: winner.winner.uid,
         amount: winner.prize,
         memo: `Lottery Prize - Position #${winner.position}`,
