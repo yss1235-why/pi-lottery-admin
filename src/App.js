@@ -1,4 +1,4 @@
-// File path: src/App.js - Improved Admin Interface with Enhanced Pi SDK
+// File path: src/App.js - Clean Admin Interface
 import React, { useState, useEffect } from 'react';
 import { auth, db } from './firebase';
 import { signInWithEmailAndPassword, signOut, onAuthStateChanged } from 'firebase/auth';
@@ -13,7 +13,7 @@ import {
   Timestamp 
 } from 'firebase/firestore';
 
-import usePiSDK from './hooks/usePiSDK'; // Use the enhanced hook
+import usePiSDK from './hooks/usePiSDK';
 
 function App() {
   // Authentication state
@@ -24,30 +24,17 @@ function App() {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
 
-  // Enhanced Pi SDK hook for admin
+  // Pi SDK hook for admin
   const {
     piUser: adminPiUser,
     isAuthenticated: adminWalletConnected,
     hasPaymentAccess: adminHasPaymentAccess,
     loading: piLoading,
     error: piError,
-    sdkReady,
-    connectionStatus,
-    authStep,
-    connectUser: connectAdminUser,
-    requestPaymentAccess: requestAdminPaymentAccess,
-    connectWallet: connectAdminWallet,
     createPayment,
-    disconnect: disconnectAdmin,
-    testConnection,
-    getConnectionInfo,
     clearError: clearPiError,
-    canConnect,
     isFullyConnected: adminFullyConnected
   } = usePiSDK();
-
-  // Debug information
-  const [showDebugInfo, setShowDebugInfo] = useState(false);
 
   // Lottery data
   const [lotteries, setLotteries] = useState([]);
@@ -121,7 +108,6 @@ function App() {
       const response = await fetch('https://blockstream.info/api/blocks/tip/height');
       const height = await response.json();
       setCurrentBitcoinBlock(height);
-      console.log('📦 Current Bitcoin block:', height);
     } catch (error) {
       console.error('Error fetching Bitcoin block height:', error);
       setCurrentBitcoinBlock(Math.floor((Date.now() - 1609459200000) / 600000) + 665000);
@@ -173,26 +159,11 @@ function App() {
     
     const commitmentBlock = currentBlock + blocksUntilEnd + safetyMargin;
     
-    console.log(`📊 Commitment block calculation for ${lotteryType} lottery:`, {
-      currentBlock,
-      hoursUntilEnd: hoursUntilEnd.toFixed(1),
-      blocksUntilEnd,
-      safetyMargin,
-      commitmentBlock
-    });
-    
     return commitmentBlock;
   };
 
   // Provably fair functions
   const generateProvablyFairWinners = (blockHash, lotteryId, participants, winnerCount) => {
-    console.log('🎯 Generating provably fair winners:', {
-      blockHash: blockHash.substring(0, 16) + '...',
-      lotteryId,
-      participantCount: participants.length,
-      winnerCount
-    });
-    
     const winners = [];
     const remainingParticipants = [...participants];
     
@@ -278,7 +249,7 @@ function App() {
     } catch (error) {
       console.error('Login error:', error);
       if (error.code === 'auth/user-not-found') {
-        setError('Admin account not found. Please create the admin account in Firebase Console first.');
+        setError('Admin account not found. Please check your credentials.');
       } else if (error.code === 'auth/wrong-password') {
         setError('Invalid password');
       } else {
@@ -292,7 +263,6 @@ function App() {
     try {
       await signOut(auth);
       setSuccess('Successfully logged out!');
-      disconnectAdmin();
       setLotteries([]);
     } catch (error) {
       setError('Error logging out');
@@ -300,41 +270,16 @@ function App() {
     }
   };
 
-  // Enhanced admin Pi wallet connection
-  const handleConnectAdminWallet = async () => {
-    setError('');
-    console.log('🔗 Connecting admin Pi wallet...');
-    
-    try {
-      if (!canConnect) {
-        throw new Error('Pi SDK not ready. Please wait and try again.');
-      }
-
-      await connectAdminWallet();
-      setSuccess(`💰 Admin Pi wallet connected! Ready to distribute prizes.`);
-      
-    } catch (error) {
-      console.error('❌ Admin Pi wallet connection failed:', error);
-      setError(`Admin wallet connection failed: ${error.message}`);
-    }
-  };
-
-  // Enhanced prize distribution with new Pi SDK
+  // Prize distribution with Pi SDK
   const distributePrizeToWinner = async (winner, lotteryId) => {
     if (!adminFullyConnected) {
-      setError('Admin wallet must be fully connected to distribute prizes');
+      setError('Admin wallet must be connected to distribute prizes');
       return;
     }
 
     try {
       setDistributingPrizes(true);
       
-      console.log('💰 Distributing prize:', {
-        winner: winner.winner.username || winner.winner.uid,
-        amount: winner.prize,
-        position: winner.position
-      });
-
       const paymentData = {
         amount: winner.prize,
         memo: `Lottery Prize - Position #${winner.position}`,
@@ -348,13 +293,10 @@ function App() {
 
       const paymentCallbacks = {
         onReadyForServerApproval: (paymentId) => {
-          console.log('Payment ready for approval:', paymentId);
           setSuccess(`Payment approved for ${winner.winner.username}: ${winner.prize}π`);
         },
         
         onReadyForServerCompletion: async (paymentId, txnId) => {
-          console.log('Payment completed:', paymentId, txnId);
-          
           try {
             // Update lottery document
             await updateDoc(doc(db, 'lotteries', lotteryId), {
@@ -375,7 +317,7 @@ function App() {
               }
             }));
 
-            setSuccess(`✅ Prize distributed to ${winner.winner.username || winner.winner.uid}: ${winner.prize}π`);
+            setSuccess(`✅ Prize distributed to ${winner.winner.username}: ${winner.prize}π`);
             loadLotteries();
           } catch (updateError) {
             console.error('Error updating lottery:', updateError);
@@ -384,12 +326,10 @@ function App() {
         },
         
         onCancel: (paymentId) => {
-          console.log('Payment cancelled:', paymentId);
           setError('Prize distribution cancelled');
         },
         
         onError: (error, paymentId) => {
-          console.error('Payment error:', error, paymentId);
           setError(`Prize distribution failed: ${error.message || error}`);
         }
       };
@@ -410,17 +350,6 @@ function App() {
       }));
     } finally {
       setDistributingPrizes(false);
-    }
-  };
-
-  // Enhanced test connection
-  const handleTestAdminConnection = async () => {
-    try {
-      setSuccess('Testing admin Pi connection...');
-      const result = await testConnection();
-      setSuccess(`✅ Admin connection test successful! User: ${result.user.username}`);
-    } catch (testError) {
-      setError(`❌ Admin connection test failed: ${testError.message}`);
     }
   };
 
@@ -577,8 +506,6 @@ function App() {
 
     setLoading(true);
     try {
-      console.log(`🎯 Drawing winners for ${lottery.lotteryType || 'standard'} lottery...`);
-      
       const blockData = await fetchBitcoinBlockHash(lottery.provablyFair.commitmentBlock);
       
       const winnerCount = calculateWinnerCount(
@@ -626,7 +553,7 @@ function App() {
         }
       });
 
-      setSuccess(`🎉 ${winnerCount} winners drawn using Bitcoin block #${blockData.height}! Ready for prize distribution.`);
+      setSuccess(`🎉 ${winnerCount} winners drawn using Bitcoin block #${blockData.height}!`);
       loadLotteries();
       calculateStats();
     } catch (error) {
@@ -677,16 +604,6 @@ function App() {
     clearPiError();
   };
 
-  // Get connection status color
-  const getConnectionStatusColor = () => {
-    switch (connectionStatus) {
-      case 'connected': return '#28a745';
-      case 'connecting': return '#ffc107';
-      case 'error': return '#dc3545';
-      default: return '#6c757d';
-    }
-  };
-
   // Main loading state
   if (loading && !user && !isAdmin) {
     return (
@@ -698,59 +615,13 @@ function App() {
     );
   }
 
-  // Enhanced login form for non-admin users
+  // Login form for non-admin users
   if (!isAdmin) {
     return (
       <div className="container">
         <div className="header">
           <h1>🎰 Pi Lottery Admin</h1>
           <p>Administrator Access Required</p>
-        </div>
-
-        {/* Enhanced Debug Info for Admin Login Issues */}
-        <div className="card" style={{border: '2px solid #ffc107', background: '#fff3cd'}}>
-          <h3>🔧 Pi SDK Status (Admin)</h3>
-          <div style={{fontSize: '0.9rem', fontFamily: 'monospace'}}>
-            <div style={{display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '10px'}}>
-              <div style={{
-                width: '12px',
-                height: '12px',
-                borderRadius: '50%',
-                background: getConnectionStatusColor()
-              }}></div>
-              <span><strong>Connection:</strong> {connectionStatus}</span>
-            </div>
-            <p><strong>SDK Ready:</strong> {sdkReady ? '✅ Yes' : '❌ No'}</p>
-            <p><strong>SDK Available:</strong> {window.Pi ? '✅ Yes' : '❌ No'}</p>
-            {authStep && <p><strong>Status:</strong> {authStep}</p>}
-            {piError && <p><strong>Error:</strong> {piError}</p>}
-          </div>
-          
-          {canConnect && (
-            <div style={{marginTop: '15px'}}>
-              <button 
-                onClick={handleTestAdminConnection}
-                className="button secondary"
-                style={{marginRight: '10px'}}
-              >
-                🧪 Test Pi Connection
-              </button>
-              <button 
-                onClick={() => setShowDebugInfo(!showDebugInfo)}
-                className="button secondary"
-              >
-                {showDebugInfo ? '🔽 Hide' : '🔼 Show'} Debug Info
-              </button>
-            </div>
-          )}
-          
-          {showDebugInfo && (
-            <div style={{marginTop: '15px', padding: '10px', background: '#f8f9fa', borderRadius: '4px'}}>
-              <pre style={{fontSize: '0.8rem', margin: 0, whiteSpace: 'pre-wrap'}}>
-                {JSON.stringify(getConnectionInfo(), null, 2)}
-              </pre>
-            </div>
-          )}
         </div>
 
         <div className="card">
@@ -815,25 +686,23 @@ function App() {
   // Main admin dashboard
   return (
     <div className="container">
-      {/* Enhanced Header */}
+      {/* Header */}
       <div className="header">
         <h1>🎰 Pi Lottery Admin Dashboard</h1>
         <p>Manage provably fair lotteries with manual prize distribution</p>
       </div>
 
-      {/* Enhanced Admin Info & Controls */}
+      {/* Admin Info & Controls */}
       <div className="card">
         <div className="logged-in-header">
           <div className="admin-info">
             <div style={{display: 'flex', alignItems: 'center', gap: '10px'}}>
               <span>✅ Admin: {user.email}</span>
-              <div style={{
-                width: '8px',
-                height: '8px',
-                borderRadius: '50%',
-                background: getConnectionStatusColor(),
-                animation: connectionStatus === 'connecting' ? 'pulse 2s infinite' : 'none'
-              }}></div>
+              {adminFullyConnected && (
+                <span style={{color: '#28a745', fontSize: '0.9rem'}}>
+                  💰 Wallet Connected ({adminPiUser.username})
+                </span>
+              )}
             </div>
             {currentBitcoinBlock && (
               <div style={{fontSize: '0.9rem', color: '#6c757d', marginTop: '5px'}}>
@@ -841,35 +710,10 @@ function App() {
               </div>
             )}
           </div>
-          <div style={{display: 'flex', gap: '10px'}}>
-            <button 
-              onClick={() => setShowDebugInfo(!showDebugInfo)}
-              className="button secondary"
-              style={{padding: '6px 12px', fontSize: '0.9rem'}}
-            >
-              🔧 Debug
-            </button>
-            <button onClick={handleLogout} className="button secondary">
-              🚪 Logout
-            </button>
-          </div>
+          <button onClick={handleLogout} className="button secondary">
+            🚪 Logout
+          </button>
         </div>
-        
-        {showDebugInfo && (
-          <div style={{
-            marginTop: '15px', 
-            padding: '15px', 
-            background: '#f8f9fa', 
-            borderRadius: '8px',
-            fontSize: '0.9rem',
-            fontFamily: 'monospace'
-          }}>
-            <h4>🔧 Admin Debug Information:</h4>
-            <pre style={{margin: '10px 0', whiteSpace: 'pre-wrap'}}>
-              {JSON.stringify(getConnectionInfo(), null, 2)}
-            </pre>
-          </div>
-        )}
       </div>
 
       {/* Messages */}
@@ -887,7 +731,7 @@ function App() {
       )}
       {piError && (
         <div className="error">
-          Pi SDK Error: {piError}
+          Pi Wallet Error: {piError}
           <button onClick={clearPiError} style={{float: 'right', background: 'none', border: 'none', color: 'inherit', cursor: 'pointer'}}>×</button>
         </div>
       )}
@@ -909,79 +753,6 @@ function App() {
         <div className="stat-card blue">
           <div className="stat-number">{stats.winnersDrawn}</div>
           <div className="stat-label">Winners Drawn</div>
-        </div>
-      </div>
-
-      {/* Enhanced Admin Pi Wallet for Prize Distribution */}
-      <div className="card">
-        <h2>💰 Admin Pi Wallet (Prize Distribution)</h2>
-        <div className={`wallet-status ${adminFullyConnected ? 'wallet-connected' : ''}`}>
-          <div className="wallet-indicator"></div>
-          <div className="wallet-info">
-            <h4>
-              {adminFullyConnected ? '✅ Admin Wallet Fully Connected' : 
-               adminWalletConnected ? '⚠️ Admin Wallet Connected (Payment Access Needed)' : 
-               '❌ Admin Wallet Disconnected'}
-            </h4>
-            {adminPiUser && (
-              <p>👤 Admin: {adminPiUser.username} ({adminPiUser.uid})</p>
-            )}
-            <p style={{fontSize: '0.9rem', color: '#6c757d'}}>
-              {adminFullyConnected 
-                ? '🎯 Ready to distribute prizes manually' 
-                : adminWalletConnected 
-                ? '💰 Click "Enable Payments" to distribute prizes'
-                : '⚠️ Connect wallet to distribute prizes to winners'
-              }
-            </p>
-            {authStep && (
-              <p style={{fontSize: '0.9rem', color: '#6f42c1', fontStyle: 'italic'}}>
-                {authStep}
-              </p>
-            )}
-          </div>
-          
-          <div style={{display: 'flex', flexDirection: 'column', gap: '8px'}}>
-            {adminFullyConnected ? (
-              <button onClick={disconnectAdmin} className="button danger">
-                🔌 Disconnect
-              </button>
-            ) : adminWalletConnected ? (
-              <>
-                <button 
-                  onClick={requestAdminPaymentAccess}
-                  className="button warning"
-                  disabled={piLoading}
-                >
-                  {piLoading ? '🔄 Requesting...' : '💰 Enable Payments'}
-                </button>
-                <button onClick={disconnectAdmin} className="button secondary" style={{fontSize: '0.9rem'}}>
-                  🔌 Disconnect
-                </button>
-              </>
-            ) : (
-              <button 
-                onClick={handleConnectAdminWallet}
-                className="button success"
-                disabled={!canConnect || piLoading}
-              >
-                {piLoading ? `🔄 ${authStep || 'Connecting...'}` : 
-                 canConnect ? '💰 Connect Admin Wallet' : 
-                 '⏳ Pi SDK Loading...'}
-              </button>
-            )}
-            
-            {/* Test connection button for debugging */}
-            {canConnect && !piLoading && (
-              <button 
-                onClick={handleTestAdminConnection}
-                className="button secondary"
-                style={{padding: '6px 12px', fontSize: '0.9rem'}}
-              >
-                🧪 Test Connection
-              </button>
-            )}
-          </div>
         </div>
       </div>
 
@@ -1042,9 +813,6 @@ function App() {
                 onChange={(e) => setNewLottery({...newLottery, platformFee: parseFloat(e.target.value) || 0})}
                 placeholder="0.10"
               />
-              <small style={{color: '#6c757d', fontSize: '0.85rem'}}>
-                Deducted from prize pool
-              </small>
             </div>
           </div>
 
@@ -1086,12 +854,6 @@ function App() {
             </div>
           </div>
 
-          <div className="success" style={{margin: '15px 0'}}>
-            <h4>🎫 2% Ticket System:</h4>
-            <p>Each user can buy up to 2% of total participants as tickets (minimum 2 tickets)</p>
-            <p>🔒 Provably fair winners selected using Bitcoin blockchain</p>
-          </div>
-
           <button 
             type="submit" 
             className="button success full-width"
@@ -1102,7 +864,7 @@ function App() {
         </form>
       </div>
 
-      {/* All Lotteries with Enhanced Prize Distribution */}
+      {/* All Lotteries */}
       <div className="card">
         <h2>📋 All Lotteries</h2>
         {lotteries.length === 0 ? (
@@ -1149,22 +911,12 @@ function App() {
                       <div className="lottery-detail-value">{totalPrize} π</div>
                     </div>
                     <div className="lottery-detail">
-                      <div className="lottery-detail-label">Platform Fee</div>
-                      <div className="lottery-detail-value">{(participantCount * (lottery.platformFee || 0.1)).toFixed(2)} π</div>
+                      <div className="lottery-detail-label">End Date</div>
+                      <div className="lottery-detail-value">{formatDate(lottery.endDate)}</div>
                     </div>
                   </div>
 
-                  {/* Provably Fair Info */}
-                  {lottery.provablyFair && (
-                    <div className="success" style={{margin: '15px 0'}}>
-                      <p><strong>🔒 Bitcoin Block:</strong> #{lottery.provablyFair.commitmentBlock}</p>
-                      {lottery.provablyFair.blockDataFetched && (
-                        <p><strong>✅ Block Hash:</strong> {lottery.provablyFair.blockHash?.substring(0, 16)}...</p>
-                      )}
-                    </div>
-                  )}
-
-                  {/* Enhanced Winners and Prize Distribution */}
+                  {/* Winners and Prize Distribution */}
                   {hasWinners && (
                     <div className="winners-section" style={{margin: '20px 0'}}>
                       <h4>🏆 Winners & Prize Distribution</h4>
@@ -1202,11 +954,6 @@ function App() {
                                       {formatDate(winner.paidAt.toDate())}
                                     </div>
                                   )}
-                                  {winner.txnId && (
-                                    <div style={{fontSize: '0.7rem', color: '#6c757d', fontFamily: 'monospace'}}>
-                                      TX: {winner.txnId.substring(0, 8)}...
-                                    </div>
-                                  )}
                                 </div>
                               ) : (
                                 <button
@@ -1215,44 +962,12 @@ function App() {
                                   disabled={!adminFullyConnected || distributingPrizes}
                                   style={{padding: '8px 16px', fontSize: '0.9rem'}}
                                 >
-                                  {distributingPrizes ? (
-                                    <span>
-                                      <span style={{
-                                        display: 'inline-block',
-                                        width: '12px',
-                                        height: '12px',
-                                        border: '2px solid #ffffff40',
-                                        borderTop: '2px solid #ffffff',
-                                        borderRadius: '50%',
-                                        animation: 'spin 1s linear infinite',
-                                        marginRight: '6px'
-                                      }}></span>
-                                      Sending...
-                                    </span>
-                                  ) : (
-                                    `💰 Send ${winner.prize}π`
-                                  )}
+                                  {distributingPrizes ? '🔄 Sending...' : `💰 Send ${winner.prize}π`}
                                 </button>
                               )}
                             </div>
                           </div>
                         ))}
-                      </div>
-                      
-                      {/* Enhanced Prize Distribution Summary */}
-                      <div style={{marginTop: '15px', padding: '15px', background: '#e9ecef', borderRadius: '8px'}}>
-                        <strong>📊 Distribution Summary:</strong>
-                        <div style={{marginTop: '8px', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '10px'}}>
-                          <div>
-                            <span style={{color: '#28a745'}}>✅ Paid:</span> {lottery.winners.filter(w => w.paid).length}/{lottery.winners.length}
-                          </div>
-                          <div>
-                            <span style={{color: '#007bff'}}>💰 Distributed:</span> {lottery.winners.filter(w => w.paid).reduce((sum, w) => sum + w.prize, 0).toFixed(2)}π
-                          </div>
-                          <div>
-                            <span style={{color: '#ffc107'}}>⏳ Remaining:</span> {lottery.winners.filter(w => !w.paid).reduce((sum, w) => sum + w.prize, 0).toFixed(2)}π
-                          </div>
-                        </div>
                       </div>
                     </div>
                   )}
@@ -1290,19 +1005,6 @@ function App() {
           </div>
         )}
       </div>
-
-      {/* Add CSS for animations */}
-      <style jsx>{`
-        @keyframes spin {
-          0% { transform: rotate(0deg); }
-          100% { transform: rotate(360deg); }
-        }
-        
-        @keyframes pulse {
-          0%, 100% { opacity: 1; }
-          50% { opacity: 0.5; }
-        }
-      `}</style>
     </div>
   );
 }
