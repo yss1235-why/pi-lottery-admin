@@ -1,4 +1,4 @@
-<!-- File path: public/index.html -->
+<!-- File path: public/index.html - Pi Browser Optimized -->
 <!DOCTYPE html>
 <html lang="en">
   <head>
@@ -9,132 +9,117 @@
     <meta name="description" content="Pi Lottery - Provably Fair Lotteries with 2% Ticket System" />
     <title>Pi Lottery - Fair & Transparent</title>
     
-    <!-- Pi SDK Configuration for Testnet -->
+    <!-- Simplified Pi SDK Configuration for Pi Browser -->
     <script>
-      console.log('🔧 Configuring Pi SDK for lottery platform...');
+      console.log('🔧 Configuring Pi SDK for Pi Browser...');
       
-      // Enhanced Pi SDK Configuration
+      // Simple Pi SDK Configuration - Pi Browser compatible
       window.PI_SDK_CONFIG = {
-        environment: 'sandbox', // Use 'sandbox' for testnet
-        debug: true,
-        allowCrossOrigin: true,
         version: "2.0",
-        timeout: 45000, // 45 second timeout
-        retryOnFailure: true,
-        maxRetries: 3
+        sandbox: true
       };
       
-      // Enhanced error handling and debugging
-      window.addEventListener('error', function(e) {
-        if (e.filename && e.filename.includes('pi-sdk')) {
-          console.error('❌ Pi SDK Error:', {
-            message: e.message,
-            filename: e.filename,
-            lineno: e.lineno,
-            colno: e.colno,
-            error: e.error
-          });
-          
-          // Show user-friendly error
-          if (window.piSDKErrorHandler) {
-            window.piSDKErrorHandler(e.error || e.message);
-          }
+      // Track SDK loading status
+      window.piSDKStatus = {
+        loaded: false,
+        error: null,
+        attempts: 0
+      };
+      
+      // Simple error handler
+      window.piSDKErrorHandler = function(error) {
+        console.error('🚨 Pi SDK Error:', error);
+        window.piSDKStatus.error = error.toString();
+        
+        // Show error to user
+        const errorDiv = document.getElementById('pi-sdk-error');
+        if (errorDiv) {
+          errorDiv.style.display = 'block';
+          errorDiv.innerHTML = '⚠️ Pi SDK Error: ' + error.toString();
         }
-      });
+      };
       
-      // Pi SDK Load Monitoring
-      let piSDKLoadAttempts = 0;
-      const maxLoadAttempts = 5;
-      
-      const checkPiSDKLoaded = () => {
-        piSDKLoadAttempts++;
+      // Check if Pi SDK is loaded
+      window.checkPiSDK = function() {
+        window.piSDKStatus.attempts++;
         
         if (window.Pi) {
           console.log('✅ Pi SDK loaded successfully');
-          console.log('📊 Pi SDK Info:', {
-            version: window.Pi.version || 'unknown',
-            environment: window.Pi.environment || 'unknown',
-            loadAttempt: piSDKLoadAttempts
-          });
+          window.piSDKStatus.loaded = true;
           
-          // Notify app that SDK is ready
-          window.dispatchEvent(new CustomEvent('piSDKReady', {
-            detail: { attempts: piSDKLoadAttempts }
-          }));
+          // Hide loading, show success
+          const loading = document.getElementById('pi-sdk-loading');
+          const success = document.getElementById('pi-sdk-success');
+          if (loading) loading.style.display = 'none';
+          if (success) {
+            success.style.display = 'block';
+            success.innerHTML = '✅ Pi SDK Ready';
+          }
           
-        } else if (piSDKLoadAttempts < maxLoadAttempts) {
-          console.warn(`⚠️ Pi SDK not loaded (attempt ${piSDKLoadAttempts}/${maxLoadAttempts}), retrying...`);
-          setTimeout(checkPiSDKLoaded, 2000);
+          // Notify React app
+          window.dispatchEvent(new CustomEvent('piSDKReady'));
+          
+        } else if (window.piSDKStatus.attempts < 10) {
+          console.warn(`⚠️ Pi SDK not loaded (attempt ${window.piSDKStatus.attempts}/10)`);
+          setTimeout(window.checkPiSDK, 2000);
         } else {
-          console.error(`❌ Pi SDK failed to load after ${maxLoadAttempts} attempts`);
-          
-          // Notify app of failure
-          window.dispatchEvent(new CustomEvent('piSDKFailed', {
-            detail: { attempts: piSDKLoadAttempts }
-          }));
+          console.error('❌ Pi SDK failed to load after 10 attempts');
+          window.piSDKStatus.error = 'SDK failed to load';
+          window.piSDKErrorHandler('SDK failed to load after 10 attempts');
         }
       };
-      
-      // Start checking when page loads
-      window.addEventListener('load', () => {
-        console.log('📄 Page loaded, checking Pi SDK...');
-        checkPiSDKLoaded();
-      });
-      
-      // Fallback check after delay
-      setTimeout(() => {
-        if (!window.Pi && piSDKLoadAttempts === 0) {
-          console.warn('🔄 Fallback: Starting Pi SDK check...');
-          checkPiSDKLoaded();
-        }
-      }, 3000);
     </script>
     
-    <!-- Pi SDK for Testnet/Sandbox -->
+    <!-- Pi SDK - Simple loading -->
     <script 
       src="https://sdk.minepi.com/pi-sdk.js" 
-      async 
-      defer
-      onload="console.log('📦 Pi SDK script loaded')"
-      onerror="console.error('❌ Pi SDK script failed to load')"
+      onload="console.log('📦 Pi SDK script loaded'); setTimeout(window.checkPiSDK, 1000);"
+      onerror="console.error('❌ Pi SDK script failed to load'); window.piSDKErrorHandler('Script failed to load');"
     ></script>
     
-    <!-- Alternative Pi SDK URLs (fallbacks) -->
-    <script>
-      // Fallback Pi SDK loading
-      let sdkLoaded = false;
-      
-      window.addEventListener('load', () => {
-        setTimeout(() => {
-          if (!window.Pi && !sdkLoaded) {
-            console.log('🔄 Trying alternative Pi SDK URL...');
-            const script = document.createElement('script');
-            script.src = 'https://sdk.minepi.com/pi-sdk.js?v=2.0&env=sandbox';
-            script.async = true;
-            script.onload = () => {
-              console.log('✅ Alternative Pi SDK loaded');
-              sdkLoaded = true;
-            };
-            script.onerror = () => {
-              console.error('❌ Alternative Pi SDK failed');
-            };
-            document.head.appendChild(script);
-          }
-        }, 5000);
-      });
-    </script>
-    
-    <!-- Lottery Platform Specific Styles -->
+    <!-- Basic styles -->
     <style>
-      /* Loading animation for Pi SDK */
-      .pi-sdk-loading {
+      .pi-status {
+        position: fixed;
+        top: 10px;
+        right: 10px;
+        padding: 10px;
+        border-radius: 8px;
+        font-size: 14px;
+        font-weight: bold;
+        z-index: 10000;
+        max-width: 300px;
+      }
+      
+      #pi-sdk-loading {
+        background: #fff3cd;
+        color: #856404;
+        border: 1px solid #ffeaa7;
+      }
+      
+      #pi-sdk-success {
+        background: #d4edda;
+        color: #155724;
+        border: 1px solid #c3e6cb;
+        display: none;
+      }
+      
+      #pi-sdk-error {
+        background: #f8d7da;
+        color: #721c24;
+        border: 1px solid #f5c6cb;
+        display: none;
+      }
+      
+      .pi-loading-animation {
         display: inline-block;
-        width: 20px;
-        height: 20px;
-        border: 3px solid #f3f3f3;
-        border-top: 3px solid #6f42c1;
+        width: 16px;
+        height: 16px;
+        border: 2px solid #f3f3f3;
+        border-top: 2px solid #6f42c1;
         border-radius: 50%;
         animation: spin 1s linear infinite;
+        margin-right: 8px;
       }
       
       @keyframes spin {
@@ -142,145 +127,27 @@
         100% { transform: rotate(360deg); }
       }
       
-      /* Enhanced button styles for lottery actions */
-      .lottery-button {
-        background: linear-gradient(135deg, #6f42c1, #8b5cf6);
-        color: white;
-        border: none;
-        padding: 12px 24px;
-        border-radius: 8px;
-        font-weight: 600;
-        cursor: pointer;
-        transition: all 0.3s ease;
-        box-shadow: 0 4px 12px rgba(111, 66, 193, 0.3);
+      /* Initial loading screen */
+      #initial-loading {
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        text-align: center;
+        font-family: Arial, sans-serif;
+        z-index: 1000;
       }
       
-      .lottery-button:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 6px 20px rgba(111, 66, 193, 0.4);
-      }
-      
-      .lottery-button:disabled {
-        background: #6c757d;
-        cursor: not-allowed;
-        transform: none;
-        box-shadow: none;
-      }
-      
-      /* Prize display animations */
-      .prize-animation {
-        animation: prizeGlow 2s ease-in-out infinite alternate;
-      }
-      
-      @keyframes prizeGlow {
-        from { box-shadow: 0 0 5px rgba(255, 193, 7, 0.5); }
-        to { box-shadow: 0 0 20px rgba(255, 193, 7, 0.8); }
-      }
-      
-      /* Ticket counter animations */
-      .ticket-counter {
-        animation: ticketPulse 1s ease-in-out;
-      }
-      
-      @keyframes ticketPulse {
-        0% { transform: scale(1); }
-        50% { transform: scale(1.1); }
-        100% { transform: scale(1); }
-      }
-      
-      /* Responsive improvements */
-      @media (max-width: 768px) {
-        .lottery-button {
-          width: 100%;
-          padding: 15px;
-          font-size: 16px;
-        }
+      .loading-spinner {
+        display: inline-block;
+        width: 40px;
+        height: 40px;
+        border: 4px solid #f3f3f3;
+        border-top: 4px solid #6f42c1;
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
       }
     </style>
-    
-    <!-- Error Tracking for Pi SDK -->
-    <script>
-      // Global error handler for Pi-related errors
-      window.piSDKErrorHandler = (error) => {
-        console.error('🚨 Pi SDK Error Handler:', error);
-        
-        // Store error for app to handle
-        window.piSDKLastError = {
-          message: error.toString(),
-          timestamp: new Date().toISOString(),
-          userAgent: navigator.userAgent,
-          url: window.location.href
-        };
-        
-        // Dispatch custom event for React app
-        window.dispatchEvent(new CustomEvent('piSDKError', {
-          detail: window.piSDKLastError
-        }));
-      };
-      
-      // Network connectivity check
-      const checkNetworkAndSDK = () => {
-        if (!navigator.onLine) {
-          console.warn('📡 Offline: Pi SDK may not work properly');
-          return false;
-        }
-        
-        if (!window.Pi) {
-          console.warn('🔧 Pi SDK not available');
-          return false;
-        }
-        
-        return true;
-      };
-      
-      // Expose utility functions for React app
-      window.lotteryPlatformUtils = {
-        checkNetworkAndSDK,
-        piSDKErrorHandler,
-        isSDKReady: () => !!window.Pi,
-        getSDKStatus: () => ({
-          loaded: !!window.Pi,
-          online: navigator.onLine,
-          attempts: piSDKLoadAttempts,
-          lastError: window.piSDKLastError
-        })
-      };
-    </script>
-    
-    <!-- Lottery Platform Analytics (Optional) -->
-    <script>
-      // Simple analytics for lottery platform
-      window.lotteryAnalytics = {
-        trackEvent: (event, data = {}) => {
-          console.log('📊 Analytics:', event, data);
-          // Could integrate with actual analytics service
-        },
-        
-        trackLotteryJoin: (lotteryId, entryFee) => {
-          window.lotteryAnalytics.trackEvent('lottery_join', {
-            lotteryId,
-            entryFee,
-            timestamp: new Date().toISOString()
-          });
-        },
-        
-        trackWalletConnect: (userId) => {
-          window.lotteryAnalytics.trackEvent('wallet_connect', {
-            userId,
-            timestamp: new Date().toISOString()
-          });
-        },
-        
-        trackPrizeWon: (lotteryId, position, amount) => {
-          window.lotteryAnalytics.trackEvent('prize_won', {
-            lotteryId,
-            position,
-            amount,
-            timestamp: new Date().toISOString()
-          });
-        }
-      };
-    </script>
   </head>
   
   <body>
@@ -292,27 +159,43 @@
       </div>
     </noscript>
     
+    <!-- Pi SDK Status Indicators -->
+    <div id="pi-sdk-loading" class="pi-status">
+      <span class="pi-loading-animation"></span>
+      Loading Pi SDK...
+    </div>
+    <div id="pi-sdk-success" class="pi-status"></div>
+    <div id="pi-sdk-error" class="pi-status"></div>
+    
     <!-- Loading indicator while app initializes -->
-    <div id="initial-loading" style="
-      position: fixed;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-      text-align: center;
-      font-family: Arial, sans-serif;
-      z-index: 1000;
-    ">
-      <div class="pi-sdk-loading"></div>
+    <div id="initial-loading">
+      <div class="loading-spinner"></div>
       <h3 style="margin-top: 20px; color: #6f42c1;">🎰 Loading Pi Lottery...</h3>
-      <p style="color: #6c757d;">Initializing Pi SDK and lottery platform...</p>
+      <p style="color: #6c757d;">Initializing platform...</p>
+      <div id="loading-status" style="margin-top: 10px; font-size: 14px; color: #6c757d;">
+        Checking Pi SDK...
+      </div>
     </div>
     
     <!-- Main app container -->
     <div id="root"></div>
     
-    <!-- Hide loading indicator when React app starts -->
+    <!-- Enhanced loading management -->
     <script>
-      // Remove loading indicator when React mounts
+      // Update loading status
+      function updateLoadingStatus(message) {
+        const status = document.getElementById('loading-status');
+        if (status) {
+          status.innerHTML = message;
+        }
+      }
+      
+      // Pi SDK ready handler
+      window.addEventListener('piSDKReady', function() {
+        updateLoadingStatus('✅ Pi SDK ready, starting app...');
+      });
+      
+      // Hide loading when React app mounts
       const observer = new MutationObserver((mutations) => {
         mutations.forEach((mutation) => {
           if (mutation.type === 'childList' && mutation.addedNodes.length > 0) {
@@ -333,13 +216,23 @@
         subtree: true
       });
       
-      // Fallback to hide loading after 10 seconds
+      // Auto-hide loading after 15 seconds
       setTimeout(() => {
         const loading = document.getElementById('initial-loading');
         if (loading) {
           loading.style.display = 'none';
         }
-      }, 10000);
+      }, 15000);
+      
+      // Check page load
+      window.addEventListener('load', () => {
+        updateLoadingStatus('📄 Page loaded, checking Pi SDK...');
+        setTimeout(() => {
+          if (!window.piSDKStatus.loaded) {
+            updateLoadingStatus('⚠️ Pi SDK taking longer than expected...');
+          }
+        }, 5000);
+      });
     </script>
   </body>
 </html>
