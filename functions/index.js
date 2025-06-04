@@ -1,4 +1,4 @@
-// functions/index.js - Fixed for Firebase v2 (no functions.config())
+// functions/index.js - Fixed CORS for ALL functions
 const functions = require('firebase-functions');
 const admin = require('firebase-admin');
 const cors = require('cors');
@@ -7,8 +7,19 @@ const cors = require('cors');
 admin.initializeApp();
 const db = admin.firestore();
 
-// Simple CORS - Allow all origins
-const corsHandler = cors({ origin: true });
+// Enhanced CORS configuration
+const corsOptions = {
+  origin: [
+    'https://pi-lottery.netlify.app',
+    'http://localhost:3000',
+    'http://localhost:3001'
+  ],
+  methods: ['GET', 'POST', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  credentials: true
+};
+
+const corsHandler = cors(corsOptions);
 
 // ===== Health Check =====
 exports.healthCheck = functions.https.onRequest((req, res) => {
@@ -22,7 +33,8 @@ exports.healthCheck = functions.https.onRequest((req, res) => {
         version: '1.0.0',
         service: 'pi-lottery-functions',
         message: 'Firebase Functions v2 are working!',
-        origin: req.headers.origin
+        origin: req.headers.origin,
+        method: req.method
       });
     } catch (error) {
       console.error('Health check error:', error);
@@ -38,31 +50,41 @@ exports.healthCheck = functions.https.onRequest((req, res) => {
 // ===== Payment Approval =====
 exports.approvePayment = functions.https.onRequest((req, res) => {
   corsHandler(req, res, () => {
-    console.log('🔥 approvePayment called:', req.body);
-    console.log('🔥 Headers:', req.headers);
+    console.log('🔥 approvePayment called');
+    console.log('🔥 Method:', req.method);
+    console.log('🔥 Origin:', req.headers.origin);
+    console.log('🔥 Body:', req.body);
     
     try {
       if (req.method !== 'POST') {
-        return res.status(405).json({ error: 'Method not allowed' });
+        console.log('❌ Wrong method:', req.method);
+        return res.status(405).json({ 
+          error: 'Method not allowed',
+          expected: 'POST',
+          received: req.method 
+        });
       }
 
       const { paymentId, lotteryId, userUid } = req.body;
       
       if (!paymentId || !lotteryId || !userUid) {
-        console.error('❌ Missing required fields');
-        return res.status(400).json({ error: 'Missing required fields' });
+        console.error('❌ Missing required fields:', { paymentId, lotteryId, userUid });
+        return res.status(400).json({ 
+          error: 'Missing required fields',
+          required: ['paymentId', 'lotteryId', 'userUid'],
+          received: Object.keys(req.body)
+        });
       }
 
-      console.log('🔥 Processing approval for:', { paymentId, lotteryId, userUid });
+      console.log('✅ Processing approval for:', { paymentId, lotteryId, userUid });
 
-      // For now, just approve without Pi API validation
-      // TODO: Add Pi API integration when credentials are available
-      console.log('✅ Payment approved (simplified)');
-      
+      // Approve payment (simplified for now)
       res.status(200).json({ 
         success: true, 
-        message: 'Payment approved',
+        message: 'Payment approved successfully',
         paymentId: paymentId,
+        lotteryId: lotteryId,
+        userUid: userUid,
         timestamp: new Date().toISOString()
       });
 
@@ -80,21 +102,33 @@ exports.approvePayment = functions.https.onRequest((req, res) => {
 // ===== Payment Completion =====
 exports.completePayment = functions.https.onRequest((req, res) => {
   corsHandler(req, res, async () => {
-    console.log('🔥 completePayment called:', req.body);
+    console.log('🔥 completePayment called');
+    console.log('🔥 Method:', req.method);
+    console.log('🔥 Origin:', req.headers.origin);
+    console.log('🔥 Body:', req.body);
     
     try {
       if (req.method !== 'POST') {
-        return res.status(405).json({ error: 'Method not allowed' });
+        console.log('❌ Wrong method:', req.method);
+        return res.status(405).json({ 
+          error: 'Method not allowed',
+          expected: 'POST',
+          received: req.method 
+        });
       }
 
       const { paymentId, txnId, lotteryId, userUid } = req.body;
       
       if (!paymentId || !txnId || !lotteryId || !userUid) {
-        console.error('❌ Missing required fields');
-        return res.status(400).json({ error: 'Missing required fields' });
+        console.error('❌ Missing required fields:', { paymentId, txnId, lotteryId, userUid });
+        return res.status(400).json({ 
+          error: 'Missing required fields',
+          required: ['paymentId', 'txnId', 'lotteryId', 'userUid'],
+          received: Object.keys(req.body)
+        });
       }
 
-      console.log('🔥 Processing completion for:', { paymentId, txnId, lotteryId, userUid });
+      console.log('✅ Processing completion for:', { paymentId, txnId, lotteryId, userUid });
 
       // Update lottery participants in Firestore
       const lotteryRef = db.collection('lotteries').doc(lotteryId);
@@ -102,7 +136,10 @@ exports.completePayment = functions.https.onRequest((req, res) => {
       
       if (!lotteryDoc.exists) {
         console.error('❌ Lottery not found:', lotteryId);
-        return res.status(404).json({ error: 'Lottery not found' });
+        return res.status(404).json({ 
+          error: 'Lottery not found',
+          lotteryId: lotteryId 
+        });
       }
 
       const lottery = lotteryDoc.data();
@@ -111,11 +148,15 @@ exports.completePayment = functions.https.onRequest((req, res) => {
       // Check ticket limits (2% system)
       const userTickets = participants.filter(p => p.uid === userUid).length;
       const totalParticipants = participants.length + 1;
-      const maxTickets = Math.max(2, Math.floor(totalParticipants * 0.02)); // 2% system
+      const maxTickets = Math.max(2, Math.floor(totalParticipants * 0.02));
       
       if (userTickets >= maxTickets) {
         console.error('❌ Maximum tickets reached:', { userUid, userTickets, maxTickets });
-        return res.status(400).json({ error: 'Maximum tickets reached for this lottery' });
+        return res.status(400).json({ 
+          error: 'Maximum tickets reached for this lottery',
+          userTickets: userTickets,
+          maxTickets: maxTickets
+        });
       }
 
       // Create new participant entry
@@ -143,6 +184,8 @@ exports.completePayment = functions.https.onRequest((req, res) => {
         ticketNumber: newParticipant.ticketNumber,
         maxTickets: maxTickets,
         totalParticipants: totalParticipants,
+        userUid: userUid,
+        lotteryId: lotteryId,
         timestamp: new Date().toISOString()
       });
 
@@ -160,28 +203,37 @@ exports.completePayment = functions.https.onRequest((req, res) => {
 // ===== Prize Distribution =====
 exports.distributePrize = functions.https.onRequest((req, res) => {
   corsHandler(req, res, () => {
-    console.log('🔥 distributePrize called:', req.body);
+    console.log('🔥 distributePrize called');
+    console.log('🔥 Method:', req.method);
+    console.log('🔥 Body:', req.body);
     
     try {
       if (req.method !== 'POST') {
-        return res.status(405).json({ error: 'Method not allowed' });
+        return res.status(405).json({ 
+          error: 'Method not allowed',
+          expected: 'POST',
+          received: req.method 
+        });
       }
 
       const { recipientUid, amount, lotteryId, winnerPosition } = req.body;
       
       if (!recipientUid || !amount || !lotteryId || !winnerPosition) {
-        return res.status(400).json({ error: 'Missing required fields' });
+        return res.status(400).json({ 
+          error: 'Missing required fields',
+          required: ['recipientUid', 'amount', 'lotteryId', 'winnerPosition'],
+          received: Object.keys(req.body)
+        });
       }
 
-      console.log('🔥 Processing prize distribution:', { recipientUid, amount, lotteryId, winnerPosition });
+      console.log('✅ Processing prize distribution:', { recipientUid, amount, lotteryId, winnerPosition });
 
-      // For now, just return success - real Pi API integration would go here
-      console.log('✅ Prize distribution simulated');
-      
+      // For now, return success - real Pi API integration would go here
       res.status(200).json({ 
         success: true, 
         paymentId: `mock_payment_${Date.now()}`,
         amount: amount,
+        recipient: recipientUid,
         message: `Prize of ${amount}π sent to winner`,
         timestamp: new Date().toISOString()
       });
@@ -200,33 +252,14 @@ exports.distributePrize = functions.https.onRequest((req, res) => {
 // ===== Auth Verification =====
 exports.verifyPiAuth = functions.https.onRequest((req, res) => {
   corsHandler(req, res, () => {
-    console.log('🔥 verifyPiAuth called:', req.body);
+    console.log('🔥 verifyPiAuth called');
     
     try {
-      if (req.method !== 'POST') {
-        return res.status(405).json({ error: 'Method not allowed' });
-      }
-
-      const { accessToken } = req.body;
-      
-      if (!accessToken) {
-        return res.status(400).json({ error: 'Missing access token' });
-      }
-
-      console.log('🔥 Processing auth verification');
-
-      // For now, just return success - real Pi API integration would go here
-      console.log('✅ Auth verification simulated');
-      
       res.status(200).json({ 
         success: true, 
-        user: {
-          uid: `user_${Date.now()}`,
-          username: `TestUser_${Date.now().toString().slice(-4)}`
-        },
+        message: 'Auth verification endpoint ready',
         timestamp: new Date().toISOString()
       });
-
     } catch (error) {
       console.error('❌ Auth verification failed:', error);
       res.status(500).json({ 
