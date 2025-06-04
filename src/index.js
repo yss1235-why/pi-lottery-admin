@@ -1,14 +1,14 @@
-// File path: src/index.js - Updated React Entry Point
+// File path: src/index.js - Clean React Entry Point
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import './index.css';
-import MainApp from './MainApp'; // Import main router component
+import MainApp from './MainApp';
 
-// Enhanced error boundary for better error handling
+// Simple error boundary
 class ErrorBoundary extends React.Component {
   constructor(props) {
     super(props);
-    this.state = { hasError: false, error: null, errorInfo: null };
+    this.state = { hasError: false };
   }
 
   static getDerivedStateFromError(error) {
@@ -16,22 +16,7 @@ class ErrorBoundary extends React.Component {
   }
 
   componentDidCatch(error, errorInfo) {
-    console.error('🚨 Pi Lottery App Error:', error, errorInfo);
-    
-    this.setState({
-      error: error,
-      errorInfo: errorInfo
-    });
-
-    // Report error to analytics if enabled
-    if (window.lotteryAnalytics && window.lotteryAnalytics.trackEvent) {
-      window.lotteryAnalytics.trackEvent('app_error', {
-        error: error.toString(),
-        stack: error.stack,
-        componentStack: errorInfo.componentStack,
-        timestamp: new Date().toISOString()
-      });
-    }
+    console.error('Pi Lottery App Error:', error, errorInfo);
   }
 
   render() {
@@ -62,25 +47,6 @@ class ErrorBoundary extends React.Component {
             <p style={{ color: '#6c757d', marginBottom: '20px' }}>
               The Pi Lottery app encountered an unexpected error. Please try refreshing the page.
             </p>
-            
-            {process.env.REACT_APP_ENABLE_DEBUG_MODE === 'true' && (
-              <details style={{ marginBottom: '20px', textAlign: 'left' }}>
-                <summary style={{ cursor: 'pointer', marginBottom: '10px' }}>
-                  🔧 Error Details (Debug Mode)
-                </summary>
-                <pre style={{ 
-                  background: '#f8f9fa', 
-                  padding: '10px', 
-                  borderRadius: '4px',
-                  fontSize: '0.8rem',
-                  overflow: 'auto',
-                  maxHeight: '200px'
-                }}>
-                  {this.state.error && this.state.error.toString()}
-                  {this.state.errorInfo.componentStack}
-                </pre>
-              </details>
-            )}
             
             <button 
               onClick={() => window.location.reload()}
@@ -122,14 +88,10 @@ class ErrorBoundary extends React.Component {
 }
 
 // Initialize React app
-console.log('🚀 Initializing Pi Lottery Platform...');
-
 const root = ReactDOM.createRoot(document.getElementById('root'));
 
-// Enhanced render with error boundary and performance monitoring
+// Render with error boundary
 const renderApp = () => {
-  const startTime = performance.now();
-  
   root.render(
     <React.StrictMode>
       <ErrorBoundary>
@@ -137,19 +99,6 @@ const renderApp = () => {
       </ErrorBoundary>
     </React.StrictMode>
   );
-  
-  const endTime = performance.now();
-  console.log(`⚡ App rendered in ${(endTime - startTime).toFixed(2)}ms`);
-  
-  // Track app initialization
-  if (window.lotteryAnalytics && window.lotteryAnalytics.trackEvent) {
-    window.lotteryAnalytics.trackEvent('app_initialized', {
-      renderTime: endTime - startTime,
-      timestamp: new Date().toISOString(),
-      userAgent: navigator.userAgent,
-      buildVersion: process.env.REACT_APP_BUILD_VERSION || 'dev'
-    });
-  }
 };
 
 // Wait for DOM to be ready
@@ -157,40 +106,4 @@ if (document.readyState === 'loading') {
   document.addEventListener('DOMContentLoaded', renderApp);
 } else {
   renderApp();
-}
-
-// Performance monitoring
-if (process.env.REACT_APP_ENABLE_PERFORMANCE_MONITORING === 'true') {
-  // Web Vitals monitoring
-  const reportWebVitals = (metric) => {
-    console.log('📊 Web Vital:', metric);
-    
-    if (window.lotteryAnalytics && window.lotteryAnalytics.trackEvent) {
-      window.lotteryAnalytics.trackEvent('web_vital', {
-        name: metric.name,
-        value: metric.value,
-        rating: metric.rating,
-        timestamp: new Date().toISOString()
-      });
-    }
-  };
-  
-  // Import and use web-vitals if available
-  import('web-vitals').then(({ getCLS, getFID, getFCP, getLCP, getTTFB }) => {
-    getCLS(reportWebVitals);
-    getFID(reportWebVitals);
-    getFCP(reportWebVitals);
-    getLCP(reportWebVitals);
-    getTTFB(reportWebVitals);
-  }).catch(() => {
-    console.log('📊 Web Vitals not available');
-  });
-}
-
-// Hot reload support for development
-if (process.env.NODE_ENV === 'development' && module.hot) {
-  module.hot.accept('./MainApp', () => {
-    console.log('🔄 Hot reloading MainApp...');
-    renderApp();
-  });
 }
