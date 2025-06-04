@@ -1,32 +1,23 @@
-// File path: src/MainApp.js - Simplified Main Router Component
+// File path: src/MainApp.js - Clean Main Router Component
 import React, { useState, useEffect } from 'react';
 import App from './App';                // Admin Interface
 import UserApp from './UserApp';        // User Interface
 import LegalComponents from './components/LegalComponents';
 
 function MainApp() {
-  const [currentInterface, setCurrentInterface] = useState('user'); // Default to user interface
+  const [currentInterface, setCurrentInterface] = useState('user');
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Check URL path to determine interface - only admin if explicitly accessing /admin
+    // Check URL path to determine interface
     const path = window.location.pathname;
 
-    console.log('🔍 Checking route:', { path });
-
-    // If the URL contains "/legal", we'll render LegalComponents instead of admin/user
     if (path.includes('/legal')) {
       setCurrentInterface('legal');
-      console.log('📜 Loading Legal Components');
-    }
-    // Admin interface triggers - only for /admin path
-    else if (path.includes('/admin')) {
+    } else if (path.includes('/admin')) {
       setCurrentInterface('admin');
-      console.log('🔧 Loading Admin Interface');
-    } 
-    else {
+    } else {
       setCurrentInterface('user');
-      console.log('👤 Loading User Interface');
     }
 
     setLoading(false);
@@ -58,9 +49,6 @@ function MainApp() {
         <h3 style={{ marginTop: '20px', color: '#6f42c1' }}>
           🎰 Loading Pi Lottery Platform...
         </h3>
-        <p style={{ color: '#6c757d', textAlign: 'center', maxWidth: '400px' }}>
-          Connecting to Pi Network and loading available lotteries
-        </p>
         <style>{`
           @keyframes spin {
             0% { transform: rotate(0deg); }
