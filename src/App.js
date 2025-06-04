@@ -1,4 +1,4 @@
-// File path: src/App.js - Secure Admin Interface with Environment Variables
+// File path: src/App.js - Complete Admin Interface with Environment Variables
 import React, { useState, useEffect } from 'react';
 import { auth, db } from './firebase';
 import { signInWithEmailAndPassword, signOut, onAuthStateChanged } from 'firebase/auth';
@@ -14,6 +14,7 @@ import {
 } from 'firebase/firestore';
 
 import usePiSDK from './hooks/usePiSDK';
+import usePiPayments from './hooks/usePiPayments';
 
 function App() {
   // Authentication state
@@ -50,10 +51,18 @@ function App() {
     hasPaymentAccess: adminHasPaymentAccess,
     loading: piLoading,
     error: piError,
-    createPayment,
+    connectWallet,
     clearError: clearPiError,
     isFullyConnected: adminFullyConnected
   } = usePiSDK();
+
+  // Payment hook for prize distribution
+  const { 
+    distributePrize, 
+    loading: paymentLoading, 
+    error: paymentError,
+    clearError: clearPaymentError
+  } = usePiPayments();
 
   // Lottery data
   const [lotteries, setLotteries] = useState([]);
@@ -136,9 +145,15 @@ function App() {
   useEffect(() => {
     if (isAdmin()) {
       loadLotteries();
-      calculateStats();
     }
   }, [user]);
+
+  // Calculate stats when lotteries change
+  useEffect(() => {
+    if (isAdmin() && lotteries.length >= 0) {
+      calculateStats();
+    }
+  }, [lotteries, user]);
 
   // Clear messages after timeout
   useEffect(() => {
@@ -289,9 +304,7 @@ function App() {
     return commitmentBlock;
   };
 
-  // ... [Previous provably fair functions remain the same] ...
-  // [I'll include the key ones but they don't need environment variable changes]
-
+  // Provably fair functions
   const generateProvablyFairWinners = (blockHash, lotteryId, participants, winnerCount) => {
     const winners = [];
     const remainingParticipants = [...participants];
@@ -364,6 +377,66 @@ function App() {
     return prizes;
   };
 
+  // Data management functions
+  const loadLotteries = async () => {
+    try {
+      const lotteriesRef = collection(db, 'lotteries');
+      const q = query(lotteriesRef, orderBy('createdAt', 'desc'));
+      const querySnapshot = await getDocs(q);
+      
+      const lotteryList = [];
+      querySnapshot.forEach((doc) => {
+        const data = doc.data();
+        lotteryList.push({
+          id: doc.id,
+          ...data,
+          createdAt: data.createdAt?.toDate() || new Date(),
+          endDate: data.endDate?.toDate() || new Date(),
+          drawnAt: data.drawnAt?.toDate() || null
+        });
+      });
+      
+      setLotteries(lotteryList);
+      console.log('✅ Loaded lotteries:', lotteryList.length);
+      
+    } catch (error) {
+      console.error('❌ Error loading lotteries:', error);
+      setError('Failed to load lotteries');
+    }
+  };
+
+  const calculateStats = () => {
+    try {
+      let totalLotteries = 0;
+      let activeParticipants = 0;
+      let totalPiCollected = 0;
+      let winnersDrawn = 0;
+
+      lotteries.forEach(lottery => {
+        totalLotteries++;
+        
+        if (lottery.participants) {
+          activeParticipants += lottery.participants.length;
+          totalPiCollected += lottery.participants.length * lottery.entryFee;
+        }
+        
+        if (lottery.winners && lottery.winners.length > 0) {
+          winnersDrawn += lottery.winners.length;
+        }
+      });
+
+      setStats({
+        totalLotteries,
+        activeParticipants,
+        totalPiCollected: totalPiCollected.toFixed(2),
+        winnersDrawn
+      });
+      
+    } catch (error) {
+      console.error('❌ Error calculating stats:', error);
+    }
+  };
+
   // Auth functions with enhanced security
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -424,13 +497,224 @@ function App() {
     }
   };
 
-  // ... [Rest of the component remains similar but with environment variable integration] ...
-  // [Prize distribution, lottery management, etc. functions stay the same]
+  // Lottery management functions
+  const createLottery = async (e) => {
+    e.preventDefault();
+    setError('');
+    setLoading(true);
+
+    try {
+      const config = getConfig();
+      
+      // Validate inputs
+      if (!newLottery.title || !newLottery.endDate) {
+        throw new Error('Title and end date are required');
+      }
+
+      const entryFee = parseFloat(newLottery.entryFee);
+      if (entryFee < config.minEntryFee || entryFee > config.maxEntryFee) {
+        throw new Error(`Entry fee must be between ${config.minEntryFee}π and ${config.maxEntryFee}π`);
+      }
+
+      const endDate = new Date(newLottery.endDate);
+      if (endDate <= new Date()) {
+        throw new Error('End date must be in the future');
+      }
+
+      // Check max duration
+      const maxEndDate = new Date();
+      maxEndDate.setDate(maxEndDate.getDate() + config.maxLotteryDuration);
+      if (endDate > maxEndDate) {
+        throw new Error(`Lottery duration cannot exceed ${config.maxLotteryDuration} days`);
+      }
+
+      // Calculate commitment block
+      const commitmentBlock = calculateCommitmentBlock(
+        currentBitcoinBlock, 
+        newLottery.endDate, 
+        newLottery.lotteryType
+      );
+
+      // Create lottery document
+      const lotteryData = {
+        title: newLottery.title,
+        description: newLottery.description || '',
+        entryFee: entryFee,
+        platformFee: parseFloat(newLottery.platformFee),
+        endDate: Timestamp.fromDate(endDate),
+        maxParticipants: newLottery.maxParticipants ? parseInt(newLottery.maxParticipants) : null,
+        minWinners: parseInt(newLottery.minWinners),
+        maxTicketsPerUser: parseInt(newLottery.maxTicketsPerUser),
+        lotteryType: newLottery.lotteryType,
+        status: 'active',
+        participants: [],
+        winners: [],
+        createdAt: Timestamp.now(),
+        createdBy: user.email,
+        provablyFair: {
+          commitmentBlock: commitmentBlock,
+          blockHash: null,
+          verified: false
+        }
+      };
+
+      // Add to Firestore
+      await addDoc(collection(db, 'lotteries'), lotteryData);
+      
+      setSuccess(`✅ Lottery "${newLottery.title}" created successfully!`);
+      
+      // Reset form
+      const defaultConfig = getConfig();
+      setNewLottery({
+        title: '',
+        description: '',
+        entryFee: defaultConfig.minEntryFee.toString(),
+        endDate: '',
+        maxParticipants: '',
+        platformFee: defaultConfig.defaultPlatformFee,
+        platformFeePercent: defaultConfig.defaultPlatformFee * 100,
+        minWinners: 3,
+        maxTicketsPerUser: 2,
+        lotteryType: 'standard'
+      });
+      
+      // Reload lotteries
+      loadLotteries();
+      
+    } catch (error) {
+      console.error('❌ Error creating lottery:', error);
+      setError(error.message);
+    }
+    
+    setLoading(false);
+  };
+
+  // Draw winners for a lottery
+  const drawWinners = async (lotteryId) => {
+    setError('');
+    setLoading(true);
+
+    try {
+      const lottery = lotteries.find(l => l.id === lotteryId);
+      if (!lottery) {
+        throw new Error('Lottery not found');
+      }
+
+      if (lottery.status !== 'active') {
+        throw new Error('Lottery is not active');
+      }
+
+      if (!lottery.participants || lottery.participants.length === 0) {
+        throw new Error('No participants in this lottery');
+      }
+
+      // Check if lottery has ended
+      if (new Date() < lottery.endDate) {
+        throw new Error('Lottery has not ended yet');
+      }
+
+      // Fetch Bitcoin block data
+      const blockData = await fetchBitcoinBlockHash(lottery.provablyFair.commitmentBlock);
+      
+      // Calculate winners
+      const winnerCount = calculateWinnerCount(lottery.participants.length, lottery.minWinners);
+      const winners = generateProvablyFairWinners(
+        blockData.hash, 
+        lotteryId, 
+        lottery.participants, 
+        winnerCount
+      );
+      
+      // Calculate prizes
+      const prizes = calculatePrizeDistribution(
+        lottery.participants.length,
+        lottery.entryFee,
+        lottery.platformFee,
+        winnerCount
+      );
+      
+      // Add prize amounts to winners
+      const winnersWithPrizes = winners.map((winner, index) => ({
+        ...winner,
+        prize: prizes[index] || 0,
+        paid: false,
+        paidAt: null,
+        paymentId: null
+      }));
+
+      // Update lottery in Firestore
+      const lotteryRef = doc(db, 'lotteries', lotteryId);
+      await updateDoc(lotteryRef, {
+        status: 'ended',
+        winners: winnersWithPrizes,
+        drawnAt: Timestamp.now(),
+        provablyFair: {
+          ...lottery.provablyFair,
+          blockHash: blockData.hash,
+          verified: true,
+          blockData: blockData
+        }
+      });
+
+      setSuccess(`🎉 Drew ${winnerCount} winners for "${lottery.title}"!`);
+      loadLotteries();
+      
+    } catch (error) {
+      console.error('❌ Error drawing winners:', error);
+      setError(error.message);
+    }
+    
+    setLoading(false);
+  };
+
+  // Prize distribution
+  const handleDistributePrize = async (lotteryId, winner) => {
+    setDistributingPrizes(true);
+    
+    try {
+      await distributePrize(
+        winner,
+        lotteryId,
+        (result) => {
+          setDistributionResults(prev => ({
+            ...prev,
+            [winner.winner.uid]: { success: true, paymentId: result.paymentId }
+          }));
+          
+          // Update lottery to mark prize as paid
+          const lotteryRef = doc(db, 'lotteries', lotteryId);
+          const lottery = lotteries.find(l => l.id === lotteryId);
+          const updatedWinners = lottery.winners.map(w => 
+            w.winner.uid === winner.winner.uid 
+              ? { ...w, paid: true, paidAt: Timestamp.now(), paymentId: result.paymentId }
+              : w
+          );
+          
+          updateDoc(lotteryRef, { winners: updatedWinners });
+          loadLotteries();
+          
+          setSuccess(`💰 Prize sent to ${winner.winner.username}!`);
+        },
+        (error) => {
+          setDistributionResults(prev => ({
+            ...prev,
+            [winner.winner.uid]: { success: false, error: error.message }
+          }));
+          setError(`Failed to send prize: ${error.message}`);
+        }
+      );
+    } catch (error) {
+      setError(`Prize distribution failed: ${error.message}`);
+    }
+    
+    setDistributingPrizes(false);
+  };
 
   const clearMessages = () => {
     setError('');
     setSuccess('');
     clearPiError();
+    clearPaymentError();
   };
 
   // Utility functions
@@ -443,6 +727,21 @@ function App() {
       hour: '2-digit',
       minute: '2-digit'
     });
+  };
+
+  const formatTimeRemaining = (endDate) => {
+    const now = new Date();
+    const diff = endDate - now;
+    
+    if (diff <= 0) return 'Ended';
+    
+    const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+    const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+    const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+    
+    if (days > 0) return `${days}d ${hours}h`;
+    if (hours > 0) return `${hours}h ${minutes}m`;
+    return `${minutes}m`;
   };
 
   // Main loading state
@@ -563,15 +862,23 @@ function App() {
               </div>
             )}
           </div>
-          <button onClick={handleLogout} className="button secondary">
-            🚪 Logout
-          </button>
+          <div style={{display: 'flex', gap: '10px'}}>
+            {!adminFullyConnected && (
+              <button 
+                onClick={connectWallet} 
+                className="button success"
+                disabled={piLoading}
+              >
+                {piLoading ? '🔄 Connecting...' : '💰 Connect Wallet'}
+              </button>
+            )}
+            <button onClick={handleLogout} className="button secondary">
+              🚪 Logout
+            </button>
+          </div>
         </div>
       </div>
 
-      {/* Rest of the admin dashboard remains the same... */}
-      {/* Messages, Stats, Create Lottery, Manage Lotteries */}
-      
       {/* Messages */}
       {error && (
         <div className="error">
@@ -583,6 +890,12 @@ function App() {
         <div className="success">
           {success}
           <button onClick={clearMessages} style={{float: 'right', background: 'none', border: 'none', color: 'inherit', cursor: 'pointer'}}>×</button>
+        </div>
+      )}
+      {piError && (
+        <div className="warning">
+          Pi Wallet: {piError}
+          <button onClick={clearPiError} style={{float: 'right', background: 'none', border: 'none', color: 'inherit', cursor: 'pointer'}}>×</button>
         </div>
       )}
 
@@ -613,15 +926,281 @@ function App() {
           Create provably fair lotteries with Bitcoin blockchain randomness
         </p>
         
-        {/* Configuration reminder */}
         <div className="warning" style={{marginBottom: '20px'}}>
           <strong>Configuration:</strong> Entry fees: {config.minEntryFee}π - {config.maxEntryFee}π | 
           Max duration: {config.maxLotteryDuration} days | 
           Ticket limit: {config.ticketLimitPercentage}%
         </div>
         
-        {/* Lottery creation form would go here... */}
-        {/* This section would be similar to the previous version but with validation against config */}
+        <form onSubmit={createLottery}>
+          <div className="form-row">
+            <div className="form-group">
+              <label htmlFor="title">Lottery Title *</label>
+              <input
+                type="text"
+                id="title"
+                value={newLottery.title}
+                onChange={(e) => setNewLottery({...newLottery, title: e.target.value})}
+                required
+                placeholder="Enter lottery title"
+              />
+            </div>
+            
+            <div className="form-group">
+              <label htmlFor="lotteryType">Lottery Type</label>
+              <select
+                id="lotteryType"
+                value={newLottery.lotteryType}
+                onChange={(e) => setNewLottery({...newLottery, lotteryType: e.target.value})}
+              >
+                <option value="standard">Standard</option>
+                <option value="daily">Daily (24 hours)</option>
+                <option value="weekly">Weekly (7 days)</option>
+                <option value="monthly">Monthly (30 days)</option>
+              </select>
+            </div>
+          </div>
+
+          <div className="form-group">
+            <label htmlFor="description">Description</label>
+            <textarea
+              id="description"
+              value={newLottery.description}
+              onChange={(e) => setNewLottery({...newLottery, description: e.target.value})}
+              placeholder="Optional lottery description"
+            />
+          </div>
+
+          <div className="form-row">
+            <div className="form-group">
+              <label htmlFor="entryFee">Entry Fee (π) *</label>
+              <input
+                type="number"
+                id="entryFee"
+                value={newLottery.entryFee}
+                onChange={(e) => setNewLottery({...newLottery, entryFee: e.target.value})}
+                min={config.minEntryFee}
+                max={config.maxEntryFee}
+                step="0.01"
+                required
+              />
+              <small>Range: {config.minEntryFee}π - {config.maxEntryFee}π</small>
+            </div>
+            
+            <div className="form-group">
+              <label htmlFor="platformFeePercent">Platform Fee (%)</label>
+              <input
+                type="number"
+                id="platformFeePercent"
+                value={newLottery.platformFeePercent}
+                onChange={(e) => {
+                  const percent = parseFloat(e.target.value);
+                  setNewLottery({
+                    ...newLottery, 
+                    platformFeePercent: percent,
+                    platformFee: (percent / 100) * parseFloat(newLottery.entryFee)
+                  });
+                }}
+                min="1"
+                max="50"
+                step="0.1"
+              />
+              <small>Fee: {newLottery.platformFee.toFixed(3)}π per ticket</small>
+            </div>
+          </div>
+
+          <div className="form-row">
+            <div className="form-group">
+              <label htmlFor="endDate">End Date & Time *</label>
+              <input
+                type="datetime-local"
+                id="endDate"
+                value={newLottery.endDate}
+                onChange={(e) => setNewLottery({...newLottery, endDate: e.target.value})}
+                min={new Date().toISOString().slice(0, 16)}
+                required
+              />
+            </div>
+            
+            <div className="form-group">
+              <label htmlFor="minWinners">Minimum Winners</label>
+              <input
+                type="number"
+                id="minWinners"
+                value={newLottery.minWinners}
+                onChange={(e) => setNewLottery({...newLottery, minWinners: parseInt(e.target.value)})}
+                min="1"
+                max="25"
+              />
+            </div>
+          </div>
+
+          <div className="form-row">
+            <div className="form-group">
+              <label htmlFor="maxParticipants">Max Participants (optional)</label>
+              <input
+                type="number"
+                id="maxParticipants"
+                value={newLottery.maxParticipants}
+                onChange={(e) => setNewLottery({...newLottery, maxParticipants: e.target.value})}
+                min="2"
+                placeholder="Leave empty for unlimited"
+              />
+            </div>
+            
+            <div className="form-group">
+              <label htmlFor="maxTicketsPerUser">Max Tickets Per User</label>
+              <input
+                type="number"
+                id="maxTicketsPerUser"
+                value={newLottery.maxTicketsPerUser}
+                onChange={(e) => setNewLottery({...newLottery, maxTicketsPerUser: parseInt(e.target.value)})}
+                min="1"
+                max="100"
+              />
+            </div>
+          </div>
+
+          <button 
+            type="submit" 
+            className="button success full-width"
+            disabled={loading || !currentBitcoinBlock}
+          >
+            {loading ? '🔄 Creating...' : '🎰 Create Lottery'}
+          </button>
+        </form>
+      </div>
+
+      {/* Manage Existing Lotteries */}
+      <div className="card">
+        <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px'}}>
+          <h2>🎟️ Manage Lotteries</h2>
+          <button 
+            onClick={loadLotteries} 
+            className="button secondary"
+            disabled={loading}
+          >
+            🔄 Refresh
+          </button>
+        </div>
+
+        {lotteries.length === 0 ? (
+          <p style={{textAlign: 'center', color: '#6c757d', padding: '40px'}}>
+            No lotteries created yet. Create your first lottery above!
+          </p>
+        ) : (
+          <div className="lottery-list">
+            {lotteries.map((lottery) => (
+              <div key={lottery.id} className="lottery-item">
+                <div className="lottery-header">
+                  <h3 className="lottery-title">{lottery.title}</h3>
+                  <div style={{display: 'flex', gap: '10px', alignItems: 'center'}}>
+                    <span className={`lottery-status status-${lottery.status}`}>
+                      {lottery.status === 'active' && `⏰ ${formatTimeRemaining(lottery.endDate)}`}
+                      {lottery.status === 'ended' && '🔴 Ended'}
+                      {lottery.status === 'completed' && '🏆 Completed'}
+                    </span>
+                  </div>
+                </div>
+
+                {lottery.description && (
+                  <p style={{ color: '#6c757d', margin: '10px 0' }}>
+                    {lottery.description}
+                  </p>
+                )}
+
+                <div className="lottery-details">
+                  <div className="lottery-detail">
+                    <div className="lottery-detail-label">Entry Fee</div>
+                    <div className="lottery-detail-value">{lottery.entryFee}π</div>
+                  </div>
+                  <div className="lottery-detail">
+                    <div className="lottery-detail-label">Participants</div>
+                    <div className="lottery-detail-value">{lottery.participants?.length || 0}</div>
+                  </div>
+                  <div className="lottery-detail">
+                    <div className="lottery-detail-label">Prize Pool</div>
+                    <div className="lottery-detail-value">
+                      {((lottery.participants?.length || 0) * lottery.entryFee - 
+                        (lottery.participants?.length || 0) * lottery.platformFee).toFixed(2)}π
+                    </div>
+                  </div>
+                  <div className="lottery-detail">
+                    <div className="lottery-detail-label">Created</div>
+                    <div className="lottery-detail-value">{formatDate(lottery.createdAt)}</div>
+                  </div>
+                </div>
+
+                {/* Bitcoin commitment info */}
+                <div className="provably-fair-section">
+                  <h4>🔒 Provably Fair Info</h4>
+                  <div style={{fontSize: '0.9rem', color: '#6c757d'}}>
+                    <div>Commitment Block: #{lottery.provablyFair?.commitmentBlock}</div>
+                    {lottery.provablyFair?.blockHash && (
+                      <div>Block Hash: {lottery.provablyFair.blockHash.substring(0, 20)}...</div>
+                    )}
+                    <div>Verified: {lottery.provablyFair?.verified ? '✅ Yes' : '⏳ Pending'}</div>
+                  </div>
+                </div>
+
+                {/* Winners display */}
+                {lottery.winners && lottery.winners.length > 0 && (
+                  <div className="winners-section">
+                    <h4>🏆 Winners ({lottery.winners.length})</h4>
+                    <div className="winners-grid">
+                      {lottery.winners.map((winner, index) => (
+                        <div key={index} className={`winner-item ${winner.paid ? 'paid' : ''}`}>
+                          <div className="winner-info">
+                            <div style={{fontWeight: 'bold'}}>
+                              {winner.position === 1 ? '🥇' : winner.position === 2 ? '🥈' : winner.position === 3 ? '🥉' : '🏅'} 
+                              #{winner.position}
+                            </div>
+                            <div>{winner.winner.username}</div>
+                            <div className="prize-amount">{winner.prize}π</div>
+                          </div>
+                          <div className="winner-actions">
+                            {winner.paid ? (
+                              <span style={{color: '#28a745', fontWeight: 'bold'}}>✅ Paid</span>
+                            ) : adminFullyConnected ? (
+                              <button 
+                                onClick={() => handleDistributePrize(lottery.id, winner)}
+                                className="button success"
+                                disabled={distributingPrizes || paymentLoading}
+                              >
+                                {distributingPrizes ? '💰 Sending...' : '💰 Send Prize'}
+                              </button>
+                            ) : (
+                              <span style={{color: '#ffc107'}}>⚠️ Connect wallet to pay</span>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Lottery actions */}
+                <div className="lottery-actions">
+                  {lottery.status === 'active' && new Date() >= lottery.endDate && (
+                    <button 
+                      onClick={() => drawWinners(lottery.id)}
+                      className="button warning"
+                      disabled={loading}
+                    >
+                      {loading ? '🎲 Drawing...' : '🎲 Draw Winners'}
+                    </button>
+                  )}
+                  
+                  {lottery.status === 'active' && new Date() < lottery.endDate && (
+                    <div style={{color: '#28a745', fontWeight: 'bold'}}>
+                      ⏰ Active - ends {formatTimeRemaining(lottery.endDate)}
+                    </div>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );
