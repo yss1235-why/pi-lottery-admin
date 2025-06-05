@@ -1,4 +1,4 @@
-// File path: src/hooks/usePiPayments.js - Fixed Version with Proper Timeouts
+// File path: src/hooks/usePiPayments.js - Complete Fixed Version with Pi Slug
 import { useState } from 'react';
 
 const usePiPayments = () => {
@@ -20,9 +20,10 @@ const usePiPayments = () => {
       region,
       localPort,
       isDevelopment: process.env.NODE_ENV === 'development',
-      apiTimeout: 45000, // Increased to 45 seconds for cold starts
-      enableRetry: true, // Always enable retry
-      maxRetries: 2 // Reduced retries to avoid long waits
+      apiTimeout: 45000, // 45 seconds for Firebase cold starts
+      enableRetry: true,
+      maxRetries: 2,
+      piSlug: 'lottery-app-7c168369969f97a4' // Your Pi Network slug
     };
   };
 
@@ -39,7 +40,7 @@ const usePiPayments = () => {
     return `https://${config.region}-${config.projectId}.cloudfunctions.net`;
   };
 
-  // FIXED: Enhanced API call helper with proper timeout handling
+  // Enhanced API call helper with proper timeout handling
   const apiCall = async (functionName, data, options = {}) => {
     const config = getConfig();
     const baseUrl = getFunctionsBaseUrl();
@@ -47,15 +48,20 @@ const usePiPayments = () => {
     
     console.log(`🔗 Calling Firebase Function: ${url}`);
     console.log(`📤 Request data:`, data);
+    console.log(`🏷️ Pi Slug: ${config.piSlug}`);
     
     const requestOptions = {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'Accept': 'application/json',
+        'Pi-App-Slug': config.piSlug, // Include Pi slug in headers
         ...options.headers
       },
-      body: JSON.stringify(data)
+      body: JSON.stringify({
+        ...data,
+        piSlug: config.piSlug // Include Pi slug in body
+      })
     };
 
     let lastError;
@@ -65,7 +71,7 @@ const usePiPayments = () => {
       try {
         console.log(`🔗 API Call (attempt ${attempt}/${maxAttempts}): ${functionName}`);
         
-        // FIXED: Proper timeout implementation with AbortController
+        // Proper timeout implementation with AbortController
         const controller = new AbortController();
         const timeoutId = setTimeout(() => {
           console.log(`⏰ Request timeout (${config.apiTimeout}ms) for ${functionName}`);
@@ -80,6 +86,7 @@ const usePiPayments = () => {
         clearTimeout(timeoutId);
 
         console.log(`📡 Response status: ${response.status} for ${functionName}`);
+        console.log(`📡 Response headers:`, response.headers);
 
         if (!response.ok) {
           let errorData;
@@ -97,7 +104,12 @@ const usePiPayments = () => {
 
       } catch (fetchError) {
         lastError = fetchError;
-        console.warn(`⚠️ API Error (attempt ${attempt}/${maxAttempts}): ${fetchError.message}`);
+        
+        if (fetchError.name === 'AbortError') {
+          console.warn(`⏰ Request timeout (attempt ${attempt}/${maxAttempts}): ${functionName}`);
+        } else {
+          console.warn(`⚠️ API Error (attempt ${attempt}/${maxAttempts}): ${fetchError.message}`);
+        }
         
         if (attempt < maxAttempts) {
           const delay = Math.min(2000 * attempt, 5000); // 2s, 4s max
@@ -110,7 +122,7 @@ const usePiPayments = () => {
     throw new Error(`API call failed after ${maxAttempts} attempts: ${lastError.message}`);
   };
 
-  // FIXED: Create lottery payment with better error handling
+  // Create lottery payment with enhanced error handling
   const createLotteryPayment = async (piUser, lottery, onSuccess, onError) => {
     if (!piUser || !lottery) {
       throw new Error('User and lottery data required');
@@ -131,18 +143,20 @@ const usePiPayments = () => {
       console.log('💰 Starting payment process for:', {
         user: piUser.username,
         lottery: lottery.title,
-        amount: lottery.entryFee
+        amount: lottery.entryFee,
+        piSlug: getConfig().piSlug
       });
 
       const paymentData = {
         amount: parseFloat(lottery.entryFee),
-        memo: `${process.env.REACT_APP_PLATFORM_NAME || 'Pi Lottery'}: ${lottery.title}`,
+        memo: `Pi Lottery: ${lottery.title}`,
         metadata: {
           lotteryId: lottery.id,
           userId: piUser.uid,
           username: piUser.username,
           timestamp: Date.now(),
           type: 'lottery_entry',
+          piSlug: getConfig().piSlug,
           version: process.env.REACT_APP_BUILD_VERSION || '1.0.0'
         }
       };
@@ -243,7 +257,8 @@ const usePiPayments = () => {
       console.log('💰 Distributing prize to winner:', {
         position: winner.position,
         amount: winner.prize,
-        winnerUid: winner.winner.uid
+        winnerUid: winner.winner.uid,
+        piSlug: getConfig().piSlug
       });
 
       // Validate prize data
@@ -258,7 +273,7 @@ const usePiPayments = () => {
       const distributionResult = await apiCall('distributePrize', {
         recipientUid: winner.winner.uid,
         amount: parseFloat(winner.prize),
-        memo: `${process.env.REACT_APP_PLATFORM_NAME || 'Pi Lottery'} Prize - Position #${winner.position}`,
+        memo: `Pi Lottery Prize - Position #${winner.position}`,
         lotteryId: lotteryId,
         winnerPosition: winner.position
       });
@@ -285,6 +300,7 @@ const usePiPayments = () => {
       const baseUrl = getFunctionsBaseUrl();
       
       console.log('🔍 Testing health check:', `${baseUrl}/healthCheck`);
+      console.log('🏷️ Pi Slug:', config.piSlug);
       
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 10000);
@@ -292,7 +308,8 @@ const usePiPayments = () => {
       const response = await fetch(`${baseUrl}/healthCheck`, {
         method: 'GET',
         headers: {
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
+          'Pi-App-Slug': config.piSlug
         },
         signal: controller.signal
       });
@@ -329,7 +346,8 @@ const usePiPayments = () => {
         projectId: config.projectId,
         region: config.region,
         environment: config.isDevelopment ? 'development' : 'production',
-        backendUrl: getFunctionsBaseUrl()
+        backendUrl: getFunctionsBaseUrl(),
+        piSlug: config.piSlug
       };
     }
   };
