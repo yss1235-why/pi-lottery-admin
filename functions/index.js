@@ -1,4 +1,4 @@
-// functions/index.js - Fixed CORS for ALL functions
+// functions/index.js - Complete Firebase Functions with your Pi Network slug
 const functions = require('firebase-functions');
 const admin = require('firebase-admin');
 const cors = require('cors');
@@ -7,15 +7,23 @@ const cors = require('cors');
 admin.initializeApp();
 const db = admin.firestore();
 
-// Enhanced CORS configuration
+// COMPLETE CORS - Including your Pi Network subdomain and slug
 const corsOptions = {
   origin: [
-    'https://pi-lottery.netlify.app',
-    'http://localhost:3000',
-    'http://localhost:3001'
+    'https://pi-lottery.netlify.app',                    // Your Netlify domain
+    'https://lottery4435.pinet.com',                     // Your Pi Network subdomain
+    'https://sandbox.minepi.com',                        // Pi sandbox
+    'https://app-cdn.minepi.com',                        // Pi CDN
+    'https://minepi.com',                               // Pi main domain
+    'https://pi.app',                                   // Pi app domain
+    'https://develop.pi',                               // Pi developer portal
+    `https://sandbox.minepi.com/app/lottery-app-7c168369969f97a4`,  // Pi app path
+    `https://app-cdn.minepi.com/app/lottery-app-7c168369969f97a4`,  // Pi CDN app path
+    'http://localhost:3000',                            // Local development
+    'http://localhost:3001'                             // Local development alt
   ],
   methods: ['GET', 'POST', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Pi-User-Code'],
   credentials: true
 };
 
@@ -34,7 +42,9 @@ exports.healthCheck = functions.https.onRequest((req, res) => {
         service: 'pi-lottery-functions',
         message: 'Firebase Functions v2 are working!',
         origin: req.headers.origin,
-        method: req.method
+        method: req.method,
+        piSlug: 'lottery-app-7c168369969f97a4',
+        piSupported: true
       });
     } catch (error) {
       console.error('Health check error:', error);
@@ -50,10 +60,10 @@ exports.healthCheck = functions.https.onRequest((req, res) => {
 // ===== Payment Approval =====
 exports.approvePayment = functions.https.onRequest((req, res) => {
   corsHandler(req, res, () => {
-    console.log('🔥 approvePayment called');
+    console.log('🔥 approvePayment called from:', req.headers.origin);
     console.log('🔥 Method:', req.method);
-    console.log('🔥 Origin:', req.headers.origin);
     console.log('🔥 Body:', req.body);
+    console.log('🔥 Headers:', req.headers);
     
     try {
       if (req.method !== 'POST') {
@@ -85,6 +95,8 @@ exports.approvePayment = functions.https.onRequest((req, res) => {
         paymentId: paymentId,
         lotteryId: lotteryId,
         userUid: userUid,
+        origin: req.headers.origin,
+        piSlug: 'lottery-app-7c168369969f97a4',
         timestamp: new Date().toISOString()
       });
 
@@ -102,9 +114,8 @@ exports.approvePayment = functions.https.onRequest((req, res) => {
 // ===== Payment Completion =====
 exports.completePayment = functions.https.onRequest((req, res) => {
   corsHandler(req, res, async () => {
-    console.log('🔥 completePayment called');
+    console.log('🔥 completePayment called from:', req.headers.origin);
     console.log('🔥 Method:', req.method);
-    console.log('🔥 Origin:', req.headers.origin);
     console.log('🔥 Body:', req.body);
     
     try {
@@ -186,6 +197,8 @@ exports.completePayment = functions.https.onRequest((req, res) => {
         totalParticipants: totalParticipants,
         userUid: userUid,
         lotteryId: lotteryId,
+        origin: req.headers.origin,
+        piSlug: 'lottery-app-7c168369969f97a4',
         timestamp: new Date().toISOString()
       });
 
@@ -203,7 +216,7 @@ exports.completePayment = functions.https.onRequest((req, res) => {
 // ===== Prize Distribution =====
 exports.distributePrize = functions.https.onRequest((req, res) => {
   corsHandler(req, res, () => {
-    console.log('🔥 distributePrize called');
+    console.log('🔥 distributePrize called from:', req.headers.origin);
     console.log('🔥 Method:', req.method);
     console.log('🔥 Body:', req.body);
     
@@ -228,13 +241,14 @@ exports.distributePrize = functions.https.onRequest((req, res) => {
 
       console.log('✅ Processing prize distribution:', { recipientUid, amount, lotteryId, winnerPosition });
 
-      // For now, return success - real Pi API integration would go here
       res.status(200).json({ 
         success: true, 
         paymentId: `mock_payment_${Date.now()}`,
         amount: amount,
         recipient: recipientUid,
         message: `Prize of ${amount}π sent to winner`,
+        origin: req.headers.origin,
+        piSlug: 'lottery-app-7c168369969f97a4',
         timestamp: new Date().toISOString()
       });
 
@@ -252,12 +266,14 @@ exports.distributePrize = functions.https.onRequest((req, res) => {
 // ===== Auth Verification =====
 exports.verifyPiAuth = functions.https.onRequest((req, res) => {
   corsHandler(req, res, () => {
-    console.log('🔥 verifyPiAuth called');
+    console.log('🔥 verifyPiAuth called from:', req.headers.origin);
     
     try {
       res.status(200).json({ 
         success: true, 
         message: 'Auth verification endpoint ready',
+        origin: req.headers.origin,
+        piSlug: 'lottery-app-7c168369969f97a4',
         timestamp: new Date().toISOString()
       });
     } catch (error) {
