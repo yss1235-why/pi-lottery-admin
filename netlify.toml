@@ -19,6 +19,10 @@
   # PRODUCTION WARNINGS
   REACT_APP_REAL_MONEY_MODE = "true"
   REACT_APP_GAMBLING_WARNING = "true"
+  
+  # PRODUCTION Performance settings
+  NETLIFY_CONCURRENT_BUILDS = "1"
+  NETLIFY_BUILD_DEBUG = "false"
 
 # SPA redirects - CRITICAL for React routing
 [[redirects]]
@@ -122,16 +126,6 @@
     REACT_APP_PI_ENVIRONMENT = "production"
     REACT_APP_REAL_MONEY_MODE = "true"
 
-# PRODUCTION Edge Functions (if needed)
-# [[edge_functions]]
-#   function = "gambling-verification"
-#   path = "/api/verify-age"
-
-# PRODUCTION Form handling (if needed for compliance)
-# [[forms]]
-#   action = "/compliance-report"
-#   method = "POST"
-
 # PRODUCTION Redirects for compliance
 [[redirects]]
   from = "/sandbox"
@@ -150,26 +144,6 @@
   from = "/legal/gambling-laws"
   to = "/responsible-gambling"
   status = 301
-
-# PRODUCTION Analytics and monitoring
-[build.processing]
-  skip_processing = false
-
-[build.processing.css]
-  bundle = true
-  minify = true
-
-[build.processing.js]
-  bundle = true
-  minify = true
-
-[build.processing.html]
-  pretty_urls = true
-
-# PRODUCTION Performance settings
-[build.environment]
-  NETLIFY_CONCURRENT_BUILDS = "1"
-  NETLIFY_BUILD_DEBUG = "false"
 
 # PRODUCTION Error pages
 [[redirects]]
@@ -212,13 +186,17 @@
     X-Gambling-Warning = "Gambling can be addictive. Seek help if needed."
     X-Help-Resources = "Available 24/7"
 
-# PRODUCTION environment-specific settings
-[template.environment]
-  REACT_APP_NETLIFY_SITE_ID = "your-site-id"
-  REACT_APP_NETLIFY_DEPLOY_URL = "$DEPLOY_URL"
-  REACT_APP_NETLIFY_CONTEXT = "$CONTEXT"
+# PRODUCTION Build processing
+[build.processing]
+  skip_processing = false
 
-# PRODUCTION monitoring and alerts
-# [notifications]
-#   email = "admin@pilottery.com"
-#   slack = "https://hooks.slack.com/services/YOUR/SLACK/WEBHOOK"
+[build.processing.css]
+  bundle = true
+  minify = true
+
+[build.processing.js]
+  bundle = true
+  minify = true
+
+[build.processing.html]
+  pretty_urls = true
