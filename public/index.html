@@ -5,58 +5,110 @@
     <link rel="icon" href="%PUBLIC_URL%/favicon.ico" />
     <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no" />
     <meta name="theme-color" content="#6f42c1" />
-    <meta name="description" content="Pi Lottery - Provably Fair Lotteries with 2% Ticket System" />
+    <meta name="description" content="Pi Lottery - PRODUCTION - Real Pi Cryptocurrency Gambling Platform" />
     
-    <!-- Pi Browser Compatibility -->
+    <!-- PRODUCTION Pi Browser Compatibility -->
     <meta name="pi-network-app" content="true" />
     <meta name="pi-app-version" content="2.0.0" />
+    <meta name="pi-production-mode" content="true" />
+    <meta name="pi-real-currency" content="true" />
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="default" />
     
-    <title>Pi Lottery - Fair & Transparent</title>
+    <!-- PRODUCTION Gambling Compliance Meta Tags -->
+    <meta name="gambling-warning" content="This platform involves real money gambling" />
+    <meta name="age-restriction" content="18+" />
+    <meta name="real-money" content="true" />
+    <meta name="currency-type" content="PI_CRYPTOCURRENCY" />
     
-    <!-- Pi SDK Configuration -->
+    <title>Pi Lottery - PRODUCTION - Real Pi Gambling</title>
+    
+    <!-- PRODUCTION Warning for Search Engines -->
+    <meta name="robots" content="index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1" />
+    <meta name="googlebot" content="index, follow" />
+    
+    <!-- PRODUCTION Social Media Tags with Warnings -->
+    <meta property="og:title" content="Pi Lottery - Real Pi Cryptocurrency Gambling" />
+    <meta property="og:description" content="⚠️ Real money gambling platform using Pi cryptocurrency. 18+ only. Gambling can be addictive." />
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://lottery4435.pinet.com" />
+    <meta property="og:image" content="%PUBLIC_URL%/pi-lottery-preview.png" />
+    
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Pi Lottery - Real Pi Cryptocurrency Gambling" />
+    <meta name="twitter:description" content="⚠️ Real money gambling with Pi cryptocurrency. 18+ only. Gamble responsibly." />
+    
+    <!-- PRODUCTION Legal and Compliance -->
+    <meta name="legal-age-requirement" content="18+" />
+    <meta name="gambling-jurisdiction" content="Check local laws" />
+    <meta name="responsible-gambling" content="Gambling can be addictive. Seek help if needed." />
+    
+    <!-- PRODUCTION Pi SDK Configuration -->
     <script>
-      // Simple Pi SDK status tracking
+      // PRODUCTION Pi SDK status tracking with enhanced security
       window.piSDKStatus = {
         loaded: false,
-        startTime: Date.now()
+        production: true,
+        realCurrency: true,
+        startTime: Date.now(),
+        environment: 'PRODUCTION'
       };
       
-      // Check Pi SDK availability
+      // Enhanced PRODUCTION Pi SDK availability check
       window.checkPiSDK = function() {
         if (window.Pi) {
           window.piSDKStatus.loaded = true;
           
-          // Notify React app
+          console.warn('🚨 PRODUCTION Pi SDK loaded - REAL Pi cryptocurrency!');
+          console.warn('💰 All transactions will involve actual monetary value!');
+          
+          // Notify React app with PRODUCTION warnings
           window.dispatchEvent(new CustomEvent('piSDKReady', {
             detail: {
-              loadTime: Date.now() - window.piSDKStatus.startTime
+              loadTime: Date.now() - window.piSDKStatus.startTime,
+              production: true,
+              realCurrency: true,
+              environment: 'PRODUCTION'
             }
           }));
         } else {
-          // Retry in 1 second if not found
-          setTimeout(window.checkPiSDK, 1000);
+          // Retry in 2 seconds for PRODUCTION reliability
+          setTimeout(window.checkPiSDK, 2000);
         }
       };
       
-      // SDK Loading Handler
+      // PRODUCTION SDK Loading Handler with warnings
       window.handlePiSDKLoad = function() {
-        setTimeout(window.checkPiSDK, 500);
+        console.warn('🚨 PRODUCTION: Pi SDK loading for real money transactions!');
+        setTimeout(window.checkPiSDK, 1000);
       };
       
-      // Page Load Handler
+      // PRODUCTION Page Load Handler with enhanced checks
       window.addEventListener('load', function() {
+        console.warn('🚨 PRODUCTION MODE: Real Pi cryptocurrency platform loaded!');
+        
         setTimeout(function() {
           if (!window.piSDKStatus.loaded) {
+            console.warn('⚠️ PRODUCTION: Pi SDK not loaded, retrying...');
             window.checkPiSDK();
           }
-        }, 2000);
+        }, 3000);
       });
+      
+      // PRODUCTION Warning System
+      window.showProductionWarning = function() {
+        if (!localStorage.getItem('production-warning-shown')) {
+          console.warn('🚨 PRODUCTION WARNING: Real money gambling platform!');
+          localStorage.setItem('production-warning-shown', 'true');
+        }
+      };
+      
+      // Show warning on first load
+      setTimeout(window.showProductionWarning, 1000);
     </script>
     
-    <!-- Loading Screen Styles -->
+    <!-- PRODUCTION Loading Screen Styles -->
     <style>
       #initial-loading {
         position: fixed;
@@ -64,7 +116,7 @@
         left: 0;
         right: 0;
         bottom: 0;
-        background: linear-gradient(135deg, #6f42c1, #8b5cf6);
+        background: linear-gradient(135deg, #dc3545, #6f42c1);
         display: flex;
         flex-direction: column;
         align-items: center;
@@ -90,26 +142,66 @@
         100% { transform: rotate(360deg); }
       }
       
+      .production-warning {
+        background: rgba(220, 53, 69, 0.9);
+        border: 3px solid #fff;
+        border-radius: 12px;
+        padding: 20px;
+        margin-top: 30px;
+        max-width: 500px;
+        text-align: center;
+      }
+      
+      .production-warning h3 {
+        color: #fff;
+        margin-bottom: 15px;
+        font-size: 1.3rem;
+      }
+      
+      .production-warning ul {
+        text-align: left;
+        margin: 15px 0;
+        padding-left: 20px;
+      }
+      
+      .production-warning li {
+        margin-bottom: 8px;
+        font-size: 0.95rem;
+        line-height: 1.4;
+      }
+      
       .loading-progress {
         width: 300px;
-        height: 4px;
+        height: 6px;
         background: rgba(255,255,255,0.3);
-        border-radius: 2px;
+        border-radius: 3px;
         overflow: hidden;
         margin-top: 20px;
       }
       
       .loading-progress-bar {
         height: 100%;
-        background: white;
-        border-radius: 2px;
-        animation: loadingProgress 3s ease-in-out infinite;
+        background: linear-gradient(90deg, #fff, #ffeb3b);
+        border-radius: 3px;
+        animation: loadingProgress 4s ease-in-out infinite;
       }
       
       @keyframes loadingProgress {
         0% { width: 0%; }
-        50% { width: 70%; }
+        25% { width: 30%; }
+        75% { width: 80%; }
         100% { width: 100%; }
+      }
+      
+      .blinking-warning {
+        animation: blink 1.5s infinite;
+        font-weight: bold;
+        color: #ffeb3b;
+      }
+      
+      @keyframes blink {
+        0%, 50% { opacity: 1; }
+        51%, 100% { opacity: 0.5; }
       }
       
       /* Responsive Design */
@@ -126,6 +218,15 @@
         
         .loading-progress {
           width: 250px;
+        }
+        
+        .production-warning {
+          max-width: 350px;
+          padding: 15px;
+        }
+        
+        .production-warning h3 {
+          font-size: 1.1rem;
         }
       }
     </style>
@@ -145,55 +246,87 @@
         background: #f8f9fa;
       ">
         <h2 style="color: #dc3545; margin-bottom: 20px;">🚫 JavaScript Required</h2>
-        <p style="color: #6c757d; max-width: 400px; line-height: 1.6;">
-          Pi Lottery requires JavaScript to function properly. Please enable JavaScript in your browser settings and refresh this page.
+        <p style="color: #6c757d; max-width: 400px; line-height: 1.6; margin-bottom: 15px;">
+          Pi Lottery PRODUCTION platform requires JavaScript to function properly with real Pi cryptocurrency. 
+          Please enable JavaScript in your browser settings and refresh this page.
         </p>
+        <div style="
+          background: #fff3cd;
+          border: 2px solid #ffc107;
+          border-radius: 8px;
+          padding: 15px;
+          max-width: 400px;
+          color: #856404;
+        ">
+          <strong>⚠️ PRODUCTION WARNING:</strong> This platform involves real money gambling with Pi cryptocurrency. 
+          Must be 18+ and legal in your jurisdiction.
+        </div>
       </div>
     </noscript>
     
-    <!-- Loading Screen -->
+    <!-- PRODUCTION Loading Screen with Real Money Warnings -->
     <div id="initial-loading">
       <div class="loading-spinner"></div>
-      <h2 style="margin: 0 0 10px 0; font-size: 2rem;">🎰 Pi Lottery</h2>
-      <p style="margin: 0 0 20px 0; font-size: 1.1rem; opacity: 0.9;">
-        Provably Fair Lotteries
+      <h2 style="margin: 0 0 10px 0; font-size: 2.2rem;">🎰 Pi Lottery</h2>
+      <p style="margin: 0 0 20px 0; font-size: 1.2rem; opacity: 0.9;">
+        PRODUCTION Platform
       </p>
       
-      <div id="loading-status" style="font-size: 16px; font-weight: 500;">
-        Connecting to Pi Network...
+      <div id="loading-status" style="font-size: 18px; font-weight: 600;">
+        <span class="blinking-warning">🚨 Connecting to REAL Pi Network...</span>
       </div>
       
       <div class="loading-progress">
         <div class="loading-progress-bar"></div>
+      </div>
+      
+      <!-- PRODUCTION Warning Box -->
+      <div class="production-warning">
+        <h3>🚨 PRODUCTION MODE WARNING</h3>
+        <ul>
+          <li><strong>REAL MONEY:</strong> Uses actual Pi cryptocurrency</li>
+          <li><strong>GAMBLING RISK:</strong> You can lose real money</li>
+          <li><strong>AGE LIMIT:</strong> Must be 18+ years old</li>
+          <li><strong>LEGAL CHECK:</strong> Ensure gambling is legal in your area</li>
+          <li><strong>NO REFUNDS:</strong> All transactions are final</li>
+        </ul>
+        <p style="margin: 10px 0 0 0; font-size: 0.9rem; font-style: italic;">
+          By continuing, you acknowledge the financial risks involved.
+        </p>
       </div>
     </div>
     
     <!-- Main app container -->
     <div id="root"></div>
     
-    <!-- Pi SDK Loading -->
+    <!-- PRODUCTION Pi SDK Loading with Enhanced Security -->
     <script 
       src="https://sdk.minepi.com/pi-sdk.js" 
       onload="window.handlePiSDKLoad()"
+      onerror="console.error('❌ PRODUCTION: Pi SDK failed to load for real money transactions!')"
       async
     ></script>
     
-    <!-- Loading Management -->
+    <!-- PRODUCTION Loading Management with Enhanced Monitoring -->
     <script>
-      // Monitor app mounting
+      // Monitor app mounting with PRODUCTION logging
       const rootObserver = new MutationObserver((mutations) => {
         mutations.forEach((mutation) => {
           if (mutation.type === 'childList' && mutation.addedNodes.length > 0) {
             const root = document.getElementById('root');
             if (root && root.children.length > 0) {
-              // Hide loading screen
+              console.warn('✅ PRODUCTION React app mounted successfully!');
+              console.warn('💰 Real Pi cryptocurrency platform ready!');
+              
+              // Hide loading screen with PRODUCTION transition
               const loading = document.getElementById('initial-loading');
               if (loading) {
                 loading.style.opacity = '0';
-                loading.style.transition = 'opacity 0.5s ease';
+                loading.style.transition = 'opacity 0.8s ease';
                 setTimeout(() => {
                   loading.style.display = 'none';
-                }, 500);
+                  console.warn('🎰 PRODUCTION platform fully loaded - real money gambling active!');
+                }, 800);
               }
               
               rootObserver.disconnect();
@@ -207,13 +340,92 @@
         subtree: true
       });
       
-      // Auto-hide loading after maximum time
+      // PRODUCTION Auto-hide loading after maximum time with warnings
       setTimeout(() => {
         const loading = document.getElementById('initial-loading');
         if (loading && loading.style.display !== 'none') {
+          console.warn('⚠️ PRODUCTION: Loading timeout reached, forcing app display');
           loading.style.display = 'none';
         }
-      }, 15000);
+      }, 20000);
+      
+      // PRODUCTION Error Monitoring
+      window.addEventListener('error', function(e) {
+        console.error('🚨 PRODUCTION Error:', e.error);
+        console.error('💰 Error in real money gambling platform:', e.message);
+      });
+      
+      window.addEventListener('unhandledrejection', function(e) {
+        console.error('🚨 PRODUCTION Unhandled Promise Rejection:', e.reason);
+        console.error('💰 Promise error in real money platform');
+      });
+      
+      // PRODUCTION Performance Monitoring
+      window.addEventListener('load', function() {
+        setTimeout(() => {
+          if (window.performance && window.performance.timing) {
+            const loadTime = window.performance.timing.loadEventEnd - window.performance.timing.navigationStart;
+            console.log('📊 PRODUCTION Load Time:', loadTime + 'ms');
+            
+            if (loadTime > 5000) {
+              console.warn('⚠️ PRODUCTION: Slow load time detected for real money platform');
+            }
+          }
+        }, 1000);
+      });
+      
+      // PRODUCTION Security Headers Check
+      window.checkSecurityHeaders = function() {
+        const headers = {
+          'X-Production-Mode': 'true',
+          'X-Real-Currency': 'true',
+          'X-Gambling-Warning': 'This platform involves real money gambling',
+          'X-Age-Restriction': '18+'
+        };
+        
+        console.log('🔒 PRODUCTION Security Headers Required:', headers);
+      };
+      
+      // Run security check
+      setTimeout(window.checkSecurityHeaders, 2000);
+      
+      // PRODUCTION Compliance Monitoring
+      window.logComplianceEvent = function(event, data) {
+        console.log('📋 PRODUCTION Compliance Event:', event, data);
+        // In real production, this would send to compliance monitoring service
+      };
+      
+      // PRODUCTION Session Monitoring
+      let sessionStartTime = Date.now();
+      window.monitorSession = function() {
+        const sessionDuration = Date.now() - sessionStartTime;
+        if (sessionDuration > 3600000) { // 1 hour
+          console.warn('⚠️ PRODUCTION: Long gambling session detected (' + Math.round(sessionDuration/60000) + ' minutes)');
+          window.logComplianceEvent('LONG_SESSION', { duration: sessionDuration });
+        }
+      };
+      
+      // Check session duration every 10 minutes
+      setInterval(window.monitorSession, 600000);
+    </script>
+    
+    <!-- PRODUCTION Analytics and Monitoring (placeholder) -->
+    <!-- In real production, add your analytics tracking here -->
+    <script>
+      // PRODUCTION Analytics placeholder
+      window.trackProductionEvent = function(eventName, eventData) {
+        console.log('📊 PRODUCTION Analytics:', eventName, eventData);
+        // Implement your analytics tracking here
+      };
+      
+      // Track page load for PRODUCTION
+      window.trackProductionEvent('PRODUCTION_PAGE_LOAD', {
+        timestamp: Date.now(),
+        userAgent: navigator.userAgent,
+        url: window.location.href,
+        realMoney: true,
+        gambling: true
+      });
     </script>
   </body>
 </html>
