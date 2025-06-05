@@ -1,8 +1,9 @@
-// File path: src/hooks/usePiSDK.js - Fixed Payment Access
+// File path: src/hooks/usePiSDK.js - PRODUCTION VERSION
+// ⚠️ WARNING: PRODUCTION MODE - REAL PI CRYPTOCURRENCY ⚠️
 import { useState, useEffect, useCallback, useRef } from 'react';
 
 /**
- * Fixed Pi SDK Hook - Handles payment access properly
+ * Production Pi SDK Hook - Handles REAL Pi cryptocurrency transactions
  */
 export const usePiSDK = () => {
   // State management
@@ -25,15 +26,25 @@ export const usePiSDK = () => {
   const mountedRef = useRef(true);
   const autoConnectTimeoutRef = useRef(null);
 
-  // Configuration
+  // PRODUCTION Configuration - REAL Pi Network
   const PI_SDK_CONFIG = {
     version: "2.0",
-    sandbox: false,
-    timeout: 30000,
-    maxRetries: 2,
-    retryDelay: 3000,
-    autoConnectDelay: 2000
+    sandbox: false,  // PRODUCTION MODE - REAL Pi!
+    timeout: 45000,  // Increased timeout for production
+    maxRetries: 3,   // More retries for production reliability
+    retryDelay: 5000, // Longer delay for production
+    autoConnectDelay: 3000, // Longer delay for production
+    environment: 'production'
   };
+
+  // Production warnings
+  useEffect(() => {
+    if (process.env.REACT_APP_PI_ENVIRONMENT === 'production') {
+      console.warn('🚨 PRODUCTION MODE: Using REAL Pi cryptocurrency!');
+      console.warn('💰 All transactions involve actual Pi tokens with real value');
+      console.warn('⚠️ Ensure users understand they are gambling with real money');
+    }
+  }, []);
 
   // Check if component is still mounted
   const isMounted = () => mountedRef.current;
@@ -48,25 +59,28 @@ export const usePiSDK = () => {
     };
   }, []);
 
-  // Initialize Pi SDK
+  // Initialize Pi SDK for PRODUCTION
   const initializePiSDK = useCallback(async () => {
     try {
       if (!window.Pi) {
-        throw new Error('Pi SDK not available. Please use Pi Browser.');
+        throw new Error('Pi SDK not available. Please use Pi Browser or Pi mobile app.');
       }
 
       if (typeof window.Pi.authenticate !== 'function') {
         throw new Error('Pi SDK authenticate method not available');
       }
 
-      // Initialize SDK
+      // Initialize SDK for PRODUCTION
       try {
         await window.Pi.init({
           version: PI_SDK_CONFIG.version,
-          sandbox: PI_SDK_CONFIG.sandbox
+          sandbox: PI_SDK_CONFIG.sandbox  // false for production
         });
+        
+        console.log('✅ Pi SDK initialized for PRODUCTION mode');
+        console.warn('🚨 REAL Pi cryptocurrency mode active!');
       } catch (initError) {
-        // Continue anyway - some environments throw warnings here
+        console.warn('⚠️ Pi SDK init warning (continuing anyway):', initError.message);
       }
 
       if (isMounted()) {
@@ -75,24 +89,26 @@ export const usePiSDK = () => {
       }
 
     } catch (error) {
+      console.error('❌ Pi SDK initialization failed:', error);
       if (isMounted()) {
-        setError(`SDK not available: ${error.message}`);
+        setError(`Pi SDK not available: ${error.message}`);
         setSdkReady(false);
       }
     }
   }, []);
 
-  // Auto-authenticate - FIXED to handle different response structures
+  // Production-safe authentication with enhanced error handling
   const autoAuthenticate = useCallback(async (scopes = ['username'], retryCount = 0) => {
     if (autoConnectAttempted && !retryCount && scopes.includes('username')) {
       return;
     }
 
-    console.log('🔐 Authenticating with scopes:', scopes);
+    console.log('🔐 PRODUCTION AUTH: Authenticating with scopes:', scopes);
+    console.warn('💰 This will access REAL Pi cryptocurrency!');
 
     return new Promise((resolve, reject) => {
       const timeout = setTimeout(() => {
-        reject(new Error('Connection timeout - please refresh'));
+        reject(new Error('Production authentication timeout - please try again'));
       }, PI_SDK_CONFIG.timeout);
 
       authTimeoutRef.current = timeout;
@@ -100,13 +116,15 @@ export const usePiSDK = () => {
       try {
         window.Pi.authenticate(scopes, {
           onIncompletePaymentFound: (payment) => {
-            console.log('💳 Incomplete payment found:', payment);
+            console.log('💳 PRODUCTION: Incomplete payment found:', payment);
+            console.warn('💰 This involves REAL Pi cryptocurrency!');
             if (isMounted()) {
-              setAuthStep('Processing incomplete payment...');
+              setAuthStep('Processing incomplete real Pi payment...');
             }
           }
         }).then(authResult => {
-          console.log('✅ Auth result received:', authResult);
+          console.log('✅ PRODUCTION AUTH successful:', authResult);
+          console.warn('💰 User authenticated for REAL Pi transactions!');
           clearTimeout(timeout);
           
           if (scopes.includes('username')) {
@@ -116,7 +134,7 @@ export const usePiSDK = () => {
           resolve(authResult);
           
         }).catch(authError => {
-          console.error('❌ Auth error:', authError);
+          console.error('❌ PRODUCTION AUTH error:', authError);
           clearTimeout(timeout);
           
           // Check if user declined
@@ -127,17 +145,17 @@ export const usePiSDK = () => {
             if (scopes.includes('username')) {
               setAutoConnectAttempted(true);
             }
-            reject(new Error('User declined connection'));
+            reject(new Error('User declined real Pi cryptocurrency access'));
             return;
           }
           
-          // Retry logic for username scope only
+          // Retry logic for production reliability
           if (retryCount < PI_SDK_CONFIG.maxRetries && scopes.includes('username')) {
             const nextRetry = retryCount + 1;
             const delay = PI_SDK_CONFIG.retryDelay * nextRetry;
             
             if (isMounted()) {
-              setAuthStep(`Connecting (attempt ${nextRetry + 1})...`);
+              setAuthStep(`Connecting to Pi Network (attempt ${nextRetry + 1})...`);
             }
             
             retryTimeoutRef.current = setTimeout(() => {
@@ -149,26 +167,26 @@ export const usePiSDK = () => {
             if (scopes.includes('username')) {
               setAutoConnectAttempted(true);
             }
-            reject(new Error(`Connection failed: ${authError.message}`));
+            reject(new Error(`Production connection failed: ${authError.message}`));
           }
         });
 
       } catch (syncError) {
-        console.error('❌ Sync error:', syncError);
+        console.error('❌ PRODUCTION sync error:', syncError);
         clearTimeout(timeout);
         if (scopes.includes('username')) {
           setAutoConnectAttempted(true);
         }
-        reject(new Error(`Connection failed: ${syncError.message}`));
+        reject(new Error(`Production connection failed: ${syncError.message}`));
       }
     });
   }, [autoConnectAttempted]);
 
-  // Start auto-connection process when SDK is ready
+  // Auto-connect for production
   useEffect(() => {
     if (sdkReady && !autoConnectAttempted && !userDeclined && !isAuthenticated) {
       if (isMounted()) {
-        setAuthStep('Connecting...');
+        setAuthStep('Connecting to Pi Network...');
         setConnectionStatus('connecting');
         setLoading(true);
       }
@@ -176,7 +194,7 @@ export const usePiSDK = () => {
       autoConnectTimeoutRef.current = setTimeout(async () => {
         try {
           if (isMounted()) {
-            setAuthStep('Connecting to Pi Network...');
+            setAuthStep('Connecting to REAL Pi Network...');
           }
 
           const authResult = await autoAuthenticate(['username']);
@@ -188,26 +206,27 @@ export const usePiSDK = () => {
             setAuthStep('');
             setError(null);
             
-            console.log('🎉 Auto-connection successful!');
+            console.log('🎉 PRODUCTION auto-connection successful!');
+            console.warn('💰 User connected for REAL Pi transactions!');
             
-            // Auto-request payment access after a short delay
+            // Auto-request payment access for production
             setTimeout(() => {
               if (isMounted() && !hasPaymentAccess) {
                 requestPaymentAccessAuto();
               }
-            }, 1000);
+            }, 2000);
           }
           
         } catch (autoError) {
-          console.error('❌ Auto-connection failed:', autoError);
+          console.error('❌ PRODUCTION auto-connection failed:', autoError);
           if (isMounted()) {
             setConnectionStatus('error');
             setAuthStep('');
             
             if (!userDeclined) {
-              setError(`Connection failed: ${autoError.message}`);
+              setError(`Production connection failed: ${autoError.message}`);
             } else {
-              setError('Connection declined');
+              setError('Real Pi cryptocurrency access declined');
             }
           }
         } finally {
@@ -219,43 +238,40 @@ export const usePiSDK = () => {
     }
   }, [sdkReady, autoConnectAttempted, userDeclined, isAuthenticated, autoAuthenticate]);
 
-  // FIXED: Auto-request payment access
+  // Production payment access with enhanced warnings
   const requestPaymentAccessAuto = useCallback(async () => {
     if (!isAuthenticated || hasPaymentAccess) return;
 
-    console.log('💰 Auto-requesting payment access...');
+    console.log('💰 PRODUCTION: Auto-requesting REAL Pi payment access...');
+    console.warn('🚨 This enables REAL cryptocurrency transactions!');
 
     try {
       if (isMounted()) {
-        setAuthStep('Setting up payments...');
+        setAuthStep('Setting up REAL Pi payments...');
         setLoading(true);
       }
 
       const paymentAuthResult = await autoAuthenticate(['payments']);
       
-      console.log('💰 Payment auth result:', paymentAuthResult);
+      console.log('💰 PRODUCTION payment auth result:', paymentAuthResult);
+      console.warn('✅ REAL Pi payment access granted!');
       
-      // FIXED: Handle different response structures
       if (isMounted()) {
-        // If we get here, payment access was granted
         setHasPaymentAccess(true);
         setAuthStep('');
         
-        // Keep existing user data if payment result doesn't include user
         if (paymentAuthResult && paymentAuthResult.user) {
           setPiUser(paymentAuthResult.user);
         }
-        // If no user in payment result, keep existing piUser
         
-        console.log('✅ Payment access granted automatically!');
+        console.log('✅ PRODUCTION payment access granted automatically!');
       }
       
     } catch (paymentError) {
-      console.error('❌ Auto payment access failed:', paymentError);
+      console.error('❌ PRODUCTION payment access failed:', paymentError);
       if (isMounted()) {
         setAuthStep('');
-        // Don't show error for auto payment access failure
-        console.log('ℹ️ Payment access will be requested when needed');
+        console.log('ℹ️ REAL Pi payment access will be requested when needed');
       }
     } finally {
       if (isMounted()) {
@@ -264,17 +280,19 @@ export const usePiSDK = () => {
     }
   }, [isAuthenticated, hasPaymentAccess, autoAuthenticate]);
 
-  // Manual connection methods (fallback)
+  // Manual connection for production
   const connectUser = useCallback(async () => {
     if (!sdkReady) {
       throw new Error('Pi SDK not ready');
     }
 
+    console.warn('💰 Manual connection to REAL Pi Network...');
+
     setLoading(true);
     setConnectionStatus('connecting');
     setError(null);
     setUserDeclined(false);
-    setAuthStep('Connecting...');
+    setAuthStep('Connecting to REAL Pi Network...');
 
     try {
       const authResult = await autoAuthenticate(['username']);
@@ -284,6 +302,7 @@ export const usePiSDK = () => {
         setIsAuthenticated(true);
         setConnectionStatus('connected');
         setAuthStep('');
+        console.warn('💰 User connected for REAL Pi transactions!');
         return authResult.user;
       }
       
@@ -301,40 +320,39 @@ export const usePiSDK = () => {
     }
   }, [sdkReady, autoAuthenticate]);
 
-  // FIXED: Request payment access
+  // Production payment access with warnings
   const requestPaymentAccess = useCallback(async () => {
     if (!isAuthenticated) {
       throw new Error('User must be connected first');
     }
 
-    console.log('💰 Manually requesting payment access...');
+    console.log('💰 PRODUCTION: Manually requesting REAL Pi payment access...');
+    console.warn('🚨 This enables REAL cryptocurrency transactions!');
 
     setLoading(true);
-    setAuthStep('Requesting payment permissions...');
+    setAuthStep('Requesting REAL Pi payment permissions...');
 
     try {
       const paymentAuthResult = await autoAuthenticate(['payments']);
       
-      console.log('💰 Manual payment auth result:', paymentAuthResult);
+      console.log('💰 PRODUCTION manual payment auth result:', paymentAuthResult);
       
-      // FIXED: Handle payment access properly
       if (isMounted()) {
-        // If we get here without error, payment access was granted
         setHasPaymentAccess(true);
         setAuthStep('');
         
-        // Update user data if provided, otherwise keep existing
         if (paymentAuthResult && paymentAuthResult.user) {
           setPiUser(paymentAuthResult.user);
         }
         
-        console.log('✅ Payment access granted manually!');
-        return piUser; // Return existing user
+        console.log('✅ PRODUCTION payment access granted manually!');
+        console.warn('💰 User can now make REAL Pi transactions!');
+        return piUser;
       }
     } catch (error) {
-      console.error('❌ Manual payment access failed:', error);
+      console.error('❌ PRODUCTION payment access failed:', error);
       if (isMounted()) {
-        setError(`Payment access failed: ${error.message}`);
+        setError(`Real Pi payment access failed: ${error.message}`);
         setAuthStep('');
       }
       throw error;
@@ -346,6 +364,7 @@ export const usePiSDK = () => {
   }, [isAuthenticated, autoAuthenticate, piUser]);
 
   const connectWallet = useCallback(async () => {
+    console.warn('💰 Connecting wallet for REAL Pi transactions...');
     try {
       await connectUser();
       await requestPaymentAccess();
@@ -355,36 +374,42 @@ export const usePiSDK = () => {
     }
   }, [connectUser, requestPaymentAccess, piUser]);
 
-  // Create payment
+  // Create PRODUCTION payment with enhanced warnings
   const createPayment = useCallback(async (paymentData, callbacks = {}) => {
     if (!hasPaymentAccess) {
-      throw new Error('Payment access required. Please connect wallet first.');
+      throw new Error('Real Pi payment access required. Please connect wallet first.');
     }
 
     if (!paymentData.amount || paymentData.amount <= 0) {
       throw new Error('Invalid payment amount');
     }
 
-    console.log('💰 Creating Pi payment:', paymentData);
+    console.log('💰 PRODUCTION: Creating REAL Pi payment:', paymentData);
+    console.warn('🚨 This involves REAL Pi cryptocurrency with actual value!');
+    console.warn('💰 Amount:', paymentData.amount, 'Pi (REAL VALUE)');
 
     const enhancedCallbacks = {
       onReadyForServerApproval: (paymentId) => {
-        console.log('📋 Payment ready for approval:', paymentId);
+        console.log('📋 PRODUCTION payment ready for approval:', paymentId);
+        console.warn('💰 Real Pi transaction pending...');
         callbacks.onReadyForServerApproval?.(paymentId);
       },
       
       onReadyForServerCompletion: (paymentId, txnId) => {
-        console.log('✅ Payment completed:', { paymentId, txnId });
+        console.log('✅ PRODUCTION payment completed:', { paymentId, txnId });
+        console.warn('💰 REAL Pi cryptocurrency transferred!');
         callbacks.onReadyForServerCompletion?.(paymentId, txnId);
       },
       
       onCancel: (paymentId) => {
-        console.log('❌ Payment cancelled:', paymentId);
+        console.log('❌ PRODUCTION payment cancelled:', paymentId);
+        console.log('💰 No real Pi was transferred');
         callbacks.onCancel?.(paymentId);
       },
       
       onError: (error, paymentId) => {
-        console.error('❌ Payment error:', { error, paymentId });
+        console.error('❌ PRODUCTION payment error:', { error, paymentId });
+        console.error('💰 Real Pi transaction failed!');
         callbacks.onError?.(error, paymentId);
       }
     };
@@ -392,13 +417,15 @@ export const usePiSDK = () => {
     try {
       return await window.Pi.createPayment(paymentData, enhancedCallbacks);
     } catch (error) {
-      console.error('❌ Create payment failed:', error);
+      console.error('❌ PRODUCTION create payment failed:', error);
       throw error;
     }
   }, [hasPaymentAccess]);
 
-  // Disconnect user
+  // Disconnect with production warnings
   const disconnect = useCallback(() => {
+    console.log('🔌 Disconnecting from REAL Pi Network...');
+    
     setPiUser(null);
     setIsAuthenticated(false);
     setHasPaymentAccess(false);
@@ -413,17 +440,19 @@ export const usePiSDK = () => {
     if (retryTimeoutRef.current) clearTimeout(retryTimeoutRef.current);
     if (autoConnectTimeoutRef.current) clearTimeout(autoConnectTimeoutRef.current);
     
-    console.log('🔌 User disconnected');
+    console.log('🔌 User disconnected from REAL Pi Network');
   }, []);
 
-  // Test connection
+  // Test connection for production
   const testConnection = useCallback(async () => {
     if (!sdkReady) {
       throw new Error('Pi SDK not ready');
     }
 
+    console.warn('💰 Testing REAL Pi Network connection...');
+
     try {
-      setAuthStep('Testing connection...');
+      setAuthStep('Testing REAL Pi connection...');
       const testResult = await autoAuthenticate(['username']);
       
       if (isMounted()) {
@@ -450,8 +479,8 @@ export const usePiSDK = () => {
     } else {
       window.addEventListener('piSDKReady', handlePiSDKReady);
       
-      // Fallback checks
-      const timeouts = [1000, 3000, 5000].map((delay) => {
+      // Enhanced fallback checks for production
+      const timeouts = [2000, 5000, 8000].map((delay) => {
         return setTimeout(() => {
           if (window.Pi && !sdkReady) {
             initializePiSDK();
@@ -466,7 +495,7 @@ export const usePiSDK = () => {
     }
   }, [initializePiSDK, sdkReady]);
 
-  // Get connection info for debugging (minimal)
+  // Get connection info for production debugging
   const getConnectionInfo = useCallback(() => {
     return {
       sdkReady,
@@ -476,11 +505,18 @@ export const usePiSDK = () => {
       user: piUser ? { username: piUser.username, uid: piUser.uid } : null,
       error,
       autoConnectAttempted,
-      userDeclined
+      userDeclined,
+      environment: 'PRODUCTION',
+      realCurrency: true,
+      warnings: [
+        'Using REAL Pi cryptocurrency',
+        'All transactions have real monetary value',
+        'Users are gambling with actual money'
+      ]
     };
   }, [sdkReady, isAuthenticated, hasPaymentAccess, connectionStatus, piUser, error, autoConnectAttempted, userDeclined]);
 
-  // Return hook interface
+  // Return hook interface with production warnings
   return {
     // State
     piUser,
@@ -494,7 +530,7 @@ export const usePiSDK = () => {
     autoConnectAttempted,
     userDeclined,
     
-    // Actions (mostly for manual fallback)
+    // Actions
     connectUser,
     requestPaymentAccess,
     connectWallet,
@@ -510,7 +546,12 @@ export const usePiSDK = () => {
     canConnect: sdkReady && !loading,
     isFullyConnected: isAuthenticated && hasPaymentAccess,
     needsPaymentAccess: isAuthenticated && !hasPaymentAccess,
-    isAutoConnecting: loading && !autoConnectAttempted
+    isAutoConnecting: loading && !autoConnectAttempted,
+    
+    // Production flags
+    isProduction: true,
+    usesRealCurrency: true,
+    environment: 'production'
   };
 };
 
