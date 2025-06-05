@@ -1,3 +1,6 @@
+# Netlify Configuration for Pi Lottery Platform v2.0 - PRODUCTION MODE
+# ⚠️ WARNING: PRODUCTION MODE - REAL PI CRYPTOCURRENCY ⚠️
+
 [build]
   command = "npm run build:production"
   publish = "build"
@@ -7,7 +10,15 @@
   NPM_VERSION = "9"
   CI = "false"
   GENERATE_SOURCEMAP = "false"
+  
+  # PRODUCTION ENVIRONMENT FLAGS
   REACT_APP_DEPLOYMENT_ENV = "production"
+  REACT_APP_PI_ENVIRONMENT = "production"
+  REACT_APP_ENABLE_DEBUG_MODE = "false"
+  
+  # PRODUCTION WARNINGS
+  REACT_APP_REAL_MONEY_MODE = "true"
+  REACT_APP_GAMBLING_WARNING = "true"
 
 # SPA redirects - CRITICAL for React routing
 [[redirects]]
@@ -15,72 +26,199 @@
   to = "/index.html"
   status = 200
 
-# Pi Browser specific headers - More permissive
+# PRODUCTION Headers - Enhanced security for real money platform
 [[headers]]
   for = "/*"
   [headers.values]
-    # Remove restrictive frame options for Pi Browser
-    X-Frame-Options = "ALLOWALL"
+    # Security headers for PRODUCTION gambling platform
+    X-Frame-Options = "SAMEORIGIN"
     X-XSS-Protection = "1; mode=block"
     X-Content-Type-Options = "nosniff"
     Referrer-Policy = "strict-origin-when-cross-origin"
+    Strict-Transport-Security = "max-age=31536000; includeSubDomains"
     
-    # Pi Browser compatibility headers
-    Access-Control-Allow-Origin = "*"
+    # PRODUCTION Pi Browser compatibility
+    Access-Control-Allow-Origin = "https://lottery4435.pinet.com"
     Access-Control-Allow-Methods = "GET, POST, PUT, DELETE, OPTIONS"
-    Access-Control-Allow-Headers = "Content-Type, Authorization, X-Requested-With"
+    Access-Control-Allow-Headers = "Content-Type, Authorization, X-Requested-With, Pi-User-Code, Pi-App-Slug"
     
-    # Very permissive CSP for Pi Browser compatibility
-    Content-Security-Policy = "default-src 'self' 'unsafe-inline' 'unsafe-eval' https: data: blob:; script-src 'self' 'unsafe-inline' 'unsafe-eval' https: data:; style-src 'self' 'unsafe-inline' https: data:; img-src 'self' https: data: blob:; connect-src 'self' https: wss: data:; frame-src 'self' https:; font-src 'self' https: data:; object-src 'none'; base-uri 'self'; form-action 'self' https:;"
+    # PRODUCTION Content Security Policy - Strict for real money
+    Content-Security-Policy = "default-src 'self' https://lottery4435.pinet.com https://sdk.minepi.com https://app-cdn.minepi.com https://minepi.com https://blockstream.info https://*.firebase.com https://*.firebaseapp.com https://*.googleapis.com; script-src 'self' 'unsafe-inline' https://sdk.minepi.com https://app-cdn.minepi.com https://*.firebase.com https://*.firebaseapp.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' https: data: blob:; connect-src 'self' https://lottery4435.pinet.com https://sdk.minepi.com https://app-cdn.minepi.com https://minepi.com https://blockstream.info https://*.firebase.com https://*.firebaseapp.com https://*.googleapis.com wss://*.firebaseio.com; font-src 'self' https://fonts.gstatic.com data:; frame-src 'self' https://sdk.minepi.com https://app-cdn.minepi.com; object-src 'none'; base-uri 'self'; form-action 'self';"
+    
+    # PRODUCTION gambling compliance headers
+    X-Gambling-Warning = "This platform involves real money gambling with Pi cryptocurrency"
+    X-Age-Restriction = "18+"
+    X-Real-Money = "true"
+    X-Currency-Type = "PI_CRYPTOCURRENCY"
 
-# Alternative even more permissive headers for testing
+# Pi Browser specific headers for PRODUCTION
 [[headers]]
-  for = "/test/*"
+  for = "/pi-browser/*"
   [headers.values]
     X-Frame-Options = "ALLOWALL"
     Content-Security-Policy = "default-src * 'unsafe-inline' 'unsafe-eval' data: blob:;"
     Access-Control-Allow-Origin = "*"
     Access-Control-Allow-Methods = "*"
     Access-Control-Allow-Headers = "*"
+    
+    # Pi Browser PRODUCTION warnings
+    X-Pi-Production-Mode = "true"
+    X-Real-Pi-Currency = "true"
 
-# Optimize static assets
+# Optimize static assets for PRODUCTION
 [[headers]]
   for = "/static/*"
   [headers.values]
     Cache-Control = "public, max-age=31536000, immutable"
-    Access-Control-Allow-Origin = "*"
+    Access-Control-Allow-Origin = "https://lottery4435.pinet.com"
 
-# Font caching
+# Font caching for PRODUCTION
 [[headers]]
   for = "*.woff2"
   [headers.values]
     Cache-Control = "public, max-age=31536000, immutable"
-    Access-Control-Allow-Origin = "*"
+    Access-Control-Allow-Origin = "https://lottery4435.pinet.com"
 
-# Pi SDK caching
+# JavaScript files with PRODUCTION headers
 [[headers]]
   for = "*.js"
   [headers.values]
     Cache-Control = "public, max-age=86400"
-    Access-Control-Allow-Origin = "*"
+    Access-Control-Allow-Origin = "https://lottery4435.pinet.com"
+    X-Production-Mode = "true"
 
-# Production context
+# PRODUCTION context with enhanced security
 [context.production]
   command = "npm run build:production"
   [context.production.environment]
     REACT_APP_DEPLOYMENT_ENV = "production"
+    REACT_APP_PI_ENVIRONMENT = "production"
     REACT_APP_ENABLE_DEBUG_MODE = "false"
+    REACT_APP_REAL_MONEY_MODE = "true"
     GENERATE_SOURCEMAP = "false"
+    DISABLE_ESLINT_PLUGIN = "true"
 
-# Development context  
+# Development context (also PRODUCTION mode for testing)
 [context.development]
-  command = "npm run build"
+  command = "npm run build:production"
   [context.development.environment]
     REACT_APP_DEPLOYMENT_ENV = "development"
+    REACT_APP_PI_ENVIRONMENT = "production"
     REACT_APP_ENABLE_DEBUG_MODE = "true"
+    REACT_APP_REAL_MONEY_MODE = "true"
 
-# Deploy previews
+# Deploy previews (PRODUCTION mode)
 [context.deploy-preview]
-  command = "npm run build"
+  command = "npm run build:production"
   [context.deploy-preview.environment]
     REACT_APP_DEPLOYMENT_ENV = "preview"
+    REACT_APP_PI_ENVIRONMENT = "production"
+    REACT_APP_REAL_MONEY_MODE = "true"
+
+# Branch deploys (PRODUCTION mode)
+[context.branch-deploy]
+  command = "npm run build:production"
+  [context.branch-deploy.environment]
+    REACT_APP_PI_ENVIRONMENT = "production"
+    REACT_APP_REAL_MONEY_MODE = "true"
+
+# PRODUCTION Edge Functions (if needed)
+# [[edge_functions]]
+#   function = "gambling-verification"
+#   path = "/api/verify-age"
+
+# PRODUCTION Form handling (if needed for compliance)
+# [[forms]]
+#   action = "/compliance-report"
+#   method = "POST"
+
+# PRODUCTION Redirects for compliance
+[[redirects]]
+  from = "/sandbox"
+  to = "/production-warning"
+  status = 301
+  force = true
+
+[[redirects]]
+  from = "/testnet"
+  to = "/production-warning"
+  status = 301
+  force = true
+
+# Legal compliance redirects
+[[redirects]]
+  from = "/legal/gambling-laws"
+  to = "/responsible-gambling"
+  status = 301
+
+# PRODUCTION Analytics and monitoring
+[build.processing]
+  skip_processing = false
+
+[build.processing.css]
+  bundle = true
+  minify = true
+
+[build.processing.js]
+  bundle = true
+  minify = true
+
+[build.processing.html]
+  pretty_urls = true
+
+# PRODUCTION Performance settings
+[build.environment]
+  NETLIFY_CONCURRENT_BUILDS = "1"
+  NETLIFY_BUILD_DEBUG = "false"
+
+# PRODUCTION Error pages
+[[redirects]]
+  from = "/404"
+  to = "/404.html"
+  status = 404
+
+[[redirects]]
+  from = "/500"
+  to = "/500.html"
+  status = 500
+
+# PRODUCTION Security headers for specific paths
+[[headers]]
+  for = "/admin/*"
+  [headers.values]
+    X-Frame-Options = "DENY"
+    X-Admin-Access = "restricted"
+    Content-Security-Policy = "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self' https://*.firebase.com https://*.firebaseapp.com;"
+
+[[headers]]
+  for = "/api/*"
+  [headers.values]
+    Access-Control-Allow-Origin = "https://lottery4435.pinet.com"
+    Access-Control-Allow-Methods = "GET, POST, OPTIONS"
+    Access-Control-Allow-Headers = "Content-Type, Authorization, Pi-App-Slug"
+    X-API-Production = "true"
+
+# PRODUCTION compliance and legal headers
+[[headers]]
+  for = "/legal/*"
+  [headers.values]
+    Cache-Control = "public, max-age=3600"
+    X-Legal-Version = "2.0.0"
+    X-Compliance-Required = "true"
+
+[[headers]]
+  for = "/responsible-gambling/*"
+  [headers.values]
+    X-Gambling-Warning = "Gambling can be addictive. Seek help if needed."
+    X-Help-Resources = "Available 24/7"
+
+# PRODUCTION environment-specific settings
+[template.environment]
+  REACT_APP_NETLIFY_SITE_ID = "your-site-id"
+  REACT_APP_NETLIFY_DEPLOY_URL = "$DEPLOY_URL"
+  REACT_APP_NETLIFY_CONTEXT = "$CONTEXT"
+
+# PRODUCTION monitoring and alerts
+# [notifications]
+#   email = "admin@pilottery.com"
+#   slack = "https://hooks.slack.com/services/YOUR/SLACK/WEBHOOK"
