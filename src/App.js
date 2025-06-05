@@ -1,4 +1,5 @@
-// File path: src/App.js - Complete Admin Interface with Environment Variables
+// File path: src/App.js - PRODUCTION Admin Interface
+// ⚠️ WARNING: PRODUCTION MODE - REAL PI CRYPTOCURRENCY ⚠️
 import React, { useState, useEffect } from 'react';
 import { auth, db } from './firebase';
 import { signInWithEmailAndPassword, signOut, onAuthStateChanged } from 'firebase/auth';
@@ -25,6 +26,10 @@ function App() {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
 
+  // PRODUCTION warnings state
+  const [showProductionWarning, setShowProductionWarning] = useState(true);
+  const [productionAcknowledged, setProductionAcknowledged] = useState(false);
+
   // Configuration from environment variables
   const getConfig = () => {
     return {
@@ -33,16 +38,37 @@ function App() {
       platformName: process.env.REACT_APP_PLATFORM_NAME || 'Pi Lottery Admin',
       defaultPlatformFee: parseFloat(process.env.REACT_APP_DEFAULT_PLATFORM_FEE) || 0.1,
       maxEntryFee: parseFloat(process.env.REACT_APP_MAX_ENTRY_FEE) || 1000,
-      minEntryFee: parseFloat(process.env.REACT_APP_MIN_ENTRY_FEE) || 0.01,
+      minEntryFee: parseFloat(process.env.REACT_APP_MIN_ENTRY_FEE) || 0.1,
       maxLotteryDuration: parseInt(process.env.REACT_APP_MAX_LOTTERY_DURATION_DAYS) || 30,
       minLotteryDuration: parseInt(process.env.REACT_APP_MIN_LOTTERY_DURATION_HOURS) || 1,
       bitcoinApiPrimary: process.env.REACT_APP_BITCOIN_API_PRIMARY || 'https://blockstream.info/api',
-      bitcoinApiFallback: process.env.REACT_APP_BITCOIN_API_FALLBACK || 'https://blockstream.info/testnet/api',
+      bitcoinApiFallback: process.env.REACT_APP_BITCOIN_API_FALLBACK || 'https://blockchain.info/api',
       ticketLimitPercentage: parseFloat(process.env.REACT_APP_TICKET_LIMIT_PERCENTAGE) || 2,
       enableDebugMode: process.env.REACT_APP_ENABLE_DEBUG_MODE === 'true',
-      sessionTimeout: parseInt(process.env.REACT_APP_ADMIN_SESSION_TIMEOUT_MINUTES) || 480
+      sessionTimeout: parseInt(process.env.REACT_APP_ADMIN_SESSION_TIMEOUT_MINUTES) || 480,
+      isProduction: process.env.REACT_APP_PI_ENVIRONMENT === 'production',
+      realMoney: process.env.REACT_APP_REAL_MONEY_MODE === 'true'
     };
   };
+
+  // PRODUCTION warning check
+  useEffect(() => {
+    const config = getConfig();
+    if (config.isProduction || config.realMoney) {
+      console.warn('🚨 ADMIN PANEL: PRODUCTION MODE ACTIVE!');
+      console.warn('💰 Managing REAL Pi cryptocurrency lotteries!');
+      console.warn('🎰 Users are gambling with actual money!');
+      
+      // Check if admin has acknowledged production mode
+      const acknowledged = localStorage.getItem('admin-production-acknowledged');
+      if (acknowledged) {
+        setProductionAcknowledged(true);
+        setShowProductionWarning(false);
+      }
+    } else {
+      setShowProductionWarning(false);
+    }
+  }, []);
 
   // Pi SDK hook for admin
   const {
@@ -97,6 +123,14 @@ function App() {
   const [distributingPrizes, setDistributingPrizes] = useState(false);
   const [distributionResults, setDistributionResults] = useState({});
 
+  // Handle PRODUCTION acknowledgment
+  const handleProductionAcknowledgment = () => {
+    console.warn('💰 Admin acknowledged PRODUCTION mode with real Pi!');
+    localStorage.setItem('admin-production-acknowledged', 'true');
+    setProductionAcknowledged(true);
+    setShowProductionWarning(false);
+  };
+
   // Check admin authorization
   const isAdmin = () => {
     const config = getConfig();
@@ -121,12 +155,13 @@ function App() {
     return () => unsubscribe();
   }, []);
 
-  // Session timeout handler
+  // Session timeout handler with PRODUCTION warnings
   useEffect(() => {
     if (isAdmin()) {
       const config = getConfig();
       const timeout = setTimeout(() => {
-        setSuccess('Session expired for security. Please log in again.');
+        console.warn('🚨 PRODUCTION session expired for security!');
+        setSuccess('PRODUCTION session expired for security. Please log in again.');
         handleLogout();
       }, config.sessionTimeout * 60 * 1000);
 
@@ -304,8 +339,9 @@ function App() {
     return commitmentBlock;
   };
 
-  // Provably fair functions
+  // Provably fair functions (same as before)
   const generateProvablyFairWinners = (blockHash, lotteryId, participants, winnerCount) => {
+    console.warn('🎲 Generating winners for REAL Pi cryptocurrency lottery!');
     const winners = [];
     const remainingParticipants = [...participants];
     
@@ -336,6 +372,7 @@ function App() {
       remainingParticipants.splice(randomIndex, 1);
     }
     
+    console.warn(`💰 ${winnerCount} winners selected for REAL Pi prizes!`);
     return winners;
   };
 
@@ -351,9 +388,12 @@ function App() {
   };
 
   const calculatePrizeDistribution = (participantCount, entryFee, platformFee, winnerCount) => {
+    console.warn('💰 Calculating REAL Pi prize distribution!');
     const totalCollected = participantCount * entryFee;
     const totalPlatformFee = participantCount * platformFee;
     const prizePool = totalCollected - totalPlatformFee;
+    
+    console.warn(`💎 Total REAL Pi prize pool: ${prizePool.toFixed(4)}π`);
     
     const getDistributionPercentages = (count) => {
       const distributions = {
@@ -377,7 +417,7 @@ function App() {
     return prizes;
   };
 
-  // Data management functions
+  // Data management functions (same as before, with PRODUCTION warnings added)
   const loadLotteries = async () => {
     try {
       const lotteriesRef = collection(db, 'lotteries');
@@ -397,10 +437,10 @@ function App() {
       });
       
       setLotteries(lotteryList);
-      console.log('✅ Loaded lotteries:', lotteryList.length);
+      console.log('✅ Loaded PRODUCTION lotteries:', lotteryList.length);
       
     } catch (error) {
-      console.error('❌ Error loading lotteries:', error);
+      console.error('❌ Error loading PRODUCTION lotteries:', error);
       setError('Failed to load lotteries');
     }
   };
@@ -432,12 +472,16 @@ function App() {
         winnersDrawn
       });
       
+      if (getConfig().isProduction) {
+        console.warn(`💰 PRODUCTION Stats - Real Pi collected: ${totalPiCollected.toFixed(2)}π`);
+      }
+      
     } catch (error) {
       console.error('❌ Error calculating stats:', error);
     }
   };
 
-  // Auth functions with enhanced security
+  // Auth functions remain the same but with PRODUCTION warnings
   const handleLogin = async (e) => {
     e.preventDefault();
     setError('');
@@ -446,20 +490,19 @@ function App() {
     try {
       const config = getConfig();
       
-      // Validate admin email before attempting login
       if (!config.adminEmail && !config.superAdminEmails.includes(email)) {
         throw new Error('Admin email not configured. Please check environment variables.');
       }
 
       await signInWithEmailAndPassword(auth, email, password);
       
-      // Double-check authorization after login
       if (!config.adminEmail && !config.superAdminEmails.includes(email)) {
         await signOut(auth);
         throw new Error('Unauthorized: This email is not configured as an admin.');
       }
 
-      setSuccess(`Welcome to ${config.platformName}!`);
+      console.warn('🚨 ADMIN LOGIN: PRODUCTION mode access granted!');
+      setSuccess(`Welcome to ${config.platformName} PRODUCTION!`);
       setEmail('');
       setPassword('');
       
@@ -483,7 +526,8 @@ function App() {
   const handleLogout = async () => {
     try {
       await signOut(auth);
-      setSuccess('Successfully logged out!');
+      console.warn('🚨 ADMIN LOGOUT: PRODUCTION session ended');
+      setSuccess('Successfully logged out from PRODUCTION!');
       setLotteries([]);
       setStats({
         totalLotteries: 0,
@@ -497,7 +541,7 @@ function App() {
     }
   };
 
-  // Lottery management functions
+  // Create lottery with PRODUCTION warnings
   const createLottery = async (e) => {
     e.preventDefault();
     setError('');
@@ -506,7 +550,6 @@ function App() {
     try {
       const config = getConfig();
       
-      // Validate inputs
       if (!newLottery.title || !newLottery.endDate) {
         throw new Error('Title and end date are required');
       }
@@ -521,21 +564,24 @@ function App() {
         throw new Error('End date must be in the future');
       }
 
-      // Check max duration
       const maxEndDate = new Date();
       maxEndDate.setDate(maxEndDate.getDate() + config.maxLotteryDuration);
       if (endDate > maxEndDate) {
         throw new Error(`Lottery duration cannot exceed ${config.maxLotteryDuration} days`);
       }
 
-      // Calculate commitment block
+      // PRODUCTION warning for lottery creation
+      if (config.isProduction) {
+        console.warn('🚨 Creating PRODUCTION lottery with REAL Pi cryptocurrency!');
+        console.warn(`💰 Entry fee: ${entryFee}π (REAL money)`);
+      }
+
       const commitmentBlock = calculateCommitmentBlock(
         currentBitcoinBlock, 
         newLottery.endDate, 
         newLottery.lotteryType
       );
 
-      // Create lottery document
       const lotteryData = {
         title: newLottery.title,
         description: newLottery.description || '',
@@ -551,6 +597,8 @@ function App() {
         winners: [],
         createdAt: Timestamp.now(),
         createdBy: user.email,
+        environment: config.isProduction ? 'PRODUCTION' : 'development',
+        realCurrency: config.realMoney,
         provablyFair: {
           commitmentBlock: commitmentBlock,
           blockHash: null,
@@ -558,10 +606,13 @@ function App() {
         }
       };
 
-      // Add to Firestore
       await addDoc(collection(db, 'lotteries'), lotteryData);
       
-      setSuccess(`✅ Lottery "${newLottery.title}" created successfully!`);
+      if (config.isProduction) {
+        setSuccess(`🚨 PRODUCTION Lottery "${newLottery.title}" created with REAL Pi cryptocurrency!`);
+      } else {
+        setSuccess(`✅ Lottery "${newLottery.title}" created successfully!`);
+      }
       
       // Reset form
       const defaultConfig = getConfig();
@@ -578,18 +629,17 @@ function App() {
         lotteryType: 'standard'
       });
       
-      // Reload lotteries
       loadLotteries();
       
     } catch (error) {
-      console.error('❌ Error creating lottery:', error);
+      console.error('❌ Error creating PRODUCTION lottery:', error);
       setError(error.message);
     }
     
     setLoading(false);
   };
 
-  // Draw winners for a lottery
+  // Draw winners with PRODUCTION warnings
   const drawWinners = async (lotteryId) => {
     setError('');
     setLoading(true);
@@ -608,15 +658,15 @@ function App() {
         throw new Error('No participants in this lottery');
       }
 
-      // Check if lottery has ended
       if (new Date() < lottery.endDate) {
         throw new Error('Lottery has not ended yet');
       }
 
-      // Fetch Bitcoin block data
+      console.warn('🎲 Drawing winners for REAL Pi cryptocurrency lottery!');
+      console.warn(`💰 Total REAL Pi at stake: ${(lottery.participants.length * lottery.entryFee).toFixed(4)}π`);
+
       const blockData = await fetchBitcoinBlockHash(lottery.provablyFair.commitmentBlock);
       
-      // Calculate winners
       const winnerCount = calculateWinnerCount(lottery.participants.length, lottery.minWinners);
       const winners = generateProvablyFairWinners(
         blockData.hash, 
@@ -625,7 +675,6 @@ function App() {
         winnerCount
       );
       
-      // Calculate prizes
       const prizes = calculatePrizeDistribution(
         lottery.participants.length,
         lottery.entryFee,
@@ -633,7 +682,6 @@ function App() {
         winnerCount
       );
       
-      // Add prize amounts to winners
       const winnersWithPrizes = winners.map((winner, index) => ({
         ...winner,
         prize: prizes[index] || 0,
@@ -642,7 +690,6 @@ function App() {
         paymentId: null
       }));
 
-      // Update lottery in Firestore
       const lotteryRef = doc(db, 'lotteries', lotteryId);
       await updateDoc(lotteryRef, {
         status: 'ended',
@@ -656,7 +703,10 @@ function App() {
         }
       });
 
-      setSuccess(`🎉 Drew ${winnerCount} winners for "${lottery.title}"!`);
+      console.warn(`🏆 ${winnerCount} winners selected for REAL Pi prizes!`);
+      console.warn(`💰 Total REAL Pi to be distributed: ${prizes.reduce((sum, prize) => sum + prize, 0).toFixed(4)}π`);
+
+      setSuccess(`🎉 Drew ${winnerCount} winners for "${lottery.title}" with REAL Pi prizes!`);
       loadLotteries();
       
     } catch (error) {
@@ -667,21 +717,24 @@ function App() {
     setLoading(false);
   };
 
-  // Prize distribution
+  // Prize distribution with PRODUCTION warnings
   const handleDistributePrize = async (lotteryId, winner) => {
     setDistributingPrizes(true);
+    
+    console.warn('💰 Distributing REAL Pi cryptocurrency prize!');
+    console.warn(`🏆 Amount: ${winner.prize}π (actual monetary value)`);
     
     try {
       await distributePrize(
         winner,
         lotteryId,
         (result) => {
+          console.warn('✅ REAL Pi cryptocurrency sent to winner!');
           setDistributionResults(prev => ({
             ...prev,
             [winner.winner.uid]: { success: true, paymentId: result.paymentId }
           }));
           
-          // Update lottery to mark prize as paid
           const lotteryRef = doc(db, 'lotteries', lotteryId);
           const lottery = lotteries.find(l => l.id === lotteryId);
           const updatedWinners = lottery.winners.map(w => 
@@ -693,18 +746,19 @@ function App() {
           updateDoc(lotteryRef, { winners: updatedWinners });
           loadLotteries();
           
-          setSuccess(`💰 Prize sent to ${winner.winner.username}!`);
+          setSuccess(`💰 REAL Pi prize of ${winner.prize}π sent to ${winner.winner.username}!`);
         },
         (error) => {
+          console.error('❌ REAL Pi prize distribution failed:', error);
           setDistributionResults(prev => ({
             ...prev,
             [winner.winner.uid]: { success: false, error: error.message }
           }));
-          setError(`Failed to send prize: ${error.message}`);
+          setError(`Failed to send REAL Pi prize: ${error.message}`);
         }
       );
     } catch (error) {
-      setError(`Prize distribution failed: ${error.message}`);
+      setError(`REAL Pi prize distribution failed: ${error.message}`);
     }
     
     setDistributingPrizes(false);
@@ -744,12 +798,112 @@ function App() {
     return `${minutes}m`;
   };
 
+  // PRODUCTION Warning Modal
+  if (showProductionWarning && !productionAcknowledged) {
+    return (
+      <div style={{
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        background: 'rgba(0,0,0,0.9)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        zIndex: 10000,
+        fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", sans-serif'
+      }}>
+        <div style={{
+          background: 'white',
+          padding: '40px',
+          borderRadius: '16px',
+          maxWidth: '600px',
+          margin: '20px',
+          textAlign: 'center',
+          border: '4px solid #dc3545'
+        }}>
+          <h1 style={{color: '#dc3545', marginBottom: '20px', fontSize: '2rem'}}>
+            🚨 PRODUCTION MODE WARNING
+          </h1>
+          
+          <div style={{
+            background: '#f8d7da',
+            border: '2px solid #dc3545',
+            borderRadius: '8px',
+            padding: '20px',
+            marginBottom: '20px',
+            textAlign: 'left'
+          }}>
+            <h2 style={{color: '#721c24', marginBottom: '15px'}}>
+              ⚠️ CRITICAL: REAL Pi CRYPTOCURRENCY MODE
+            </h2>
+            <ul style={{color: '#721c24', lineHeight: '1.6'}}>
+              <li><strong>REAL MONEY:</strong> This platform uses actual Pi cryptocurrency with monetary value</li>
+              <li><strong>LIVE GAMBLING:</strong> Users are gambling with real money and can lose significant amounts</li>
+              <li><strong>LEGAL COMPLIANCE:</strong> Ensure gambling is legal in your jurisdiction</li>
+              <li><strong>FINANCIAL RISK:</strong> Users can lose all money they spend on the platform</li>
+              <li><strong>ADMIN RESPONSIBILITY:</strong> You are managing real money transactions</li>
+            </ul>
+          </div>
+
+          <div style={{
+            background: '#fff3cd',
+            border: '2px solid #ffc107',
+            borderRadius: '8px',
+            padding: '20px',
+            marginBottom: '20px',
+            textAlign: 'left'
+          }}>
+            <h3 style={{color: '#856404', marginBottom: '10px'}}>
+              📋 ADMIN RESPONSIBILITIES:
+            </h3>
+            <ul style={{color: '#856404', lineHeight: '1.6'}}>
+              <li>Ensure compliance with local gambling laws</li>
+              <li>Monitor for responsible gambling violations</li>
+              <li>Maintain proper financial records</li>
+              <li>Handle customer complaints appropriately</li>
+              <li>Distribute real Pi prizes accurately and promptly</li>
+            </ul>
+          </div>
+
+          <button
+            onClick={handleProductionAcknowledgment}
+            style={{
+              background: '#dc3545',
+              color: 'white',
+              border: 'none',
+              padding: '15px 30px',
+              borderRadius: '8px',
+              fontSize: '1.1rem',
+              fontWeight: 'bold',
+              cursor: 'pointer',
+              width: '100%'
+            }}
+          >
+            ✅ I UNDERSTAND - PROCEED TO PRODUCTION ADMIN
+          </button>
+          
+          <p style={{
+            marginTop: '15px',
+            fontSize: '0.9rem',
+            color: '#6c757d'
+          }}>
+            By clicking above, you acknowledge you understand this platform 
+            involves real money gambling and you accept full responsibility 
+            for compliance and user safety.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
   // Main loading state
   if (loading && !user) {
     return (
       <div className="container">
         <div className="loading">
-          <h2>Loading {getConfig().platformName}...</h2>
+          <h2>Loading {getConfig().platformName} PRODUCTION...</h2>
         </div>
       </div>
     );
@@ -763,14 +917,26 @@ function App() {
       <div className="container">
         <div className="header">
           <h1>🎰 {config.platformName}</h1>
-          <p>Administrator Access Required</p>
+          <p>PRODUCTION Administrator Access Required</p>
+          {config.isProduction && (
+            <div style={{
+              background: '#f8d7da',
+              border: '2px solid #dc3545',
+              borderRadius: '8px',
+              padding: '15px',
+              marginTop: '15px',
+              color: '#721c24'
+            }}>
+              <strong>🚨 PRODUCTION MODE:</strong> Managing REAL Pi cryptocurrency lotteries
+            </div>
+          )}
         </div>
 
         <div className="card">
           <div className="login-form">
             <div className="login-header">
-              <h2>🔐 Admin Login</h2>
-              <p>Please sign in to access the admin dashboard</p>
+              <h2>🔐 PRODUCTION Admin Login</h2>
+              <p>Please sign in to access the PRODUCTION admin dashboard</p>
             </div>
 
             {error && (
@@ -797,7 +963,7 @@ function App() {
                   required
                   placeholder="Enter your admin email"
                 />
-                <small>Only configured admin emails can access this dashboard</small>
+                <small>Only configured admin emails can access PRODUCTION dashboard</small>
               </div>
 
               <div className="form-group">
@@ -817,7 +983,7 @@ function App() {
                 className="button full-width"
                 disabled={loading}
               >
-                {loading ? '🔄 Signing in...' : '🔑 Sign In'}
+                {loading ? '🔄 Signing in...' : '🔑 Sign In to PRODUCTION'}
               </button>
             </form>
 
@@ -833,32 +999,46 @@ function App() {
     );
   }
 
-  // Main admin dashboard
+  // Main admin dashboard with PRODUCTION warnings
   const config = getConfig();
   
   return (
     <div className="container">
-      {/* Header */}
+      {/* PRODUCTION Header with warnings */}
       <div className="header">
         <h1>🎰 {config.platformName}</h1>
-        <p>Manage provably fair lotteries with manual prize distribution</p>
+        <p>PRODUCTION - Manage real Pi cryptocurrency lotteries</p>
+        {config.isProduction && (
+          <div style={{
+            background: 'rgba(220, 53, 69, 0.2)',
+            border: '2px solid #dc3545',
+            borderRadius: '8px',
+            padding: '10px',
+            marginTop: '10px',
+            color: 'white',
+            fontSize: '0.9rem'
+          }}>
+            <strong>🚨 PRODUCTION MODE:</strong> Managing REAL Pi cryptocurrency with actual monetary value
+          </div>
+        )}
       </div>
 
-      {/* Admin Info & Controls */}
+      {/* Admin Info & Controls with PRODUCTION warnings */}
       <div className="card">
         <div className="logged-in-header">
           <div className="admin-info">
             <div style={{display: 'flex', alignItems: 'center', gap: '10px'}}>
-              <span>✅ Admin: {user.email}</span>
+              <span>✅ PRODUCTION Admin: {user.email}</span>
               {adminFullyConnected && (
                 <span style={{color: '#28a745', fontSize: '0.9rem'}}>
-                  💰 Wallet Connected ({adminPiUser.username})
+                  💰 REAL Pi Wallet Connected ({adminPiUser.username})
                 </span>
               )}
             </div>
             {currentBitcoinBlock && (
               <div style={{fontSize: '0.9rem', color: '#6c757d', marginTop: '5px'}}>
-                📦 Bitcoin Block: #{currentBitcoinBlock}
+                📦 Bitcoin Block: #{currentBitcoinBlock} | 
+                💰 Real Pi Mode: {config.isProduction ? 'ACTIVE' : 'INACTIVE'}
               </div>
             )}
           </div>
@@ -869,7 +1049,7 @@ function App() {
                 className="button success"
                 disabled={piLoading}
               >
-                {piLoading ? '🔄 Connecting...' : '💰 Connect Wallet'}
+                {piLoading ? '🔄 Connecting...' : '💰 Connect REAL Pi Wallet'}
               </button>
             )}
             <button onClick={handleLogout} className="button secondary">
@@ -879,6 +1059,7 @@ function App() {
         </div>
       </div>
 
+      {/* Rest of the component remains the same but with PRODUCTION warnings added throughout */}
       {/* Messages */}
       {error && (
         <div className="error">
@@ -899,35 +1080,36 @@ function App() {
         </div>
       )}
 
-      {/* Dashboard Stats */}
+      {/* Dashboard Stats with PRODUCTION labels */}
       <div className="stats-grid">
         <div className="stat-card purple">
           <div className="stat-number">{stats.totalLotteries}</div>
-          <div className="stat-label">Total Lotteries</div>
+          <div className="stat-label">PRODUCTION Lotteries</div>
         </div>
         <div className="stat-card green">
           <div className="stat-number">{stats.activeParticipants}</div>
-          <div className="stat-label">Total Participants</div>
+          <div className="stat-label">Real Pi Participants</div>
         </div>
         <div className="stat-card yellow">
           <div className="stat-number">{stats.totalPiCollected} π</div>
-          <div className="stat-label">Pi Collected</div>
+          <div className="stat-label">REAL Pi Collected</div>
         </div>
         <div className="stat-card blue">
           <div className="stat-number">{stats.winnersDrawn}</div>
-          <div className="stat-label">Winners Drawn</div>
+          <div className="stat-label">Real Pi Winners</div>
         </div>
       </div>
 
-      {/* Create New Lottery Form */}
+      {/* Create New Lottery Form with PRODUCTION warnings */}
       <div className="card">
-        <h2>🎰 Create New Lottery</h2>
+        <h2>🎰 Create New PRODUCTION Lottery</h2>
         <p style={{color: '#6c757d', marginBottom: '20px'}}>
-          Create provably fair lotteries with Bitcoin blockchain randomness
+          Create real money lotteries with ACTUAL Pi cryptocurrency
         </p>
         
         <div className="warning" style={{marginBottom: '20px'}}>
-          <strong>Configuration:</strong> Entry fees: {config.minEntryFee}π - {config.maxEntryFee}π | 
+          <strong>🚨 PRODUCTION WARNING:</strong> Users will spend REAL Pi cryptocurrency. 
+          Entry fees: {config.minEntryFee}π - {config.maxEntryFee}π | 
           Max duration: {config.maxLotteryDuration} days | 
           Ticket limit: {config.ticketLimitPercentage}%
         </div>
@@ -935,14 +1117,14 @@ function App() {
         <form onSubmit={createLottery}>
           <div className="form-row">
             <div className="form-group">
-              <label htmlFor="title">Lottery Title *</label>
+              <label htmlFor="title">PRODUCTION Lottery Title *</label>
               <input
                 type="text"
                 id="title"
                 value={newLottery.title}
                 onChange={(e) => setNewLottery({...newLottery, title: e.target.value})}
                 required
-                placeholder="Enter lottery title"
+                placeholder="Enter lottery title (REAL Pi)"
               />
             </div>
             
@@ -953,10 +1135,10 @@ function App() {
                 value={newLottery.lotteryType}
                 onChange={(e) => setNewLottery({...newLottery, lotteryType: e.target.value})}
               >
-                <option value="standard">Standard</option>
-                <option value="daily">Daily (24 hours)</option>
-                <option value="weekly">Weekly (7 days)</option>
-                <option value="monthly">Monthly (30 days)</option>
+                <option value="standard">Standard (REAL Pi)</option>
+                <option value="daily">Daily (24 hours, REAL Pi)</option>
+                <option value="weekly">Weekly (7 days, REAL Pi)</option>
+                <option value="monthly">Monthly (30 days, REAL Pi)</option>
               </select>
             </div>
           </div>
@@ -967,13 +1149,13 @@ function App() {
               id="description"
               value={newLottery.description}
               onChange={(e) => setNewLottery({...newLottery, description: e.target.value})}
-              placeholder="Optional lottery description"
+              placeholder="Describe this REAL Pi lottery"
             />
           </div>
 
           <div className="form-row">
             <div className="form-group">
-              <label htmlFor="entryFee">Entry Fee (π) *</label>
+              <label htmlFor="entryFee">Entry Fee (REAL π) *</label>
               <input
                 type="number"
                 id="entryFee"
@@ -984,7 +1166,7 @@ function App() {
                 step="0.01"
                 required
               />
-              <small>Range: {config.minEntryFee}π - {config.maxEntryFee}π</small>
+              <small>Range: {config.minEntryFee}π - {config.maxEntryFee}π (REAL Pi cryptocurrency)</small>
             </div>
             
             <div className="form-group">
@@ -1005,7 +1187,7 @@ function App() {
                 max="50"
                 step="0.1"
               />
-              <small>Fee: {newLottery.platformFee.toFixed(3)}π per ticket</small>
+              <small>Fee: {newLottery.platformFee.toFixed(3)}π per ticket (REAL Pi)</small>
             </div>
           </div>
 
@@ -1065,16 +1247,32 @@ function App() {
             type="submit" 
             className="button success full-width"
             disabled={loading || !currentBitcoinBlock}
+            style={{
+              background: config.isProduction ? '#dc3545' : '#28a745',
+              fontSize: '1.1rem',
+              fontWeight: 'bold'
+            }}
           >
-            {loading ? '🔄 Creating...' : '🎰 Create Lottery'}
+            {loading ? '🔄 Creating...' : config.isProduction ? '🚨 Create PRODUCTION Lottery (REAL Pi)' : '🎰 Create Lottery'}
           </button>
+          
+          {config.isProduction && (
+            <p style={{
+              textAlign: 'center',
+              marginTop: '10px',
+              color: '#dc3545',
+              fontWeight: 'bold'
+            }}>
+              ⚠️ This will create a lottery using REAL Pi cryptocurrency
+            </p>
+          )}
         </form>
       </div>
 
-      {/* Manage Existing Lotteries */}
+      {/* Manage Existing Lotteries with PRODUCTION warnings */}
       <div className="card">
         <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px'}}>
-          <h2>🎟️ Manage Lotteries</h2>
+          <h2>🎟️ Manage PRODUCTION Lotteries</h2>
           <button 
             onClick={loadLotteries} 
             className="button secondary"
@@ -1086,14 +1284,28 @@ function App() {
 
         {lotteries.length === 0 ? (
           <p style={{textAlign: 'center', color: '#6c757d', padding: '40px'}}>
-            No lotteries created yet. Create your first lottery above!
+            No PRODUCTION lotteries created yet. Create your first real Pi lottery above!
           </p>
         ) : (
           <div className="lottery-list">
             {lotteries.map((lottery) => (
               <div key={lottery.id} className="lottery-item">
                 <div className="lottery-header">
-                  <h3 className="lottery-title">{lottery.title}</h3>
+                  <h3 className="lottery-title">
+                    {lottery.title}
+                    {config.isProduction && (
+                      <span style={{
+                        background: '#dc3545',
+                        color: 'white',
+                        padding: '2px 8px',
+                        borderRadius: '4px',
+                        fontSize: '0.7rem',
+                        marginLeft: '10px'
+                      }}>
+                        REAL Pi
+                      </span>
+                    )}
+                  </h3>
                   <div style={{display: 'flex', gap: '10px', alignItems: 'center'}}>
                     <span className={`lottery-status status-${lottery.status}`}>
                       {lottery.status === 'active' && `⏰ ${formatTimeRemaining(lottery.endDate)}`}
@@ -1112,7 +1324,10 @@ function App() {
                 <div className="lottery-details">
                   <div className="lottery-detail">
                     <div className="lottery-detail-label">Entry Fee</div>
-                    <div className="lottery-detail-value">{lottery.entryFee}π</div>
+                    <div className="lottery-detail-value">
+                      {lottery.entryFee}π 
+                      {config.isProduction && <span style={{color: '#dc3545', fontSize: '0.8rem'}}> (REAL)</span>}
+                    </div>
                   </div>
                   <div className="lottery-detail">
                     <div className="lottery-detail-label">Participants</div>
@@ -1123,6 +1338,7 @@ function App() {
                     <div className="lottery-detail-value">
                       {((lottery.participants?.length || 0) * lottery.entryFee - 
                         (lottery.participants?.length || 0) * lottery.platformFee).toFixed(2)}π
+                      {config.isProduction && <span style={{color: '#dc3545', fontSize: '0.8rem'}}> (REAL)</span>}
                     </div>
                   </div>
                   <div className="lottery-detail">
@@ -1140,13 +1356,25 @@ function App() {
                       <div>Block Hash: {lottery.provablyFair.blockHash.substring(0, 20)}...</div>
                     )}
                     <div>Verified: {lottery.provablyFair?.verified ? '✅ Yes' : '⏳ Pending'}</div>
+                    {config.isProduction && (
+                      <div style={{color: '#dc3545', fontWeight: 'bold', marginTop: '5px'}}>
+                        🚨 PRODUCTION: Real Pi prizes will be distributed
+                      </div>
+                    )}
                   </div>
                 </div>
 
-                {/* Winners display */}
+                {/* Winners display with PRODUCTION warnings */}
                 {lottery.winners && lottery.winners.length > 0 && (
                   <div className="winners-section">
-                    <h4>🏆 Winners ({lottery.winners.length})</h4>
+                    <h4>
+                      🏆 Winners ({lottery.winners.length})
+                      {config.isProduction && (
+                        <span style={{color: '#dc3545', fontSize: '0.9rem', marginLeft: '10px'}}>
+                          - REAL Pi Prizes
+                        </span>
+                      )}
+                    </h4>
                     <div className="winners-grid">
                       {lottery.winners.map((winner, index) => (
                         <div key={index} className={`winner-item ${winner.paid ? 'paid' : ''}`}>
@@ -1156,21 +1384,34 @@ function App() {
                               #{winner.position}
                             </div>
                             <div>{winner.winner.username}</div>
-                            <div className="prize-amount">{winner.prize}π</div>
+                            <div className="prize-amount">
+                              {winner.prize}π
+                              {config.isProduction && <span style={{color: '#dc3545', fontSize: '0.8rem'}}> (REAL)</span>}
+                            </div>
                           </div>
                           <div className="winner-actions">
                             {winner.paid ? (
-                              <span style={{color: '#28a745', fontWeight: 'bold'}}>✅ Paid</span>
+                              <span style={{color: '#28a745', fontWeight: 'bold'}}>
+                                ✅ {config.isProduction ? 'REAL Pi Paid' : 'Paid'}
+                              </span>
                             ) : adminFullyConnected ? (
                               <button 
                                 onClick={() => handleDistributePrize(lottery.id, winner)}
                                 className="button success"
                                 disabled={distributingPrizes || paymentLoading}
+                                style={{
+                                  background: config.isProduction ? '#dc3545' : '#28a745'
+                                }}
                               >
-                                {distributingPrizes ? '💰 Sending...' : '💰 Send Prize'}
+                                {distributingPrizes ? 
+                                  (config.isProduction ? '💰 Sending REAL Pi...' : '💰 Sending...') : 
+                                  (config.isProduction ? '💰 Send REAL Pi Prize' : '💰 Send Prize')
+                                }
                               </button>
                             ) : (
-                              <span style={{color: '#ffc107'}}>⚠️ Connect wallet to pay</span>
+                              <span style={{color: '#ffc107'}}>
+                                ⚠️ Connect {config.isProduction ? 'REAL Pi ' : ''}wallet to pay
+                              </span>
                             )}
                           </div>
                         </div>
@@ -1186,14 +1427,26 @@ function App() {
                       onClick={() => drawWinners(lottery.id)}
                       className="button warning"
                       disabled={loading}
+                      style={{
+                        background: config.isProduction ? '#dc3545' : '#ffc107',
+                        color: config.isProduction ? 'white' : '#212529'
+                      }}
                     >
-                      {loading ? '🎲 Drawing...' : '🎲 Draw Winners'}
+                      {loading ? 
+                        (config.isProduction ? '🎲 Drawing REAL Pi Winners...' : '🎲 Drawing...') : 
+                        (config.isProduction ? '🎲 Draw REAL Pi Winners' : '🎲 Draw Winners')
+                      }
                     </button>
                   )}
                   
                   {lottery.status === 'active' && new Date() < lottery.endDate && (
                     <div style={{color: '#28a745', fontWeight: 'bold'}}>
                       ⏰ Active - ends {formatTimeRemaining(lottery.endDate)}
+                      {config.isProduction && (
+                        <div style={{color: '#dc3545', fontSize: '0.9rem'}}>
+                          Users are spending REAL Pi cryptocurrency
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>
