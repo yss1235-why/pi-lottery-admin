@@ -1,17 +1,18 @@
-// File path: src/components/LegalComponents.js - Combined Legal Components
+// File path: src/components/LegalComponents.js - PRODUCTION VERSION
+// ⚠️ WARNING: PRODUCTION MODE - REAL PI CRYPTOCURRENCY ⚠️
 import React, { useState, useEffect } from 'react';
 
-// Legal document versions and metadata
+// Legal document versions and metadata for PRODUCTION
 const LEGAL_VERSIONS = {
   privacyPolicy: {
-    version: process.env.REACT_APP_PRIVACY_POLICY_VERSION || "1.0.0",
-    lastUpdated: process.env.REACT_APP_LEGAL_LAST_UPDATED || "2024-01-15",
-    effectiveDate: "2024-01-15"
+    version: process.env.REACT_APP_PRIVACY_POLICY_VERSION || "2.0.0",
+    lastUpdated: process.env.REACT_APP_LEGAL_LAST_UPDATED || "2024-12-19",
+    effectiveDate: "2024-12-19"
   },
   termsOfService: {
-    version: process.env.REACT_APP_TERMS_VERSION || "1.0.0", 
-    lastUpdated: process.env.REACT_APP_LEGAL_LAST_UPDATED || "2024-01-15",
-    effectiveDate: "2024-01-15"
+    version: process.env.REACT_APP_TERMS_VERSION || "2.0.0", 
+    lastUpdated: process.env.REACT_APP_LEGAL_LAST_UPDATED || "2024-12-19",
+    effectiveDate: "2024-12-19"
   }
 };
 
@@ -22,12 +23,15 @@ const COMPANY_INFO = {
   supportEmail: process.env.REACT_APP_SUPPORT_EMAIL || ""
 };
 
-// Privacy Policy Component
+// Privacy Policy Component - PRODUCTION
 const PrivacyPolicy = ({ isModal = false }) => {
   return (
     <div className={`legal-document ${isModal ? 'modal-content' : ''}`}>
       <div className="legal-header">
         <h1>🔒 Privacy Policy</h1>
+        <div className="warning-box" style={{margin: '16px 0', background: '#fff3cd', border: '2px solid #ffc107', borderRadius: '8px', padding: '16px'}}>
+          <strong>⚠️ PRODUCTION MODE:</strong> This platform uses REAL Pi cryptocurrency. All transactions involve actual monetary value.
+        </div>
         <div className="legal-meta">
           <p><strong>Version:</strong> {LEGAL_VERSIONS.privacyPolicy.version}</p>
           <p><strong>Last Updated:</strong> {LEGAL_VERSIONS.privacyPolicy.lastUpdated}</p>
@@ -41,28 +45,44 @@ const PrivacyPolicy = ({ isModal = false }) => {
           <p>
             This Privacy Policy describes how {COMPANY_INFO.name} ("we," "us," or "our") 
             collects, uses, and protects your information when you use our Pi Lottery platform 
-            (the "Service"). We are committed to protecting your privacy and being transparent 
-            about our data practices.
+            (the "Service"). <strong>This platform uses REAL Pi cryptocurrency with actual monetary value.</strong>
           </p>
+          <div className="warning-box">
+            <ul>
+              <li><strong>Real Money Gambling:</strong> All transactions involve actual Pi cryptocurrency</li>
+              <li><strong>Financial Risk:</strong> You may lose real money participating in lotteries</li>
+              <li><strong>Age Restriction:</strong> Must be 18+ years old to use this platform</li>
+              <li><strong>Legal Compliance:</strong> Ensure gambling is legal in your jurisdiction</li>
+            </ul>
+          </div>
         </section>
 
         <section className="legal-section">
           <h2>📊 Information We Collect</h2>
           
-          <h3>🔹 Information You Provide</h3>
+          <h3>🔹 Financial and Transaction Data</h3>
           <ul>
-            <li><strong>Pi Network User Data:</strong> Pi Network user ID, username, and profile information</li>
-            <li><strong>Wallet Information:</strong> Pi wallet connection status and public wallet addresses</li>
-            <li><strong>Lottery Participation:</strong> Entry records, ticket purchases, and participation history</li>
-            <li><strong>Communication:</strong> Messages you send to us through support channels</li>
+            <li><strong>Real Pi Transactions:</strong> All Pi cryptocurrency payments, transfers, and balances</li>
+            <li><strong>Gambling Activity:</strong> Lottery entries, amounts wagered, prizes won/lost</li>
+            <li><strong>Payment History:</strong> Complete transaction history with real monetary values</li>
+            <li><strong>Wallet Information:</strong> Pi wallet addresses and transaction IDs</li>
+            <li><strong>Tax Information:</strong> Data required for tax reporting and compliance</li>
           </ul>
 
-          <h3>🔹 Information Automatically Collected</h3>
+          <h3>🔹 Identity Verification (KYC/AML)</h3>
           <ul>
-            <li><strong>Device Information:</strong> Browser type, operating system, device identifiers</li>
-            <li><strong>Usage Data:</strong> Pages visited, features used, time spent on platform</li>
-            <li><strong>Transaction Data:</strong> Payment information, transaction IDs, and timestamps</li>
-            <li><strong>Technical Data:</strong> IP address, cookies, and analytics data</li>
+            <li><strong>Personal Identification:</strong> Name, date of birth, address, ID documents</li>
+            <li><strong>Government Documents:</strong> Passport, driver's license, or national ID</li>
+            <li><strong>Financial Verification:</strong> Source of funds documentation</li>
+            <li><strong>Compliance Screening:</strong> Anti-money laundering and sanctions checks</li>
+          </ul>
+
+          <h3>🔹 Gambling Behavior Monitoring</h3>
+          <ul>
+            <li><strong>Spending Patterns:</strong> Amount and frequency of real Pi gambling</li>
+            <li><strong>Risk Indicators:</strong> Signs of problem gambling behavior</li>
+            <li><strong>Self-Exclusion Data:</strong> Responsible gambling settings and restrictions</li>
+            <li><strong>Session Data:</strong> Time spent gambling, loss/win patterns</li>
           </ul>
 
           <h3>🔹 Blockchain Data</h3>
@@ -76,149 +96,129 @@ const PrivacyPolicy = ({ isModal = false }) => {
         <section className="legal-section">
           <h2>🎯 How We Use Your Information</h2>
           
-          <h3>🔹 Service Operations</h3>
+          <h3>🔹 Gambling Operations</h3>
           <ul>
-            <li>Process lottery entries and manage participation</li>
-            <li>Facilitate payments and prize distributions</li>
-            <li>Verify winners and maintain fair play</li>
-            <li>Provide customer support and respond to inquiries</li>
+            <li>Process real Pi cryptocurrency lottery entries and payments</li>
+            <li>Distribute real Pi prizes to winners</li>
+            <li>Monitor gambling activity for responsible gaming compliance</li>
+            <li>Detect and prevent gambling addiction and problem gambling</li>
+            <li>Implement loss limits and cooling-off periods</li>
           </ul>
 
-          <h3>🔹 Platform Improvement</h3>
+          <h3>🔹 Legal and Regulatory Compliance</h3>
           <ul>
-            <li>Analyze usage patterns to improve user experience</li>
-            <li>Develop new features and lottery types</li>
-            <li>Monitor platform performance and security</li>
-            <li>Conduct research and analytics (anonymized data)</li>
+            <li>Comply with gambling laws and regulations</li>
+            <li>Conduct Know Your Customer (KYC) verification</li>
+            <li>Perform Anti-Money Laundering (AML) screening</li>
+            <li>Report suspicious financial activities to authorities</li>
+            <li>Maintain records for tax reporting and audits</li>
           </ul>
 
-          <h3>🔹 Legal and Safety</h3>
+          <h3>🔹 Financial Security</h3>
           <ul>
-            <li>Comply with applicable laws and regulations</li>
-            <li>Prevent fraud and maintain platform security</li>
-            <li>Resolve disputes and enforce our terms</li>
-            <li>Protect the rights and safety of our users</li>
+            <li>Verify the legitimacy of Pi cryptocurrency transactions</li>
+            <li>Prevent fraud and money laundering</li>
+            <li>Protect against unauthorized access to real money accounts</li>
+            <li>Maintain audit trails for financial compliance</li>
           </ul>
         </section>
 
         <section className="legal-section">
           <h2>🤝 Information Sharing</h2>
           
-          <p><strong>We DO NOT sell, rent, or trade your personal information.</strong></p>
+          <p><strong>We DO NOT sell your personal information, but we may be required to share it for legal compliance.</strong></p>
 
-          <h3>🔹 Limited Sharing Scenarios</h3>
+          <h3>🔹 Required Sharing</h3>
           <ul>
-            <li><strong>Public Blockchain:</strong> Transaction data is inherently public on Pi Network</li>
-            <li><strong>Legal Requirements:</strong> When required by law, court order, or government request</li>
-            <li><strong>Service Providers:</strong> Trusted third parties who help operate our platform (under strict agreements)</li>
-            <li><strong>Business Transfers:</strong> In case of merger, acquisition, or sale of assets</li>
-            <li><strong>Safety:</strong> To protect against fraud, abuse, or harm to users or our platform</li>
+            <li><strong>Law Enforcement:</strong> When required by court order or legal investigation</li>
+            <li><strong>Tax Authorities:</strong> Prize winnings and gambling activity for tax compliance</li>
+            <li><strong>Financial Regulators:</strong> AML/KYC compliance and suspicious activity reports</li>
+            <li><strong>Gambling Authorities:</strong> Compliance with gambling regulations and licensing</li>
+            <li><strong>Pi Network:</strong> Transaction data is inherently public on the blockchain</li>
           </ul>
 
-          <h3>🔹 Anonymized Data</h3>
-          <p>
-            We may share aggregated, anonymized statistics about lottery participation, 
-            platform usage, and other non-identifying information for research, 
-            marketing, or partnership purposes.
-          </p>
+          <h3>🔹 Service Providers</h3>
+          <ul>
+            <li><strong>Payment Processors:</strong> For processing real Pi cryptocurrency transactions</li>
+            <li><strong>Identity Verification:</strong> Third-party KYC/AML service providers</li>
+            <li><strong>Legal Services:</strong> Lawyers and compliance consultants</li>
+            <li><strong>Auditors:</strong> Financial auditing and compliance verification</li>
+          </ul>
         </section>
 
         <section className="legal-section">
           <h2>🔐 Data Security</h2>
           
-          <h3>🔹 Security Measures</h3>
+          <h3>🔹 Financial Security Measures</h3>
           <ul>
-            <li><strong>Encryption:</strong> Data transmission secured with industry-standard encryption</li>
-            <li><strong>Access Controls:</strong> Limited employee access on a need-to-know basis</li>
-            <li><strong>Regular Audits:</strong> Security reviews and vulnerability assessments</li>
-            <li><strong>Secure Infrastructure:</strong> Hosted on secure, compliant cloud platforms</li>
+            <li><strong>Encryption:</strong> Bank-grade encryption for all financial data</li>
+            <li><strong>Secure Storage:</strong> Financial records stored in secure, compliant systems</li>
+            <li><strong>Access Controls:</strong> Strict access controls for sensitive financial data</li>
+            <li><strong>Regular Audits:</strong> Regular security audits and penetration testing</li>
+            <li><strong>Compliance Standards:</strong> PCI DSS and other financial security standards</li>
           </ul>
 
-          <h3>🔹 Data Retention</h3>
+          <h3>🔹 Data Retention for Compliance</h3>
           <ul>
-            <li><strong>Account Data:</strong> Retained while your account is active</li>
-            <li><strong>Transaction Records:</strong> Kept for 7 years for financial compliance</li>
-            <li><strong>Analytics Data:</strong> Anonymized data may be retained indefinitely</li>
-            <li><strong>Legal Holds:</strong> Data preserved longer when required by law</li>
+            <li><strong>Financial Records:</strong> Retained for 10 years for tax and regulatory compliance</li>
+            <li><strong>KYC/AML Data:</strong> Retained for 5-10 years per regulatory requirements</li>
+            <li><strong>Gambling Activity:</strong> Retained for responsible gambling monitoring</li>
+            <li><strong>Legal Holds:</strong> Data preserved indefinitely when required by law</li>
           </ul>
         </section>
 
         <section className="legal-section">
           <h2>🎛️ Your Rights and Choices</h2>
           
-          <h3>🔹 Access and Control</h3>
+          <h3>🔹 Financial Data Rights</h3>
           <ul>
-            <li><strong>Access:</strong> Request a copy of your personal data</li>
-            <li><strong>Correction:</strong> Update or correct inaccurate information</li>
-            <li><strong>Deletion:</strong> Request deletion of your account and data</li>
-            <li><strong>Portability:</strong> Download your lottery participation history</li>
+            <li><strong>Transaction History:</strong> Access to complete gambling and financial records</li>
+            <li><strong>Account Statements:</strong> Regular statements of wins, losses, and balances</li>
+            <li><strong>Tax Documents:</strong> Annual tax reporting documents for prize winnings</li>
+            <li><strong>Correction Rights:</strong> Ability to correct inaccurate financial information</li>
           </ul>
 
-          <h3>🔹 Communication Preferences</h3>
+          <h3>🔹 Responsible Gambling Controls</h3>
           <ul>
-            <li><strong>Marketing:</strong> Opt out of promotional communications</li>
-            <li><strong>Notifications:</strong> Control platform notifications and alerts</li>
-            <li><strong>Analytics:</strong> Limit certain analytics and tracking</li>
+            <li><strong>Spending Limits:</strong> Set daily, weekly, and monthly Pi spending limits</li>
+            <li><strong>Time Limits:</strong> Restrict gambling session duration</li>
+            <li><strong>Self-Exclusion:</strong> Temporarily or permanently exclude yourself from gambling</li>
+            <li><strong>Cooling-Off Periods:</strong> Mandatory waiting periods for large transactions</li>
           </ul>
 
-          <h3>🔹 Exercising Your Rights</h3>
+          <h3>🔹 Data Deletion Limitations</h3>
           <p>
-            To exercise any of these rights, contact us at {COMPANY_INFO.contactEmail}. 
-            We will respond within 30 days and verify your identity before processing requests.
+            <strong>Important:</strong> Due to legal and regulatory requirements, we cannot delete 
+            financial records, KYC/AML data, or gambling activity records. This information must 
+            be retained for compliance with gambling laws, tax regulations, and anti-money 
+            laundering requirements.
           </p>
         </section>
 
         <section className="legal-section">
-          <h2>🍪 Cookies and Tracking</h2>
-          
-          <h3>🔹 Types of Cookies</h3>
-          <ul>
-            <li><strong>Essential:</strong> Required for platform functionality</li>
-            <li><strong>Analytics:</strong> Help us understand platform usage</li>
-            <li><strong>Preferences:</strong> Remember your settings and choices</li>
-            <li><strong>Security:</strong> Detect fraud and abuse</li>
-          </ul>
-
-          <h3>🔹 Managing Cookies</h3>
+          <h2>👶 Age Verification</h2>
           <p>
-            You can control cookies through your browser settings. However, 
-            disabling essential cookies may affect platform functionality.
+            <strong>18+ Only:</strong> This platform is strictly restricted to users 18 years of age or older. 
+            We conduct age verification as part of our KYC process. Underage gambling is illegal and 
+            will result in immediate account termination and forfeiture of funds.
           </p>
         </section>
 
         <section className="legal-section">
-          <h2>👶 Children's Privacy</h2>
+          <h2>🌍 International Users and Compliance</h2>
           <p>
-            Our platform is not intended for users under 18 years old. We do not 
-            knowingly collect personal information from children. If we become aware 
-            that we have collected data from a child under 18, we will take steps 
-            to delete such information promptly.
-          </p>
-        </section>
-
-        <section className="legal-section">
-          <h2>🌍 International Users</h2>
-          <p>
-            Our platform may be accessed globally. By using our service, you consent 
-            to the transfer and processing of your information in countries where we 
-            operate, which may have different data protection laws than your residence.
-          </p>
-        </section>
-
-        <section className="legal-section">
-          <h2>📢 Changes to This Policy</h2>
-          <p>
-            We may update this Privacy Policy periodically. We will notify users of 
-            material changes through the platform or email. Your continued use after 
-            changes constitutes acceptance of the updated policy.
+            <strong>Jurisdiction-Specific Restrictions:</strong> Online gambling with real money is illegal 
+            in many jurisdictions. Users are responsible for ensuring compliance with local laws. 
+            We may restrict access from certain countries or regions where online gambling is prohibited.
           </p>
         </section>
 
         <section className="legal-section">
           <h2>📞 Contact Us</h2>
           <div className="contact-info">
-            <p><strong>Email:</strong> {COMPANY_INFO.contactEmail}</p>
-            <p><strong>Support:</strong> {COMPANY_INFO.supportEmail}</p>
+            <p><strong>Legal Inquiries:</strong> {COMPANY_INFO.contactEmail}</p>
+            <p><strong>Customer Support:</strong> {COMPANY_INFO.supportEmail}</p>
+            <p><strong>Responsible Gambling:</strong> help@gamblingtherapy.org</p>
             <p><strong>Address:</strong> {COMPANY_INFO.address}</p>
           </div>
         </section>
@@ -227,12 +227,15 @@ const PrivacyPolicy = ({ isModal = false }) => {
   );
 };
 
-// Terms of Service Component
+// Terms of Service Component - PRODUCTION
 const TermsOfService = ({ isModal = false }) => {
   return (
     <div className={`legal-document ${isModal ? 'modal-content' : ''}`}>
       <div className="legal-header">
         <h1>📋 Terms of Service</h1>
+        <div className="warning-box" style={{margin: '16px 0', background: '#f8d7da', border: '2px solid #dc3545', borderRadius: '8px', padding: '16px'}}>
+          <strong>🚨 CRITICAL WARNING:</strong> This platform involves REAL MONEY GAMBLING with actual Pi cryptocurrency. You can lose real money. Must be 18+. Gambling may be illegal in your jurisdiction.
+        </div>
         <div className="legal-meta">
           <p><strong>Version:</strong> {LEGAL_VERSIONS.termsOfService.version}</p>
           <p><strong>Last Updated:</strong> {LEGAL_VERSIONS.termsOfService.lastUpdated}</p>
@@ -245,247 +248,197 @@ const TermsOfService = ({ isModal = false }) => {
           <h2>🎯 Agreement Overview</h2>
           <p>
             These Terms of Service ("Terms") govern your use of the Pi Lottery platform 
-            operated by {COMPANY_INFO.name}. By accessing or using our service, you agree 
-            to be bound by these Terms. If you do not agree, please do not use our platform.
+            operated by {COMPANY_INFO.name}. <strong>This platform involves real money gambling 
+            using Pi cryptocurrency.</strong> By accessing or using our service, you agree 
+            to be bound by these Terms and acknowledge the financial risks involved.
           </p>
+        </section>
+
+        <section className="legal-section">
+          <h2>🚨 CRITICAL WARNINGS AND DISCLAIMERS</h2>
+          
+          <div className="warning-box">
+            <h3>🔴 REAL MONEY GAMBLING RISKS</h3>
+            <ul>
+              <li><strong>Financial Loss:</strong> You can lose all money you spend on this platform</li>
+              <li><strong>No Guarantees:</strong> No guarantee of winning or return on investment</li>
+              <li><strong>Addiction Risk:</strong> Gambling can be addictive and harmful</li>
+              <li><strong>Emotional Impact:</strong> Losing money can cause stress and depression</li>
+              <li><strong>No Refunds:</strong> All payments are final and non-refundable</li>
+            </ul>
+          </div>
+
+          <div className="warning-box">
+            <h3>🔴 LEGAL AND REGULATORY RISKS</h3>
+            <ul>
+              <li><strong>Illegal Activity:</strong> Online gambling may be illegal in your jurisdiction</li>
+              <li><strong>Age Restriction:</strong> Must be 18+ years old to participate</li>
+              <li><strong>Tax Obligations:</strong> You may owe taxes on winnings</li>
+              <li><strong>Criminal Penalties:</strong> Gambling violations may result in criminal charges</li>
+              <li><strong>Account Seizure:</strong> Authorities may freeze accounts in illegal jurisdictions</li>
+            </ul>
+          </div>
         </section>
 
         <section className="legal-section">
           <h2>🎰 Service Description</h2>
           
-          <h3>🔹 Platform Overview</h3>
+          <h3>🔹 Real Money Gambling Platform</h3>
           <ul>
-            <li><strong>Lottery Platform:</strong> Decentralized lottery system using Pi cryptocurrency</li>
+            <li><strong>Pi Cryptocurrency Lottery:</strong> Real money gambling using Pi tokens</li>
             <li><strong>Provably Fair:</strong> Winner selection using Bitcoin blockchain randomness</li>
-            <li><strong>2% Ticket System:</strong> Fair participation limits to prevent domination</li>
-            <li><strong>Multi-Winner Format:</strong> Multiple prizes for better odds and engagement</li>
+            <li><strong>Multi-Winner Format:</strong> Multiple real Pi prizes for better odds</li>
+            <li><strong>Real Monetary Value:</strong> All Pi tokens have actual market value</li>
           </ul>
 
-          <h3>🔹 Service Environment</h3>
+          <h3>🔹 Financial Nature of Service</h3>
           <ul>
-            <li><strong>Testnet/Sandbox:</strong> Currently operating on Pi Network testnet</li>
-            <li><strong>Development Phase:</strong> Features and functionality may change</li>
-            <li><strong>No Real Money:</strong> Uses testnet Pi tokens, not mainnet currency</li>
-            <li><strong>Educational Purpose:</strong> Platform for learning and testing</li>
+            <li><strong>Real Currency:</strong> Uses Pi cryptocurrency with actual monetary value</li>
+            <li><strong>Financial Risk:</strong> Users can lose significant amounts of real money</li>
+            <li><strong>No Investment Advice:</strong> Platform provides entertainment, not investment advice</li>
+            <li><strong>Market Volatility:</strong> Pi cryptocurrency value may fluctuate</li>
           </ul>
         </section>
 
         <section className="legal-section">
-          <h2>✅ Eligibility and Requirements</h2>
+          <h2>✅ Eligibility and Legal Requirements</h2>
           
-          <h3>🔹 User Requirements</h3>
+          <h3>🔹 Mandatory Requirements</h3>
           <ul>
-            <li><strong>Age:</strong> Must be 18 years or older</li>
-            <li><strong>Legal Capacity:</strong> Able to enter into binding agreements</li>
-            <li><strong>Pi Network Account:</strong> Valid Pi Network account required</li>
-            <li><strong>Jurisdiction:</strong> Use must comply with local laws</li>
+            <li><strong>Age:</strong> Must be 18 years or older (verified by ID)</li>
+            <li><strong>Legal Capacity:</strong> Able to enter into binding financial agreements</li>
+            <li><strong>Jurisdiction:</strong> Gambling must be legal in your location</li>
+            <li><strong>Financial Capacity:</strong> Must have legitimate source of funds</li>
+            <li><strong>Mental Capacity:</strong> Must be of sound mind and not impaired</li>
           </ul>
 
           <h3>🔹 Prohibited Users</h3>
           <ul>
-            <li>Individuals under 18 years of age</li>
-            <li>Users in jurisdictions where lotteries are prohibited</li>
-            <li>Persons restricted by local gambling laws</li>
-            <li>Previously banned or suspended users</li>
+            <li>Anyone under 18 years of age</li>
+            <li>Users in jurisdictions where online gambling is illegal</li>
+            <li>Persons with gambling addiction or financial problems</li>
+            <li>Users under the influence of drugs or alcohol</li>
+            <li>Previously banned users or family members of banned users</li>
+            <li>Employees of gambling companies and their families</li>
           </ul>
         </section>
 
         <section className="legal-section">
-          <h2>🎫 Lottery Participation Rules</h2>
+          <h2>🎫 Real Money Lottery Rules</h2>
           
-          <h3>🔹 Entry Requirements</h3>
+          <h3>🔹 Financial Entry Requirements</h3>
           <ul>
-            <li><strong>Pi Wallet:</strong> Connected and authenticated Pi wallet</li>
-            <li><strong>Entry Fee:</strong> Sufficient Pi balance for lottery entry</li>
-            <li><strong>Ticket Limits:</strong> Maximum 2% of total participants per lottery</li>
-            <li><strong>Fair Play:</strong> One person per account, no automation</li>
-          </ul>
-
-          <h3>🔹 Lottery Process</h3>
-          <ul>
-            <li><strong>Entry Period:</strong> Open participation until lottery end time</li>
-            <li><strong>Winner Selection:</strong> Provably fair using Bitcoin blockchain</li>
-            <li><strong>Prize Distribution:</strong> Manual distribution by administrators</li>
-            <li><strong>Verification:</strong> All results publicly verifiable</li>
-          </ul>
-
-          <h3>🔹 Ticket System</h3>
-          <ul>
-            <li><strong>Dynamic Limits:</strong> Ticket limits adjust based on participation</li>
-            <li><strong>Minimum Tickets:</strong> At least 2 tickets available per user</li>
-            <li><strong>Fair Distribution:</strong> Prevents whale domination</li>
-            <li><strong>Real-Time Updates:</strong> Limits update as users join</li>
-          </ul>
-        </section>
-
-        <section className="legal-section">
-          <h2>💰 Financial Terms</h2>
-          
-          <h3>🔹 Entry Fees and Payments</h3>
-          <ul>
-            <li><strong>Non-Refundable:</strong> Entry fees cannot be refunded once submitted</li>
-            <li><strong>Platform Fees:</strong> Deducted from prize pool as disclosed</li>
-            <li><strong>Pi Network Fees:</strong> Transaction fees may apply</li>
-            <li><strong>Payment Processing:</strong> Processed through Pi Network SDK</li>
+            <li><strong>Real Pi Payment:</strong> Must pay actual Pi cryptocurrency to enter</li>
+            <li><strong>Sufficient Balance:</strong> Must have enough Pi in your wallet</li>
+            <li><strong>Payment Verification:</strong> All payments verified on Pi blockchain</li>
+            <li><strong>No Credit:</strong> Cannot participate with borrowed or credit money</li>
           </ul>
 
           <h3>🔹 Prize Distribution</h3>
           <ul>
-            <li><strong>Automatic Calculation:</strong> Prizes calculated based on participation</li>
-            <li><strong>Manual Distribution:</strong> Prizes sent manually by administrators</li>
-            <li><strong>Winner Verification:</strong> Identity verification may be required</li>
-            <li><strong>Processing Time:</strong> Prizes distributed within reasonable timeframe</li>
+            <li><strong>Real Pi Prizes:</strong> Winners receive actual Pi cryptocurrency</li>
+            <li><strong>Tax Implications:</strong> Winners responsible for applicable taxes</li>
+            <li><strong>Prize Verification:</strong> Large prizes may require additional identity verification</li>
+            <li><strong>Payment Processing:</strong> Prizes distributed within reasonable timeframe</li>
+          </ul>
+        </section>
+
+        <section className="legal-section">
+          <h2>💰 Financial Terms and Risks</h2>
+          
+          <h3>🔹 Payment Terms</h3>
+          <ul>
+            <li><strong>Non-Refundable:</strong> All payments are final and cannot be refunded</li>
+            <li><strong>Real Money:</strong> All transactions involve actual Pi cryptocurrency</li>
+            <li><strong>Market Risk:</strong> Pi value may fluctuate, affecting prize values</li>
+            <li><strong>Transaction Fees:</strong> Pi Network fees may apply to transactions</li>
           </ul>
 
-          <h3>🔹 Currency and Exchange</h3>
+          <h3>🔹 Financial Responsibility</h3>
           <ul>
-            <li><strong>Pi Cryptocurrency:</strong> All transactions in Pi tokens</li>
-            <li><strong>Testnet Tokens:</strong> No real-world monetary value</li>
-            <li><strong>Exchange Rates:</strong> Subject to Pi Network policies</li>
-            <li><strong>Future Changes:</strong> Terms may change with mainnet launch</li>
+            <li><strong>Afford to Lose:</strong> Only gamble money you can afford to lose</li>
+            <li><strong>No Borrowing:</strong> Do not borrow money to gamble</li>
+            <li><strong>Budget Management:</strong> Set and stick to gambling budgets</li>
+            <li><strong>Seek Help:</strong> Get help if gambling becomes a problem</li>
           </ul>
         </section>
 
         <section className="legal-section">
           <h2>🛡️ User Responsibilities</h2>
           
-          <h3>🔹 Account Security</h3>
-          <ul>
-            <li><strong>Wallet Security:</strong> Secure your Pi wallet and private keys</li>
-            <li><strong>Account Access:</strong> Keep login credentials confidential</li>
-            <li><strong>Authorized Use:</strong> Only you may use your account</li>
-            <li><strong>Suspicious Activity:</strong> Report security breaches immediately</li>
-          </ul>
-
-          <h3>🔹 Fair Play</h3>
-          <ul>
-            <li><strong>One Account:</strong> Maintain only one account per person</li>
-            <li><strong>No Automation:</strong> Manual participation only, no bots</li>
-            <li><strong>Honest Information:</strong> Provide accurate information</li>
-            <li><strong>Respect Limits:</strong> Comply with ticket limits and restrictions</li>
-          </ul>
-
           <h3>🔹 Legal Compliance</h3>
           <ul>
-            <li><strong>Local Laws:</strong> Ensure participation is legal in your jurisdiction</li>
-            <li><strong>Age Requirements:</strong> Confirm you meet minimum age requirements</li>
-            <li><strong>Tax Obligations:</strong> Handle any applicable tax responsibilities</li>
-            <li><strong>Reporting:</strong> Report suspected fraud or abuse</li>
+            <li><strong>Jurisdiction Check:</strong> Verify gambling is legal in your location</li>
+            <li><strong>Age Verification:</strong> Provide valid ID to verify age 18+</li>
+            <li><strong>Tax Compliance:</strong> Report winnings to tax authorities as required</li>
+            <li><strong>Source of Funds:</strong> Ensure all gambling funds are legitimate</li>
+          </ul>
+
+          <h3>🔹 Responsible Gambling</h3>
+          <ul>
+            <li><strong>Self-Assessment:</strong> Regularly assess your gambling behavior</li>
+            <li><strong>Use Controls:</strong> Utilize deposit limits and self-exclusion tools</li>
+            <li><strong>Seek Help:</strong> Contact gambling addiction resources if needed</li>
+            <li><strong>Take Breaks:</strong> Take regular breaks from gambling</li>
           </ul>
         </section>
 
         <section className="legal-section">
           <h2>🚫 Prohibited Activities</h2>
           
-          <h3>🔹 Platform Abuse</h3>
+          <h3>🔹 Financial Fraud</h3>
           <ul>
-            <li>Creating multiple accounts</li>
-            <li>Using automated systems or bots</li>
+            <li>Using stolen or unauthorized payment methods</li>
+            <li>Money laundering or illegal fund transfers</li>
+            <li>Creating multiple accounts to circumvent limits</li>
+            <li>Providing false identity or financial information</li>
+          </ul>
+
+          <h3>🔹 Platform Manipulation</h3>
+          <ul>
             <li>Attempting to manipulate lottery results</li>
-            <li>Circumventing ticket limits or restrictions</li>
-          </ul>
-
-          <h3>🔹 Fraudulent Behavior</h3>
-          <ul>
-            <li>Providing false identity information</li>
-            <li>Colluding with other users</li>
-            <li>Exploiting platform vulnerabilities</li>
-            <li>Money laundering or illegal activities</li>
-          </ul>
-
-          <h3>🔹 System Interference</h3>
-          <ul>
-            <li>Hacking or attempting unauthorized access</li>
-            <li>Distributing malware or viruses</li>
-            <li>Overloading platform systems</li>
-            <li>Reverse engineering platform code</li>
+            <li>Exploiting technical vulnerabilities for financial gain</li>
+            <li>Colluding with other users to gain unfair advantage</li>
+            <li>Using automated systems or bots</li>
           </ul>
         </section>
 
         <section className="legal-section">
-          <h2>⚖️ Dispute Resolution</h2>
+          <h2>⚖️ Dispute Resolution and Legal Action</h2>
           
-          <h3>🔹 Internal Resolution</h3>
+          <h3>🔹 Financial Disputes</h3>
           <ul>
-            <li><strong>Support Contact:</strong> Contact support team first</li>
-            <li><strong>Investigation:</strong> We will investigate disputes promptly</li>
-            <li><strong>Documentation:</strong> Provide relevant evidence and information</li>
-            <li><strong>Decision:</strong> Our decision will be based on available evidence</li>
+            <li><strong>Internal Process:</strong> All disputes must first go through our support team</li>
+            <li><strong>Documentation Required:</strong> Provide transaction records and evidence</li>
+            <li><strong>Final Decision:</strong> Our decision on financial disputes is final</li>
+            <li><strong>No Chargebacks:</strong> Pi cryptocurrency transactions cannot be reversed</li>
           </ul>
 
           <h3>🔹 Binding Arbitration</h3>
           <p>
-            Any disputes not resolved through internal processes will be settled through 
-            binding arbitration in accordance with applicable arbitration rules. Class 
-            action lawsuits are waived.
+            Any legal disputes involving real money gambling will be settled through 
+            binding arbitration. Class action lawsuits are waived. Users agree to 
+            individual arbitration only.
           </p>
         </section>
 
         <section className="legal-section">
-          <h2>📈 Platform Changes</h2>
+          <h2>⚠️ Platform Risks and Limitations</h2>
           
-          <h3>🔹 Service Modifications</h3>
+          <h3>🔹 Technical Risks</h3>
           <ul>
-            <li><strong>Feature Updates:</strong> We may add, modify, or remove features</li>
-            <li><strong>Rule Changes:</strong> Lottery rules may be updated with notice</li>
-            <li><strong>Technical Improvements:</strong> Platform upgrades and maintenance</li>
-            <li><strong>Policy Updates:</strong> Terms and policies may be revised</li>
-          </ul>
-
-          <h3>🔹 Service Discontinuation</h3>
-          <p>
-            We reserve the right to discontinue the platform with reasonable notice. 
-            Outstanding prizes will be distributed before discontinuation.
-          </p>
-        </section>
-
-        <section className="legal-section">
-          <h2>⚠️ Disclaimers and Limitations</h2>
-          
-          <h3>🔹 Service Availability</h3>
-          <ul>
-            <li><strong>No Guarantee:</strong> Platform availability not guaranteed</li>
-            <li><strong>Maintenance:</strong> Scheduled and emergency maintenance may occur</li>
-            <li><strong>Third-Party Dependencies:</strong> Reliance on Pi Network and Bitcoin</li>
-            <li><strong>Technical Issues:</strong> Bugs and technical problems may arise</li>
+            <li><strong>System Downtime:</strong> Platform may be unavailable during maintenance</li>
+            <li><strong>Transaction Delays:</strong> Pi Network congestion may delay payments</li>
+            <li><strong>Data Loss:</strong> Technical issues may affect transaction records</li>
+            <li><strong>Security Breaches:</strong> Cyber attacks may compromise user data</li>
           </ul>
 
           <h3>🔹 Limitation of Liability</h3>
           <p>
-            Our liability is limited to the maximum extent permitted by law. We are not 
-            liable for indirect, incidental, or consequential damages. Total liability 
-            shall not exceed amounts paid by user in the preceding 12 months.
-          </p>
-
-          <h3>🔹 Risk Acknowledgment</h3>
-          <ul>
-            <li><strong>Gambling Risk:</strong> Lottery participation involves risk of loss</li>
-            <li><strong>No Guarantees:</strong> No guarantee of winning or returns</li>
-            <li><strong>Cryptocurrency Risk:</strong> Pi token value may fluctuate</li>
-            <li><strong>Technical Risk:</strong> Platform dependent on external systems</li>
-          </ul>
-        </section>
-
-        <section className="legal-section">
-          <h2>📜 Legal Framework</h2>
-          
-          <h3>🔹 Governing Law</h3>
-          <p>
-            These Terms are governed by the laws of [Jurisdiction] without regard to 
-            conflict of law principles. Any legal proceedings must be conducted in 
-            the courts of [Jurisdiction].
-          </p>
-
-          <h3>🔹 Severability</h3>
-          <p>
-            If any provision of these Terms is deemed invalid or unenforceable, the 
-            remaining provisions shall remain in full force and effect.
-          </p>
-
-          <h3>🔹 Entire Agreement</h3>
-          <p>
-            These Terms, together with our Privacy Policy, constitute the entire 
-            agreement between you and {COMPANY_INFO.name} regarding use of our platform.
+            <strong>MAXIMUM LIABILITY:</strong> Our total liability is limited to the amount 
+            you paid to the platform in the preceding 12 months. We are not liable for 
+            indirect, consequential, or punitive damages, including lost profits or 
+            gambling losses beyond your direct payments to us.
           </p>
         </section>
 
@@ -494,6 +447,7 @@ const TermsOfService = ({ isModal = false }) => {
           <div className="contact-info">
             <p><strong>Legal Inquiries:</strong> {COMPANY_INFO.contactEmail}</p>
             <p><strong>Customer Support:</strong> {COMPANY_INFO.supportEmail}</p>
+            <p><strong>Gambling Help:</strong> 1-800-522-4700 (US) | help@gamblingtherapy.org</p>
             <p><strong>Mailing Address:</strong> {COMPANY_INFO.address}</p>
           </div>
         </section>
@@ -502,7 +456,7 @@ const TermsOfService = ({ isModal = false }) => {
   );
 };
 
-// FAQ Component
+// FAQ Component - PRODUCTION
 const FAQ = ({ isModal = false }) => {
   const [openItems, setOpenItems] = useState(new Set());
 
@@ -518,52 +472,52 @@ const FAQ = ({ isModal = false }) => {
 
   const faqItems = [
     {
-      question: "🎰 How does the lottery system work?",
-      answer: "Our lottery system uses provably fair technology with Bitcoin blockchain randomness. Winners are selected using future Bitcoin block hashes, making manipulation impossible. Each lottery has multiple winners with decreasing prize amounts."
+      question: "🚨 Is this real money gambling?",
+      answer: "YES! This platform uses REAL Pi cryptocurrency with actual monetary value. You are gambling with real money. All lottery entries cost real Pi tokens, and all prizes are paid in real Pi cryptocurrency. Only participate if you can afford to lose the money you spend."
+    },
+    {
+      question: "💰 How much real money can I lose?",
+      answer: "You can lose ALL the Pi cryptocurrency you spend on lottery entries. There are no guarantees of winning. Set strict spending limits and never gamble more than you can afford to lose. Gambling can be addictive and financially devastating."
+    },
+    {
+      question: "🔞 Who can participate in real money gambling?",
+      answer: "Only users 18+ years old can participate. You must provide valid government ID for age verification. Gambling must be legal in your jurisdiction - it's illegal in many places. You are responsible for checking your local laws."
+    },
+    {
+      question: "🎰 How does the real money lottery work?",
+      answer: "You pay real Pi cryptocurrency to buy lottery tickets. Winners are selected using provably fair Bitcoin blockchain randomness. Multiple winners share the real Pi prize pool. All transactions involve actual monetary value."
     },
     {
       question: "🎫 What is the 2% ticket system?",
-      answer: "Each user can buy up to 2% of the total participants as tickets (minimum 2 tickets). This prevents any single user from dominating the lottery and ensures fair chances for everyone."
+      answer: "Each user can buy up to 2% of total participants as tickets (minimum 2 tickets). This prevents any single user from dominating the lottery with large amounts of real money and ensures fair chances for everyone."
     },
     {
-      question: "🔒 How is the lottery provably fair?",
-      answer: "We use future Bitcoin block hashes for winner selection. The block is chosen before entries, and its hash is unpredictable. Anyone can verify results using the same algorithm and Bitcoin blockchain data."
+      question: "💸 Can I get refunds on my real money?",
+      answer: "NO! All Pi cryptocurrency payments are final and non-refundable. Once you enter a lottery with real Pi, you cannot get your money back. This is a fundamental rule of cryptocurrency gambling."
     },
     {
-      question: "💰 How are prizes distributed?",
-      answer: "Prizes are distributed manually by administrators using Pi Network payments. Winners are notified and prizes are sent directly to their Pi wallets. Distribution typically occurs within 24-48 hours after winner selection."
+      question: "🏆 How are real Pi prizes paid?",
+      answer: "Winners receive actual Pi cryptocurrency directly to their Pi wallets. Prizes have real monetary value. Large prizes may require additional identity verification. You may owe taxes on winnings."
     },
     {
-      question: "🔄 Can I get a refund on my entry fee?",
-      answer: "Entry fees are non-refundable once submitted and confirmed on the blockchain. This policy ensures lottery integrity and prevents manipulation."
+      question: "📱 What do I need to gamble with real Pi?",
+      answer: "You need: 1) Valid government ID (18+ verification), 2) Pi wallet with real Pi balance, 3) Legal permission to gamble in your location, 4) Financial ability to afford losses, 5) Mental capacity to make financial decisions."
     },
     {
-      question: "📱 What do I need to participate?",
-      answer: "You need: 1) A Pi Network account, 2) Connected Pi wallet, 3) Sufficient Pi balance for entry fees, 4) Must be 18+ years old, 5) Participation must be legal in your jurisdiction."
+      question: "🔒 How can I verify the fairness of real money results?",
+      answer: "All winner selections use Bitcoin blockchain randomness and are provably fair. You can verify results independently using the Bitcoin block hash and our verification tools. The randomness cannot be manipulated by us or anyone else."
     },
     {
-      question: "🏆 How many winners are there?",
-      answer: "Winner count depends on total participants: 1-10 participants = 1 winner, 11-25 = 3 winners, 26-50 = 5 winners, etc. More participants means more winners and better odds!"
+      question: "⚖️ Is online gambling legal where I live?",
+      answer: "Online gambling is ILLEGAL in many jurisdictions. You are responsible for checking your local laws. We may block access from certain countries. Violating gambling laws can result in criminal penalties and account seizure."
     },
     {
-      question: "⏰ When do lotteries end?",
-      answer: "Each lottery has a specific end date and time displayed on the platform. Entries are accepted until this deadline. Winner selection occurs after the lottery ends using the predetermined Bitcoin block."
+      question: "🆘 What if I develop a gambling problem?",
+      answer: "Gambling addiction is serious. We provide self-exclusion tools, spending limits, and cooling-off periods. Seek help immediately: US: 1-800-522-4700, UK: 0808-8020-133, International: help@gamblingtherapy.org. Consider professional counseling."
     },
     {
-      question: "🔍 How can I verify results?",
-      answer: "All results can be verified on the Bitcoin blockchain. We provide verification links and detailed explanations of how winners were selected using the block hash and lottery algorithm."
-    },
-    {
-      question: "⚠️ Is this real money gambling?",
-      answer: "Currently, we operate on Pi Network testnet with test tokens that have no real-world monetary value. This is a development and testing platform for learning purposes."
-    },
-    {
-      question: "🌍 Can I participate from any country?",
-      answer: "Participation must comply with local laws and regulations. You are responsible for ensuring lottery participation is legal in your jurisdiction. Some countries may prohibit online lotteries."
-    },
-    {
-      question: "📊 Can I see my participation history?",
-      answer: "Yes! Your account shows complete participation history including: lotteries entered, tickets purchased, amounts spent, prizes won, and win/loss statistics."
+      question: "💳 What are the tax implications of winning?",
+      answer: "Gambling winnings may be taxable income in your jurisdiction. You are responsible for reporting winnings to tax authorities and paying applicable taxes. We may be required to report large winnings to government agencies."
     }
   ];
 
@@ -571,7 +525,10 @@ const FAQ = ({ isModal = false }) => {
     <div className={`legal-document ${isModal ? 'modal-content' : ''}`}>
       <div className="legal-header">
         <h1>❓ Frequently Asked Questions</h1>
-        <p>Find answers to common questions about Pi Lottery platform</p>
+        <div className="warning-box" style={{margin: '16px 0', background: '#f8d7da', border: '2px solid #dc3545', borderRadius: '8px', padding: '16px'}}>
+          <strong>⚠️ REAL MONEY WARNING:</strong> This platform involves actual financial risk. Read all answers carefully before participating.
+        </div>
+        <p>Critical information about real money Pi cryptocurrency gambling</p>
       </div>
 
       <div className="legal-content">
@@ -600,12 +557,13 @@ const FAQ = ({ isModal = false }) => {
         <section className="legal-section">
           <h2>📞 Still Have Questions?</h2>
           <p>
-            If you can't find the answer you're looking for, please contact our support team:
+            <strong>Before contacting support, ensure you understand the financial risks involved.</strong>
           </p>
           <div className="contact-info">
             <p><strong>Support Email:</strong> {COMPANY_INFO.supportEmail}</p>
-            <p><strong>Response Time:</strong> Usually within 24 hours</p>
-            <p><strong>Support Hours:</strong> Monday - Friday, 9 AM - 6 PM UTC</p>
+            <p><strong>Legal Questions:</strong> {COMPANY_INFO.contactEmail}</p>
+            <p><strong>Gambling Help:</strong> 1-800-522-4700 (US)</p>
+            <p><strong>Response Time:</strong> Usually within 24-48 hours</p>
           </div>
         </section>
       </div>
@@ -613,110 +571,174 @@ const FAQ = ({ isModal = false }) => {
   );
 };
 
-// Responsible Gambling Component
+// Responsible Gambling Component - PRODUCTION
 const ResponsibleGambling = ({ isModal = false }) => {
   return (
     <div className={`legal-document ${isModal ? 'modal-content' : ''}`}>
       <div className="legal-header">
         <h1>🛡️ Responsible Gambling</h1>
-        <p>Your well-being is our priority. Please gamble responsibly.</p>
+        <div className="warning-box" style={{margin: '16px 0', background: '#f8d7da', border: '2px solid #dc3545', borderRadius: '8px', padding: '16px'}}>
+          <strong>🚨 URGENT:</strong> This platform uses REAL Pi cryptocurrency. Gambling addiction can destroy your financial life and relationships. Seek help immediately if gambling becomes a problem.
+        </div>
+        <p>Protecting yourself while gambling with real Pi cryptocurrency</p>
       </div>
 
       <div className="legal-content">
         <section className="legal-section">
-          <h2>⚠️ Important Reminders</h2>
+          <h2>⚠️ Critical Financial Warnings</h2>
           <div className="warning-box">
+            <h3>🔴 BEFORE YOU GAMBLE WITH REAL PI:</h3>
             <ul>
-              <li><strong>Never gamble more than you can afford to lose</strong></li>
-              <li><strong>Set limits before you start playing</strong></li>
-              <li><strong>Take regular breaks from gambling</strong></li>
-              <li><strong>Don't chase losses with bigger bets</strong></li>
-              <li><strong>Gambling should be fun, not stressful</strong></li>
+              <li><strong>You can lose ALL your money</strong> - Gambling is designed to favor the house</li>
+              <li><strong>Set a strict budget</strong> - Only gamble money you can afford to lose completely</li>
+              <li><strong>No borrowing</strong> - Never gamble with borrowed money or credit</li>
+              <li><strong>Time limits</strong> - Set strict time limits for gambling sessions</li>
+              <li><strong>Take breaks</strong> - Regular breaks help maintain perspective</li>
+              <li><strong>Alcohol/drugs</strong> - Never gamble while impaired</li>
             </ul>
           </div>
         </section>
 
         <section className="legal-section">
-          <h2>📊 Setting Limits</h2>
+          <h2>📊 Financial Protection Tools</h2>
           <p>
-            Our platform includes built-in spending controls to help you gamble responsibly:
+            Our platform includes mandatory spending controls to protect you from financial harm:
           </p>
           <ul>
-            <li><strong>Daily Limits:</strong> Maximum Pi you can spend per day</li>
-            <li><strong>Weekly Limits:</strong> Total spending limits per week</li>
-            <li><strong>Monthly Limits:</strong> Overall monthly spending controls</li>
-            <li><strong>Cool-down Periods:</strong> Mandatory waiting periods for large entries</li>
+            <li><strong>Daily Pi Limits:</strong> Maximum real Pi you can spend per day</li>
+            <li><strong>Weekly Pi Limits:</strong> Total Pi spending limits per week</li>
+            <li><strong>Monthly Pi Limits:</strong> Overall monthly Pi spending controls</li>
+            <li><strong>Loss Limits:</strong> Automatic stop when you reach loss thresholds</li>
+            <li><strong>Cool-down Periods:</strong> Mandatory waiting periods for large Pi transactions</li>
+            <li><strong>Session Time Limits:</strong> Automatic logout after extended sessions</li>
           </ul>
         </section>
 
         <section className="legal-section">
-          <h2>🚨 Warning Signs</h2>
+          <h2>🚨 Gambling Addiction Warning Signs</h2>
           <p>
-            If you experience any of these signs, consider taking a break:
+            <strong>SEEK HELP IMMEDIATELY if you experience any of these:</strong>
           </p>
           <ul>
-            <li>Spending more time or money than intended</li>
-            <li>Gambling to escape problems or stress</li>
-            <li>Lying about gambling activities</li>
-            <li>Feeling anxious or depressed about gambling</li>
-            <li>Neglecting family, work, or other responsibilities</li>
-            <li>Borrowing money to gamble</li>
+            <li><strong>Spending more Pi than planned</strong> or budgeted</li>
+            <li><strong>Chasing losses</strong> with bigger bets to win back money</li>
+            <li><strong>Lying about gambling</strong> activities or Pi spending</li>
+            <li><strong>Neglecting responsibilities</strong> like work, family, or bills</li>
+            <li><strong>Borrowing money</strong> to gamble or pay gambling debts</li>
+            <li><strong>Feeling anxious or depressed</strong> about gambling losses</li>
+            <li><strong>Unable to stop</strong> gambling despite wanting to quit</li>
+            <li><strong>Gambling to escape problems</strong> or negative emotions</li>
           </ul>
         </section>
 
         <section className="legal-section">
-          <h2>🆘 Getting Help</h2>
+          <h2>🆘 Immediate Help Resources</h2>
           <p>
-            If you need help with gambling problems, these resources are available:
+            <strong>If gambling is affecting your life, GET HELP NOW:</strong>
           </p>
           <div className="help-resources">
             <div className="resource-item">
-              <h4>🇺🇸 United States</h4>
-              <p><strong>National Council on Problem Gambling:</strong></p>
-              <p>1-800-522-4700 | <a href="https://www.ncpgambling.org" target="_blank" rel="noopener noreferrer">ncpgambling.org</a></p>
+              <h4>🇺🇸 United States - National Council on Problem Gambling</h4>
+              <p><strong>24/7 Helpline:</strong> 1-800-522-4700</p>
+              <p><strong>Text Support:</strong> Text "HELP" to 233-456</p>
+              <p><strong>Website:</strong> <a href="https://www.ncpgambling.org" target="_blank" rel="noopener noreferrer">ncpgambling.org</a></p>
             </div>
             
             <div className="resource-item">
-              <h4>🇬🇧 United Kingdom</h4>
-              <p><strong>GamCare:</strong></p>
-              <p>0808-8020-133 | <a href="https://www.gamcare.org.uk" target="_blank" rel="noopener noreferrer">gamcare.org.uk</a></p>
+              <h4>🇬🇧 United Kingdom - GamCare</h4>
+              <p><strong>24/7 Helpline:</strong> 0808-8020-133</p>
+              <p><strong>Live Chat:</strong> Available on website</p>
+              <p><strong>Website:</strong> <a href="https://www.gamcare.org.uk" target="_blank" rel="noopener noreferrer">gamcare.org.uk</a></p>
             </div>
             
             <div className="resource-item">
-              <h4>🇦🇺 Australia</h4>
-              <p><strong>Gambling Help Online:</strong></p>
-              <p>1800-858-858 | <a href="https://www.gamblinghelponline.org.au" target="_blank" rel="noopener noreferrer">gamblinghelponline.org.au</a></p>
+              <h4>🇦🇺 Australia - Gambling Help Online</h4>
+              <p><strong>24/7 Helpline:</strong> 1800-858-858</p>
+              <p><strong>Online Chat:</strong> Available 24/7</p>
+              <p><strong>Website:</strong> <a href="https://www.gamblinghelponline.org.au" target="_blank" rel="noopener noreferrer">gamblinghelponline.org.au</a></p>
             </div>
             
             <div className="resource-item">
-              <h4>🌍 International</h4>
-              <p><strong>Gamblers Anonymous:</strong></p>
-              <p><a href="https://www.gamblersanonymous.org" target="_blank" rel="noopener noreferrer">gamblersanonymous.org</a></p>
+              <h4>🌍 International - Gamblers Anonymous</h4>
+              <p><strong>Global Support:</strong> Find local meetings worldwide</p>
+              <p><strong>Online Meetings:</strong> Available 24/7</p>
+              <p><strong>Website:</strong> <a href="https://www.gamblersanonymous.org" target="_blank" rel="noopener noreferrer">gamblersanonymous.org</a></p>
+            </div>
+
+            <div className="resource-item">
+              <h4>🌐 Online Counseling - BetterHelp</h4>
+              <p><strong>Professional Therapy:</strong> Licensed counselors specializing in gambling addiction</p>
+              <p><strong>Available:</strong> Phone, video, and text therapy</p>
+              <p><strong>Website:</strong> <a href="https://www.betterhelp.com" target="_blank" rel="noopener noreferrer">betterhelp.com</a></p>
             </div>
           </div>
         </section>
 
         <section className="legal-section">
-          <h2>⏸️ Self-Exclusion</h2>
+          <h2>⏸️ Self-Exclusion Options</h2>
           <p>
-            If you need to take a break from gambling, you can request self-exclusion:
+            <strong>Immediately block yourself from gambling:</strong>
           </p>
           <ul>
             <li><strong>24 Hours:</strong> Temporary cooling-off period</li>
-            <li><strong>1 Week:</strong> Short-term break</li>
-            <li><strong>1 Month:</strong> Extended break</li>
-            <li><strong>6 Months:</strong> Long-term exclusion</li>
-            <li><strong>Permanent:</strong> Indefinite account closure</li>
+            <li><strong>1 Week:</strong> Short-term break from real Pi gambling</li>
+            <li><strong>1 Month:</strong> Extended break to reassess finances</li>
+            <li><strong>6 Months:</strong> Long-term exclusion for recovery</li>
+            <li><strong>1 Year:</strong> Annual exclusion for serious problems</li>
+            <li><strong>Permanent:</strong> Lifetime ban from the platform</li>
           </ul>
           <p>
-            To request self-exclusion, contact us at {COMPANY_INFO.supportEmail} with 
-            your desired exclusion period.
+            <strong>To request self-exclusion:</strong> Contact us immediately at {COMPANY_INFO.supportEmail} 
+            with your desired exclusion period. We will process your request within 24 hours.
           </p>
+        </section>
+
+        <section className="legal-section">
+          <h2>👨‍👩‍👧‍👦 Family and Friends</h2>
+          <p>
+            <strong>If someone you know has a gambling problem:</strong>
+          </p>
+          <ul>
+            <li><strong>Don't lend money</strong> or pay gambling debts</li>
+            <li><strong>Encourage professional help</strong> from addiction specialists</li>
+            <li><strong>Attend support groups</strong> for families of gambling addicts</li>
+            <li><strong>Set boundaries</strong> to protect your own financial security</li>
+            <li><strong>Consider intervention</strong> with professional guidance</li>
+          </ul>
+        </section>
+
+        <section className="legal-section">
+          <h2>📚 Educational Resources</h2>
+          <ul>
+            <li><strong>Understanding Odds:</strong> Learn why the house always has an edge</li>
+            <li><strong>Financial Planning:</strong> Resources for budgeting and debt management</li>
+            <li><strong>Mental Health:</strong> Understanding the psychology of gambling addiction</li>
+            <li><strong>Legal Consequences:</strong> How gambling problems can lead to legal issues</li>
+            <li><strong>Recovery Stories:</strong> Testimonials from people who overcame gambling addiction</li>
+          </ul>
+        </section>
+
+        <section className="legal-section">
+          <h2>🏥 When to Seek Professional Help</h2>
+          <p>
+            <strong>Contact a professional immediately if:</strong>
+          </p>
+          <ul>
+            <li>You've lost significant amounts of real Pi cryptocurrency</li>
+            <li>Gambling is affecting your work, relationships, or health</li>
+            <li>You've borrowed money to gamble or pay gambling debts</li>
+            <li>You feel suicidal or hopeless due to gambling losses</li>
+            <li>Family members are concerned about your gambling</li>
+            <li>You've tried to quit but keep returning to gambling</li>
+          </ul>
         </section>
       </div>
     </div>
   );
 };
+
+// Keep the rest of the components the same (LegalModal, LegalFooter, etc.)
+// ... [The remaining components stay largely the same, just with updated PRODUCTION context]
 
 // Main Legal Modal Component
 const LegalModal = ({ 
@@ -739,7 +761,6 @@ const LegalModal = ({
       const progress = scrollTop / (scrollHeight - clientHeight);
       setScrollProgress(progress * 100);
       
-      // Check if user has scrolled to near the end (95%)
       if (progress > 0.95) {
         setHasScrolledToEnd(true);
       }
@@ -823,10 +844,14 @@ const LegalModal = ({
   );
 };
 
-// Footer Links Component
+// Footer Links Component with PRODUCTION warnings
 const LegalFooter = ({ onOpenLegal }) => {
   return (
     <footer className="legal-footer">
+      <div className="warning-box" style={{margin: '20px 0', textAlign: 'center', background: '#f8d7da', border: '2px solid #dc3545', borderRadius: '8px', padding: '16px'}}>
+        <strong>⚠️ REAL MONEY GAMBLING WARNING:</strong> This platform uses actual Pi cryptocurrency. Gambling involves financial risk and may be illegal in your jurisdiction. Must be 18+.
+      </div>
+      
       <div className="legal-links">
         <button onClick={() => onOpenLegal('privacy')} className="legal-link">
           📄 Privacy Policy
@@ -841,11 +866,13 @@ const LegalFooter = ({ onOpenLegal }) => {
           🛡️ Responsible Gambling
         </button>
       </div>
+      
       <div className="legal-footer-info">
         <span className="company-info">
           © 2024 {COMPANY_INFO.name} | 
           Version {LEGAL_VERSIONS.privacyPolicy.version} | 
-          Updated {LEGAL_VERSIONS.privacyPolicy.lastUpdated}
+          Updated {LEGAL_VERSIONS.privacyPolicy.lastUpdated} |
+          <strong style={{color: '#dc3545'}}> PRODUCTION MODE - REAL Pi CRYPTOCURRENCY</strong>
         </span>
       </div>
     </footer>
@@ -866,9 +893,11 @@ const useConsentTracking = () => {
   const recordConsent = (documentType, version = null) => {
     const consent = {
       documentType,
-      version: version || LEGAL_VERSIONS[documentType]?.version || '1.0.0',
+      version: version || LEGAL_VERSIONS[documentType]?.version || '2.0.0',
       acceptedAt: new Date().toISOString(),
       userAgent: navigator.userAgent,
+      environment: 'PRODUCTION',
+      realMoney: true,
       ipAddress: 'hidden' // Would be set server-side in real implementation
     };
 
@@ -880,7 +909,8 @@ const useConsentTracking = () => {
     setConsents(newConsents);
     localStorage.setItem('pi-lottery-consents', JSON.stringify(newConsents));
     
-    console.log('📝 Consent recorded:', consent);
+    console.log('📝 PRODUCTION consent recorded:', consent);
+    console.warn('💰 User consented to REAL money gambling terms!');
     return consent;
   };
 
@@ -912,43 +942,3 @@ export {
 };
 
 export default LegalModal;
-
-// Usage Example for integrating into UserApp.js:
-/*
-import { 
-  LegalModal, 
-  LegalFooter, 
-  useConsentTracking,
-  LEGAL_VERSIONS 
-} from './components/LegalComponents';
-
-// In your UserApp component:
-const [legalModal, setLegalModal] = useState({ isOpen: false, type: 'privacy' });
-const { recordConsent, hasConsent } = useConsentTracking();
-
-const openLegal = (type) => {
-  setLegalModal({ isOpen: true, type });
-};
-
-const closeLegal = () => {
-  setLegalModal({ isOpen: false, type: 'privacy' });
-};
-
-const handleLegalAccept = (type) => {
-  recordConsent(type);
-  console.log(`User accepted ${type}`);
-};
-
-// In your JSX:
-<>
-  <LegalModal
-    isOpen={legalModal.isOpen}
-    onClose={closeLegal}
-    type={legalModal.type}
-    onAccept={handleLegalAccept}
-    showAcceptButton={true}
-  />
-  
-  <LegalFooter onOpenLegal={openLegal} />
-</>
-*/
