@@ -1,4 +1,5 @@
-// File path: src/UserApp.js - Clean Version
+// File path: src/UserApp.js - PRODUCTION USER INTERFACE
+// ⚠️ WARNING: PRODUCTION MODE - REAL PI CRYPTOCURRENCY ⚠️
 import React, { useState, useEffect } from 'react';
 import { db } from './firebase';
 import { 
@@ -22,6 +23,12 @@ function UserApp() {
   const [legalModal, setLegalModal] = useState({ isOpen: false, type: 'privacy' });
   const { recordConsent } = useConsentTracking();
 
+  // PRODUCTION warning and consent state
+  const [showProductionWarning, setShowProductionWarning] = useState(true);
+  const [productionConsent, setProductionConsent] = useState(false);
+  const [ageVerified, setAgeVerified] = useState(false);
+  const [legalityConfirmed, setLegalityConfirmed] = useState(false);
+
   const openLegal = (type) => {
     setLegalModal({ isOpen: true, type });
   };
@@ -35,7 +42,42 @@ function UserApp() {
     closeLegal();
   };
 
-  // Pi SDK hook - background connection
+  // Production configuration check
+  const getConfig = () => {
+    return {
+      isProduction: process.env.REACT_APP_PI_ENVIRONMENT === 'production',
+      realMoney: process.env.REACT_APP_REAL_MONEY_MODE === 'true',
+      platformName: process.env.REACT_APP_PLATFORM_NAME || 'Pi Lottery',
+      minEntryFee: parseFloat(process.env.REACT_APP_MIN_ENTRY_FEE) || 0.1,
+      maxEntryFee: parseFloat(process.env.REACT_APP_MAX_ENTRY_FEE) || 1000,
+      ticketLimitPercentage: parseFloat(process.env.REACT_APP_TICKET_LIMIT_PERCENTAGE) || 2
+    };
+  };
+
+  // Check production consent on mount
+  useEffect(() => {
+    const config = getConfig();
+    if (config.isProduction || config.realMoney) {
+      console.warn('🚨 USER INTERFACE: PRODUCTION MODE ACTIVE!');
+      console.warn('💰 Users will gamble with REAL Pi cryptocurrency!');
+      
+      // Check if user has given production consent
+      const consent = localStorage.getItem('user-production-consent');
+      const ageVerify = localStorage.getItem('user-age-verified');
+      const legalConfirm = localStorage.getItem('user-legality-confirmed');
+      
+      if (consent && ageVerify && legalConfirm) {
+        setProductionConsent(true);
+        setAgeVerified(true);
+        setLegalityConfirmed(true);
+        setShowProductionWarning(false);
+      }
+    } else {
+      setShowProductionWarning(false);
+    }
+  }, []);
+
+  // Pi SDK hook - background connection for PRODUCTION
   const {
     piUser,
     isAuthenticated,
@@ -48,7 +90,7 @@ function UserApp() {
     isFullyConnected
   } = usePiSDK();
 
-  // Payment hook
+  // Payment hook for PRODUCTION
   const { 
     createLotteryPayment, 
     loading: paymentLoading, 
@@ -100,6 +142,27 @@ function UserApp() {
       return () => clearTimeout(timer);
     }
   }, [success]);
+
+  // Handle PRODUCTION consent process
+  const handleProductionConsent = () => {
+    if (!ageVerified) {
+      alert('You must verify you are 18+ years old to continue.');
+      return;
+    }
+    
+    if (!legalityConfirmed) {
+      alert('You must confirm gambling is legal in your jurisdiction to continue.');
+      return;
+    }
+
+    console.warn('💰 User gave consent for REAL Pi gambling!');
+    localStorage.setItem('user-production-consent', 'true');
+    localStorage.setItem('user-age-verified', 'true');
+    localStorage.setItem('user-legality-confirmed', 'true');
+    
+    setProductionConsent(true);
+    setShowProductionWarning(false);
+  };
 
   // Data loading functions
   const loadActiveLotteries = async () => {
@@ -189,8 +252,10 @@ function UserApp() {
     });
   };
 
-  // Join lottery function
+  // Join lottery function with PRODUCTION warnings
   const joinLottery = async (lotteryId, lottery) => {
+    const config = getConfig();
+    
     if (!isAuthenticated) {
       setSuccess('Connecting to Pi Network...');
       return;
@@ -206,6 +271,22 @@ function UserApp() {
       }
     }
 
+    // PRODUCTION warning before spending real money
+    if (config.isProduction || config.realMoney) {
+      const confirmText = `⚠️ REAL MONEY WARNING ⚠️\n\n` +
+        `You are about to spend ${lottery.entryFee}π of REAL Pi cryptocurrency.\n\n` +
+        `This is actual money with real value that you will lose if you don't win.\n\n` +
+        `Are you sure you want to continue?`;
+        
+      if (!window.confirm(confirmText)) {
+        setSuccess('Transaction cancelled - no real Pi was spent');
+        return;
+      }
+      
+      console.warn('💰 User confirmed spending REAL Pi cryptocurrency!');
+      console.warn(`💸 Amount: ${lottery.entryFee}π (actual monetary value)`);
+    }
+
     setJoiningLottery(true);
     clearMessages();
 
@@ -214,16 +295,28 @@ function UserApp() {
         piUser,
         lottery,
         (result) => {
-          setSuccess(`🎫 Successfully joined "${lottery.title}"!`);
+          if (config.isProduction) {
+            setSuccess(`🎫 Successfully spent ${lottery.entryFee}π REAL Pi on "${lottery.title}"! You are now gambling with real money.`);
+          } else {
+            setSuccess(`🎫 Successfully joined "${lottery.title}"!`);
+          }
           loadActiveLotteries();
           loadMyEntries();
         },
         (error) => {
-          setSuccess(`Failed to join lottery: ${error.message}`);
+          if (config.isProduction) {
+            setSuccess(`Failed to spend real Pi: ${error.message}`);
+          } else {
+            setSuccess(`Failed to join lottery: ${error.message}`);
+          }
         }
       );
     } catch (joinError) {
-      setSuccess(`Failed to join lottery: ${joinError.message}`);
+      if (config.isProduction) {
+        setSuccess(`Failed to spend real Pi: ${joinError.message}`);
+      } else {
+        setSuccess(`Failed to join lottery: ${joinError.message}`);
+      }
     } finally {
       setJoiningLottery(false);
     }
@@ -262,8 +355,183 @@ function UserApp() {
     return lottery.participants.filter(p => p.uid === piUser.uid).length;
   };
 
+  // PRODUCTION Warning Modal
+  if (showProductionWarning && !productionConsent) {
+    return (
+      <div style={{
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        background: 'rgba(0,0,0,0.95)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        zIndex: 10000,
+        fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", sans-serif',
+        overflow: 'auto',
+        padding: '20px'
+      }}>
+        <div style={{
+          background: 'white',
+          padding: '40px',
+          borderRadius: '16px',
+          maxWidth: '700px',
+          width: '100%',
+          maxHeight: '90vh',
+          overflow: 'auto',
+          border: '4px solid #dc3545'
+        }}>
+          <h1 style={{color: '#dc3545', marginBottom: '20px', fontSize: '2.5rem', textAlign: 'center'}}>
+            🚨 REAL MONEY GAMBLING WARNING
+          </h1>
+          
+          <div style={{
+            background: '#f8d7da',
+            border: '3px solid #dc3545',
+            borderRadius: '12px',
+            padding: '25px',
+            marginBottom: '25px',
+            textAlign: 'left'
+          }}>
+            <h2 style={{color: '#721c24', marginBottom: '15px', fontSize: '1.5rem'}}>
+              ⚠️ CRITICAL: REAL Pi CRYPTOCURRENCY GAMBLING
+            </h2>
+            <ul style={{color: '#721c24', lineHeight: '1.8', fontSize: '1.1rem'}}>
+              <li><strong>REAL MONEY:</strong> This platform uses actual Pi cryptocurrency with real monetary value</li>
+              <li><strong>GAMBLING RISK:</strong> You can lose all money you spend - there are no guarantees of winning</li>
+              <li><strong>NO REFUNDS:</strong> All Pi payments are final and cannot be refunded</li>
+              <li><strong>ADDICTION RISK:</strong> Gambling can be addictive and financially devastating</li>
+              <li><strong>LEGAL RISK:</strong> Online gambling may be illegal in your jurisdiction</li>
+            </ul>
+          </div>
+
+          <div style={{
+            background: '#fff3cd',
+            border: '2px solid #ffc107',
+            borderRadius: '8px',
+            padding: '20px',
+            marginBottom: '25px'
+          }}>
+            <h3 style={{color: '#856404', marginBottom: '15px'}}>
+              📋 MANDATORY REQUIREMENTS:
+            </h3>
+            <div style={{marginBottom: '15px'}}>
+              <label style={{display: 'flex', alignItems: 'center', gap: '10px', color: '#856404', fontSize: '1.1rem'}}>
+                <input 
+                  type="checkbox" 
+                  checked={ageVerified}
+                  onChange={(e) => setAgeVerified(e.target.checked)}
+                  style={{transform: 'scale(1.5)'}}
+                />
+                <strong>I am 18+ years old and have valid government ID to prove it</strong>
+              </label>
+            </div>
+            <div style={{marginBottom: '15px'}}>
+              <label style={{display: 'flex', alignItems: 'center', gap: '10px', color: '#856404', fontSize: '1.1rem'}}>
+                <input 
+                  type="checkbox" 
+                  checked={legalityConfirmed}
+                  onChange={(e) => setLegalityConfirmed(e.target.checked)}
+                  style={{transform: 'scale(1.5)'}}
+                />
+                <strong>Online gambling with real money is legal in my jurisdiction</strong>
+              </label>
+            </div>
+          </div>
+
+          <div style={{
+            background: '#d4edda',
+            border: '2px solid #28a745',
+            borderRadius: '8px',
+            padding: '20px',
+            marginBottom: '25px'
+          }}>
+            <h3 style={{color: '#155724', marginBottom: '10px'}}>
+              🛡️ RESPONSIBLE GAMBLING COMMITMENT:
+            </h3>
+            <ul style={{color: '#155724', lineHeight: '1.6'}}>
+              <li>I will only gamble money I can afford to lose completely</li>
+              <li>I will set strict spending limits and stick to them</li>
+              <li>I will never borrow money to gamble</li>
+              <li>I will seek help if gambling becomes a problem</li>
+              <li>I understand this is entertainment, not an investment</li>
+            </ul>
+          </div>
+
+          <div style={{textAlign: 'center'}}>
+            <button
+              onClick={handleProductionConsent}
+              disabled={!ageVerified || !legalityConfirmed}
+              style={{
+                background: (ageVerified && legalityConfirmed) ? '#dc3545' : '#6c757d',
+                color: 'white',
+                border: 'none',
+                padding: '20px 40px',
+                borderRadius: '12px',
+                fontSize: '1.2rem',
+                fontWeight: 'bold',
+                cursor: (ageVerified && legalityConfirmed) ? 'pointer' : 'not-allowed',
+                width: '100%',
+                marginBottom: '15px'
+              }}
+            >
+              {(ageVerified && legalityConfirmed) ? 
+                '✅ I UNDERSTAND THE RISKS - PROCEED TO REAL MONEY GAMBLING' : 
+                '❌ PLEASE COMPLETE ALL REQUIREMENTS ABOVE'
+              }
+            </button>
+            
+            <p style={{
+              fontSize: '0.9rem',
+              color: '#6c757d',
+              lineHeight: '1.5'
+            }}>
+              By clicking above, you acknowledge you understand this platform involves 
+              real money gambling with Pi cryptocurrency, you meet all legal requirements, 
+              and you accept full responsibility for any financial losses.
+            </p>
+            
+            <div style={{marginTop: '15px'}}>
+              <button
+                onClick={() => window.location.href = '/responsible-gambling'}
+                style={{
+                  background: '#17a2b8',
+                  color: 'white',
+                  border: 'none',
+                  padding: '10px 20px',
+                  borderRadius: '6px',
+                  marginRight: '10px',
+                  cursor: 'pointer'
+                }}
+              >
+                🆘 Get Gambling Help
+              </button>
+              
+              <button
+                onClick={() => window.close()}
+                style={{
+                  background: '#6c757d',
+                  color: 'white',
+                  border: 'none',
+                  padding: '10px 20px',
+                  borderRadius: '6px',
+                  cursor: 'pointer'
+                }}
+              >
+                🚪 Leave Site
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   // Show loading screen while connecting
   if (loading && !isAuthenticated) {
+    const config = getConfig();
     return (
       <div className="container">
         <div style={{
@@ -284,11 +552,16 @@ function UserApp() {
             marginBottom: '20px'
           }}></div>
           <h3 style={{ color: '#6f42c1', marginBottom: '10px' }}>
-            🎰 Pi Lottery
+            🎰 {config.platformName}
           </h3>
           <p style={{ color: '#6c757d' }}>
-            Connecting to Pi Network...
+            Connecting to {config.isProduction ? 'REAL ' : ''}Pi Network...
           </p>
+          {config.isProduction && (
+            <p style={{ color: '#dc3545', fontWeight: 'bold', fontSize: '0.9rem' }}>
+              PRODUCTION MODE - Real Pi cryptocurrency
+            </p>
+          )}
         </div>
         
         <style jsx>{`
@@ -301,16 +574,36 @@ function UserApp() {
     );
   }
 
+  const config = getConfig();
+
   return (
     <div className="container">
-      {/* Header */}
+      {/* Header with PRODUCTION warnings */}
       <div className="header">
         <div>
-          <h1>🎰 Pi Lottery</h1>
-          <p>Provably fair lotteries with Pi cryptocurrency</p>
+          <h1>🎰 {config.platformName}</h1>
+          <p>
+            {config.isProduction ? 
+              'REAL Pi cryptocurrency lotteries - actual monetary value' : 
+              'Provably fair lotteries with Pi cryptocurrency'
+            }
+          </p>
+          {config.isProduction && (
+            <div style={{
+              background: 'rgba(220, 53, 69, 0.2)',
+              border: '2px solid #dc3545',
+              borderRadius: '8px',
+              padding: '10px',
+              marginTop: '10px',
+              color: 'white',
+              fontSize: '0.9rem'
+            }}>
+              <strong>🚨 PRODUCTION MODE:</strong> Using REAL Pi cryptocurrency with actual monetary value
+            </div>
+          )}
         </div>
         
-        {/* User info - clean and simple */}
+        {/* User info with PRODUCTION indicators */}
         {isAuthenticated ? (
           <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
             <div style={{ 
@@ -320,6 +613,11 @@ function UserApp() {
               color: 'white'
             }}>
               👤 {piUser.username}
+              {config.isProduction && (
+                <div style={{fontSize: '0.8rem', color: '#ffeb3b'}}>
+                  💰 Real Pi Mode
+                </div>
+              )}
             </div>
             <button 
               onClick={disconnect} 
@@ -344,14 +642,14 @@ function UserApp() {
           </div>
         ) : (
           <div style={{ color: 'white', fontSize: '0.9rem' }}>
-            🔗 Connecting...
+            🔗 Connecting to {config.isProduction ? 'REAL ' : ''}Pi...
           </div>
         )}
       </div>
 
-      {/* Messages */}
+      {/* Messages with PRODUCTION context */}
       {success && (
-        <div className="success">
+        <div className={config.isProduction && success.includes('real') || success.includes('REAL') ? 'warning' : 'success'}>
           {success}
           <button onClick={clearMessages} style={{
             float: 'right', 
@@ -376,7 +674,7 @@ function UserApp() {
         </div>
       )}
 
-      {/* User Stats - only show when authenticated */}
+      {/* User Stats with PRODUCTION labels */}
       {isAuthenticated && (
         <div className="stats-grid">
           <div className="stat-card purple">
@@ -384,11 +682,17 @@ function UserApp() {
             <div className="stat-label">Tickets Bought</div>
           </div>
           <div className="stat-card yellow">
-            <div className="stat-number">{userStats.totalSpent} π</div>
+            <div className="stat-number">
+              {userStats.totalSpent} π
+              {config.isProduction && <div style={{fontSize: '0.7rem', color: '#856404'}}>REAL Pi</div>}
+            </div>
             <div className="stat-label">Total Spent</div>
           </div>
           <div className="stat-card green">
-            <div className="stat-number">{userStats.totalWon} π</div>
+            <div className="stat-number">
+              {userStats.totalWon} π
+              {config.isProduction && <div style={{fontSize: '0.7rem', color: '#155724'}}>REAL Pi</div>}
+            </div>
             <div className="stat-label">Total Won</div>
           </div>
           <div className="stat-card blue">
@@ -398,9 +702,30 @@ function UserApp() {
         </div>
       )}
 
-      {/* Active Lotteries */}
+      {/* Available Lotteries with PRODUCTION warnings */}
       <div className="card">
-        <h2>🎲 Available Lotteries</h2>
+        <h2>
+          🎲 Available Lotteries
+          {config.isProduction && (
+            <span style={{
+              background: '#dc3545',
+              color: 'white',
+              padding: '4px 8px',
+              borderRadius: '4px',
+              fontSize: '0.8rem',
+              marginLeft: '10px'
+            }}>
+              REAL Pi
+            </span>
+          )}
+        </h2>
+        
+        {config.isProduction && (
+          <div className="warning" style={{marginBottom: '20px'}}>
+            <strong>🚨 REAL MONEY WARNING:</strong> All lotteries use actual Pi cryptocurrency. 
+            You can lose real money. Entry fees range {config.minEntryFee}π - {config.maxEntryFee}π (REAL VALUE).
+          </div>
+        )}
         
         {activeLotteries.length === 0 ? (
           <p style={{textAlign: 'center', color: '#6c757d', padding: '40px'}}>
@@ -416,7 +741,21 @@ function UserApp() {
               return (
                 <div key={lottery.id} className="lottery-item">
                   <div className="lottery-header">
-                    <h3 className="lottery-title">{lottery.title}</h3>
+                    <h3 className="lottery-title">
+                      {lottery.title}
+                      {config.isProduction && (
+                        <span style={{
+                          background: '#dc3545',
+                          color: 'white',
+                          padding: '2px 6px',
+                          borderRadius: '3px',
+                          fontSize: '0.7rem',
+                          marginLeft: '8px'
+                        }}>
+                          REAL Pi
+                        </span>
+                      )}
+                    </h3>
                     <span className="lottery-status status-active">
                       ⏰ {formatTimeRemaining(lottery.endDate)}
                     </span>
@@ -431,7 +770,10 @@ function UserApp() {
                   <div className="lottery-details">
                     <div className="lottery-detail">
                       <div className="lottery-detail-label">Entry Fee</div>
-                      <div className="lottery-detail-value">{lottery.entryFee}π</div>
+                      <div className="lottery-detail-value">
+                        {lottery.entryFee}π
+                        {config.isProduction && <div style={{fontSize: '0.7rem', color: '#dc3545'}}>REAL Pi</div>}
+                      </div>
                     </div>
                     <div className="lottery-detail">
                       <div className="lottery-detail-label">Participants</div>
@@ -442,6 +784,7 @@ function UserApp() {
                       <div className="lottery-detail-value">
                         {((lottery.participants?.length || 0) * lottery.entryFee - 
                           (lottery.participants?.length || 0) * (lottery.platformFee || 0.1)).toFixed(2)}π
+                        {config.isProduction && <div style={{fontSize: '0.7rem', color: '#dc3545'}}>REAL Pi</div>}
                       </div>
                     </div>
                     {isAuthenticated && userTickets > 0 && (
@@ -455,7 +798,7 @@ function UserApp() {
                   <div className="lottery-actions">
                     {!isAuthenticated ? (
                       <div style={{textAlign: 'center', padding: '15px', color: '#6c757d'}}>
-                        🔗 Connecting to Pi Network...
+                        🔗 Connecting to {config.isProduction ? 'REAL ' : ''}Pi Network...
                       </div>
                     ) : !canBuyMore ? (
                       <div style={{textAlign: 'center', padding: '15px'}}>
@@ -468,13 +811,31 @@ function UserApp() {
                         onClick={() => joinLottery(lottery.id, lottery)}
                         className="button success full-width"
                         disabled={joiningLottery || loading || paymentLoading}
+                        style={{
+                          background: config.isProduction ? '#dc3545' : '#28a745',
+                          fontSize: config.isProduction ? '1rem' : '1rem'
+                        }}
                       >
                         {(joiningLottery || paymentLoading) ? (
-                          '🔄 Processing...'
+                          config.isProduction ? '🔄 Spending REAL Pi...' : '🔄 Processing...'
                         ) : (
-                          `🎫 Buy Ticket (${lottery.entryFee}π)`
+                          config.isProduction ? 
+                            `🚨 Spend ${lottery.entryFee}π REAL Pi` : 
+                            `🎫 Buy Ticket (${lottery.entryFee}π)`
                         )}
                       </button>
+                    )}
+                    
+                    {config.isProduction && canBuyMore && isAuthenticated && (
+                      <p style={{
+                        textAlign: 'center',
+                        fontSize: '0.8rem',
+                        color: '#dc3545',
+                        marginTop: '8px',
+                        fontWeight: 'bold'
+                      }}>
+                        ⚠️ This will spend real Pi cryptocurrency with actual value
+                      </p>
                     )}
                   </div>
                 </div>
@@ -484,10 +845,24 @@ function UserApp() {
         )}
       </div>
 
-      {/* My Entries - only show when authenticated and has entries */}
+      {/* My Entries with PRODUCTION indicators */}
       {isAuthenticated && myEntries.length > 0 && (
         <div className="card">
-          <h2>🎟️ My Lottery Entries</h2>
+          <h2>
+            🎟️ My Lottery Entries
+            {config.isProduction && (
+              <span style={{
+                background: '#dc3545',
+                color: 'white',
+                padding: '4px 8px',
+                borderRadius: '4px',
+                fontSize: '0.8rem',
+                marginLeft: '10px'
+              }}>
+                REAL Pi Spent
+              </span>
+            )}
+          </h2>
           <div className="lottery-list">
             {myEntries.map((entry) => (
               <div key={entry.lotteryId} className="lottery-item">
@@ -507,7 +882,10 @@ function UserApp() {
                   </div>
                   <div className="lottery-detail">
                     <div className="lottery-detail-label">Amount Spent</div>
-                    <div className="lottery-detail-value">{(entry.ticketCount * entry.entryFee).toFixed(2)}π</div>
+                    <div className="lottery-detail-value">
+                      {(entry.ticketCount * entry.entryFee).toFixed(2)}π
+                      {config.isProduction && <div style={{fontSize: '0.7rem', color: '#dc3545'}}>REAL Pi</div>}
+                    </div>
                   </div>
                   <div className="lottery-detail">
                     <div className="lottery-detail-label">Total Participants</div>
@@ -521,7 +899,7 @@ function UserApp() {
                   )}
                 </div>
 
-                {/* Show winnings if any */}
+                {/* Show winnings with PRODUCTION labels */}
                 {entry.winners && entry.winners.length > 0 && (
                   (() => {
                     const userWins = entry.winners.filter(w => w.winner.uid === piUser.uid);
@@ -535,7 +913,7 @@ function UserApp() {
                           marginTop: '15px'
                         }}>
                           <h4 style={{ margin: '0 0 10px 0', color: '#155724' }}>
-                            🎉 Congratulations! You Won!
+                            🎉 Congratulations! You Won {config.isProduction ? 'REAL Pi!' : '!'}
                           </h4>
                           {userWins.map((win, index) => (
                             <div key={index} style={{
@@ -550,9 +928,20 @@ function UserApp() {
                               </span>
                               <span style={{ fontWeight: 'bold', color: '#155724' }}>
                                 {win.prize}π
+                                {config.isProduction && <span style={{fontSize: '0.8rem', color: '#dc3545'}}> (REAL)</span>}
                               </span>
                             </div>
                           ))}
+                          {config.isProduction && (
+                            <p style={{
+                              margin: '10px 0 0 0',
+                              fontSize: '0.9rem',
+                              color: '#856404',
+                              fontStyle: 'italic'
+                            }}>
+                              💰 You won real Pi cryptocurrency with actual monetary value!
+                            </p>
+                          )}
                         </div>
                       );
                     }
