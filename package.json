@@ -1,7 +1,7 @@
 {
   "name": "pi-lottery-admin",
   "version": "2.0.0",
-  "description": "Pi Lottery Platform - Provably Fair Lotteries with 2% Ticket System and Manual Prize Distribution",
+  "description": "Pi Lottery Platform - PRODUCTION - Real Pi Cryptocurrency Lotteries with Provably Fair System",
   "private": true,
   "keywords": [
     "pi-network",
@@ -10,8 +10,9 @@
     "provably-fair",
     "cryptocurrency",
     "bitcoin-randomness",
-    "testnet",
-    "sandbox"
+    "production",
+    "real-money",
+    "gambling"
   ],
   "author": "Pi Lottery Team",
   "license": "MIT",
@@ -32,7 +33,7 @@
   "scripts": {
     "start": "react-scripts start",
     "build": "react-scripts build",
-    "build:production": "DISABLE_ESLINT_PLUGIN=true GENERATE_SOURCEMAP=false react-scripts build",
+    "build:production": "DISABLE_ESLINT_PLUGIN=true GENERATE_SOURCEMAP=false REACT_APP_DEPLOYMENT_ENV=production react-scripts build",
     "build:staging": "REACT_APP_DEPLOYMENT_ENV=staging react-scripts build",
     "test": "react-scripts test",
     "test:coverage": "react-scripts test --coverage --watchAll=false",
@@ -56,11 +57,13 @@
     "type-check": "echo 'Type checking not configured for JavaScript project'",
     "precommit": "npm run lint:check && npm run format:check",
     "prebuild": "npm run clean:cache",
-    "postbuild": "echo 'Build completed successfully!'",
+    "postbuild": "echo 'PRODUCTION build completed successfully!'",
     "dev": "npm start",
     "prod": "npm run build:production && npm run serve",
     "health-check": "curl -f http://localhost:3000 || exit 1",
-    "pi-test": "echo 'Testing Pi SDK integration...' && npm run build:production"
+    "pi-production": "echo 'Testing PRODUCTION Pi SDK integration...' && npm run build:production",
+    "security-check": "echo 'Running security audit for PRODUCTION...' && npm audit",
+    "production-verify": "echo 'Verifying PRODUCTION configuration...' && npm run lint:check && npm run test:ci"
   },
   "eslintConfig": {
     "extends": [
@@ -194,7 +197,8 @@
   },
   "pi-lottery": {
     "version": "2.0.0",
-    "environment": "production",
+    "environment": "PRODUCTION",
+    "realCurrency": true,
     "features": {
       "provablyFair": true,
       "multiWinner": true,
@@ -202,8 +206,8 @@
       "manualDistribution": true,
       "bitcoinRandomness": true,
       "piNetworkIntegration": true,
-      "sandboxSupport": true,
-      "testnetSupport": true
+      "realMoneyGambling": true,
+      "productionMode": true
     },
     "supportedBrowsers": [
       "Pi Browser",
@@ -213,7 +217,14 @@
       "Edge"
     ],
     "piSdkVersion": "2.0",
-    "minimumNodeVersion": "18.0.0"
+    "minimumNodeVersion": "18.0.0",
+    "warnings": [
+      "PRODUCTION MODE: Uses REAL Pi cryptocurrency",
+      "All transactions involve actual monetary value",
+      "Users are gambling with real money",
+      "Ensure compliance with gambling regulations",
+      "Implement proper KYC/AML if required"
+    ]
   },
   "build": {
     "optimization": {
@@ -245,28 +256,51 @@
   },
   "security": {
     "audit": {
-      "level": "moderate",
+      "level": "high",
       "advisories": []
+    },
+    "production": {
+      "realMoney": true,
+      "gambling": true,
+      "compliance": "required"
     }
   },
   "deployment": {
     "environments": {
       "development": {
         "url": "http://localhost:3000",
-        "piSdk": "sandbox"
+        "piSdk": "production",
+        "realCurrency": true
       },
       "staging": {
         "url": "https://staging.pi-lottery.netlify.app",
-        "piSdk": "sandbox"
+        "piSdk": "production",
+        "realCurrency": true
       },
       "production": {
         "url": "https://pi-lottery.netlify.app",
-        "piSdk": "sandbox"
+        "piSdk": "production",
+        "realCurrency": true
       },
-      "sandbox": {
-        "url": "https://sandbox.minepi.com/app/lottery-app-*",
-        "piSdk": "native"
+      "pi-network": {
+        "url": "https://lottery4435.pinet.com",
+        "piSdk": "native",
+        "realCurrency": true
       }
+    }
+  },
+  "compliance": {
+    "gambling": {
+      "realMoney": true,
+      "jurisdiction": "Please verify local laws",
+      "ageRestriction": "18+",
+      "responsibleGambling": "required"
+    },
+    "legal": {
+      "termsOfService": "required",
+      "privacyPolicy": "required",
+      "gamblingDisclaimer": "required",
+      "riskWarning": "required"
     }
   }
 }
