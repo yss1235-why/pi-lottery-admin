@@ -1,6 +1,23 @@
-# Pi Lottery Platform v2.0 - Enhanced Provably Fair System
+# Pi Lottery Platform v2.0 - PRODUCTION - Real Pi Cryptocurrency
 
-A comprehensive, provably fair lottery platform for Pi Network with multi-winner support, 2% ticket limits, and manual prize distribution.
+⚠️ **WARNING: PRODUCTION MODE - REAL PI CRYPTOCURRENCY** ⚠️
+
+A comprehensive, provably fair lottery platform for Pi Network using **REAL Pi cryptocurrency** with multi-winner support, 2% ticket limits, and manual prize distribution.
+
+## 🚨 IMPORTANT PRODUCTION WARNINGS
+
+### 🔴 **REAL MONEY GAMBLING**
+- **Real Pi cryptocurrency** - All transactions use actual Pi tokens with monetary value
+- **No refunds** - All lottery entries are final and non-refundable
+- **Age restriction** - Must be 18+ years old to participate
+- **Legal compliance** - Ensure gambling is legal in your jurisdiction
+- **Financial risk** - Users can lose real money
+
+### 🔴 **REGULATORY COMPLIANCE**
+- **Check local laws** - Online gambling may be restricted in your area
+- **Tax obligations** - Winners may owe taxes on prizes
+- **Responsible gambling** - Platform includes addiction prevention features
+- **KYC/AML** - Identity verification may be required for large transactions
 
 ## 🎯 Key Features
 
@@ -22,23 +39,23 @@ A comprehensive, provably fair lottery platform for Pi Network with multi-winner
 - **Multiple chances to win** - Much better odds than single-winner lotteries
 - **Transparent prize pools** - Live updates of current prize amounts
 
-### 💰 **Manual Prize Distribution**
-- **Admin control** - Administrators manually distribute prizes using Pi wallet
-- **Payment verification** - All transactions recorded and verified
-- **Audit trail** - Complete history of all prize distributions
-- **Flexible timing** - Admins can distribute prizes when convenient
+### 💰 **Real Pi Cryptocurrency Payments**
+- **Production Pi Network** - Uses mainnet Pi with real monetary value
+- **Instant transactions** - Payments processed through Pi Network
+- **Manual prize distribution** - Administrators distribute real Pi prizes
+- **Secure payments** - All transactions verified on Pi blockchain
 
 ### 📅 **Multiple Lottery Types**
-- **Daily lotteries** - Quick 24-hour rounds with optimized block timing
-- **Weekly lotteries** - Longer rounds with bigger prize pools
-- **Standard lotteries** - Custom duration lotteries
+- **Daily lotteries** - Quick 24-hour rounds with real Pi prizes
+- **Weekly lotteries** - Longer rounds with bigger real Pi prize pools
+- **Standard lotteries** - Custom duration lotteries with real Pi
 - **Adjustable platform fees** - Configurable per lottery
 
 ## 📊 System Architecture
 
 ### **Participation Tiers & Winners**
 ```
-Participants    Winners    Prize Distribution
+Participants    Winners    Prize Distribution (Real Pi)
 1-10           →    1      100%
 11-25          →    3      60%, 30%, 10%
 26-50          →    5      40%, 25%, 20%, 10%, 5%
@@ -49,7 +66,7 @@ Participants    Winners    Prize Distribution
 1000+          →   25      [Distributed across 25 positions]
 ```
 
-### **2% Ticket Limit Examples**
+### **2% Ticket Limit Examples (Real Pi)**
 ```
 100 participants → Max 2 tickets per user (2%)
 500 participants → Max 10 tickets per user (2%)
@@ -58,12 +75,13 @@ Participants    Winners    Prize Distribution
 
 ### **Bitcoin Block Commitment**
 ```
-1. Admin creates lottery
+1. Admin creates lottery with real Pi stakes
 2. System calculates future Bitcoin block (end time + safety margin)
-3. Users enter lottery (block hash unknown)
+3. Users enter lottery with real Pi (block hash unknown)
 4. Lottery ends, Bitcoin block is mined
 5. Block hash used for provably fair winner selection
-6. Anyone can verify results on blockchain
+6. Real Pi prizes distributed to winners
+7. Anyone can verify results on blockchain
 ```
 
 ## 🚀 Quick Start Guide
@@ -71,8 +89,9 @@ Participants    Winners    Prize Distribution
 ### **Prerequisites**
 - Node.js 18+ and npm 8+
 - Firebase project with Authentication and Firestore
-- Pi Network developer account and API key
-- Basic understanding of React and Firebase
+- **PRODUCTION Pi Network developer account** and API key
+- **Real Pi wallet** with sufficient balance for testing
+- Understanding of cryptocurrency and gambling risks
 
 ### **Installation**
 ```bash
@@ -83,17 +102,22 @@ cd pi-lottery-admin
 # Install dependencies
 npm install
 
-# Set up environment variables
+# Set up PRODUCTION environment variables
 cp .env.example .env
-# Edit .env with your Firebase and Pi Network credentials
+# Edit .env with your PRODUCTION Firebase and Pi Network credentials
+# ⚠️ WARNING: Set REACT_APP_PI_ENVIRONMENT=production
 
-# Start development server
+# Start development server (PRODUCTION MODE)
 npm start
 ```
 
-### **Environment Configuration**
+### **PRODUCTION Environment Configuration**
 Create `.env` file with these essential variables:
 ```env
+# PRODUCTION MODE CONFIGURATION
+REACT_APP_PI_ENVIRONMENT=production
+REACT_APP_PI_API_KEY=your_PRODUCTION_pi_api_key
+
 # Firebase Configuration
 REACT_APP_FIREBASE_API_KEY=your_firebase_api_key
 REACT_APP_FIREBASE_AUTH_DOMAIN=your_project.firebaseapp.com
@@ -102,105 +126,95 @@ REACT_APP_FIREBASE_STORAGE_BUCKET=your_project.firebasestorage.app
 REACT_APP_FIREBASE_MESSAGING_SENDER_ID=your_sender_id
 REACT_APP_FIREBASE_APP_ID=your_app_id
 
-# Pi Network Configuration
-REACT_APP_PI_API_KEY=your_pi_api_key
-REACT_APP_PI_ENVIRONMENT=sandbox
-
 # Admin Configuration
 REACT_APP_ADMIN_EMAIL=your_admin_email@example.com
 
-# Lottery Configuration
+# PRODUCTION Lottery Configuration
 REACT_APP_DEFAULT_PLATFORM_FEE=0.1
 REACT_APP_TICKET_LIMIT_PERCENTAGE=2
 REACT_APP_MIN_TICKETS_PER_USER=2
-```
 
-### **Firebase Setup**
-1. Create Firebase project at https://console.firebase.google.com
-2. Enable Authentication with Email/Password
-3. Enable Firestore Database
-4. Set up Firestore security rules:
-```javascript
-rules_version = '2';
-service cloud.firestore {
-  match /databases/{database}/documents {
-    // Allow admin full access
-    match /{document=**} {
-      allow read, write: if request.auth != null && 
-        request.auth.token.email == "your_admin_email@example.com";
-    }
-    
-    // Allow users to read lotteries
-    match /lotteries/{lotteryId} {
-      allow read: if true;
-      allow write: if request.auth != null;
-    }
-  }
-}
+# Legal and Compliance
+REACT_APP_COMPANY_NAME=Pi Lottery Inc.
+REACT_APP_CONTACT_EMAIL=legal@pilottery.com
+REACT_APP_SUPPORT_EMAIL=support@pilottery.com
+
+# ⚠️ PRODUCTION WARNINGS
+# This platform uses REAL Pi cryptocurrency
+# Users will spend and win actual Pi tokens
+# Ensure compliance with local gambling laws
+# Implement proper KYC/AML procedures
 ```
 
 ## 🎮 How to Use
 
 ### **For Administrators**
 
-#### **1. Login and Setup**
+#### **1. PRODUCTION Setup**
 - Access admin panel with designated admin email
-- Connect Pi wallet for prize distribution
+- **Connect PRODUCTION Pi wallet** with real Pi balance
+- **Verify legal compliance** in your jurisdiction
+- **Set up KYC/AML procedures** if required
 - Monitor dashboard statistics
 
-#### **2. Create Lotteries**
+#### **2. Create Real Pi Lotteries**
 ```
-📝 Lottery Creation Steps:
+📝 PRODUCTION Lottery Creation:
 1. Choose lottery type (daily/weekly/standard)
-2. Set entry fee and platform fee
-3. Configure minimum winners
-4. Set end date and time
+2. Set entry fee in REAL Pi (minimum 0.1π)
+3. Configure platform fee percentage
+4. Set minimum winners and duration
 5. System automatically selects Bitcoin block for fairness
-6. Publish lottery
+6. ⚠️ WARNING: Users will spend REAL Pi to enter
+7. Publish lottery
 ```
 
 #### **3. Manage Active Lotteries**
-- Monitor participant counts and prize pools
+- Monitor participant counts and REAL Pi prize pools
 - End lotteries manually if needed
-- Draw winners when lottery ends
-- Distribute prizes manually to winners
+- Draw winners when lottery ends using Bitcoin randomness
+- **Distribute REAL Pi prizes** manually to winners
 
-#### **4. Prize Distribution Process**
+#### **4. REAL Pi Prize Distribution Process**
 ```
-💰 Manual Distribution:
+💰 Manual REAL Pi Distribution:
 1. Lottery ends and winners are drawn
-2. Admin sees list of all winners with prize amounts
+2. Admin sees list of all winners with REAL Pi prize amounts
 3. Click "Send Prize" button for each winner
-4. Pi SDK processes payment
-5. Transaction recorded and verified
-6. Winner receives Pi automatically
+4. Pi SDK processes REAL Pi payment
+5. REAL Pi cryptocurrency sent to winner's wallet
+6. Transaction recorded and verified on Pi blockchain
+7. Winner receives actual Pi tokens
 ```
 
 ### **For Users**
 
-#### **1. Connect Pi Wallet**
+#### **1. Connect PRODUCTION Pi Wallet**
 - Visit lottery platform
 - Click "Connect Pi Wallet"
-- Authenticate with Pi Network
+- **Authenticate with PRODUCTION Pi Network**
+- **Verify you have real Pi balance**
 - Access available lotteries
 
-#### **2. Join Lotteries**
+#### **2. Join Lotteries with REAL Pi**
 ```
-🎫 Ticket Purchase:
+🎫 REAL Pi Ticket Purchase:
 1. Browse active lotteries
-2. See current prize pool and your chances
+2. See current REAL Pi prize pool and your chances
 3. Check your ticket limit (2% max)
-4. Buy tickets with Pi
-5. Get confirmation of entry
-6. Track your participation
+4. ⚠️ WARNING: You will spend REAL Pi cryptocurrency
+5. Buy tickets with your actual Pi balance
+6. Get confirmation of entry with real Pi spent
+7. Track your participation
 ```
 
-#### **3. Monitor Results**
+#### **3. Monitor Results & Win REAL Pi**
 - View your active entries
 - Check lottery status and time remaining
 - See winner announcements
+- **Receive REAL Pi prizes** automatically if you win
 - Verify results on Bitcoin blockchain
-- Receive prizes automatically if you win
+- **Winners get actual Pi cryptocurrency**
 
 ## 🔧 Technical Implementation
 
@@ -208,355 +222,201 @@ service cloud.firestore {
 - **Frontend**: React 18 with hooks and context
 - **Backend**: Firebase (Authentication + Firestore)
 - **Blockchain**: Bitcoin blockchain API for randomness
-- **Payments**: Pi Network SDK for transactions
-- **Styling**: CSS Grid/Flexbox with custom animations
+- **Payments**: **PRODUCTION Pi Network SDK** for real transactions
+- **Currency**: **Real Pi cryptocurrency (mainnet)**
 
-### **Key Components**
+### **PRODUCTION Security Features**
 
-#### **Admin Dashboard (`src/App.js`)**
-- Authentication and authorization
-- Lottery creation and management
-- Prize distribution interface
-- Statistics and analytics
-- Pi wallet integration for payments
+#### **Real Money Protection**
+- Enhanced input validation for real Pi amounts
+- Transaction confirmation screens with warnings
+- Rate limiting to prevent abuse
+- Secure admin authentication
+- Real-time fraud detection
 
-#### **User Interface (`src/UserApp.js`)**
-- Pi wallet connection
-- Lottery browsing and participation
-- Ticket management with 2% limits
-- Entry tracking and history
-- Winner verification tools
+#### **Gambling Compliance**
+- Age verification (18+ required)
+- Responsible gambling features
+- Loss limits and cooling-off periods
+- Addiction prevention resources
+- Legal disclaimers and warnings
 
-#### **Bitcoin Utilities (`src/utils/bitcoinUtils.js`)**
-- Block height fetching with fallbacks
-- Commitment block calculation
-- Provably fair random generation
-- Winner selection algorithms
-- Verification functions
-
-#### **Database Structure (Firestore)**
-```javascript
-lotteries/{lotteryId}: {
-  title: string,
-  description: string,
-  entryFee: number,
-  platformFee: number,
-  endDate: timestamp,
-  participants: array[{
-    uid: string,
-    username: string,
-    joinedAt: timestamp,
-    ticketNumber: number,
-    paymentId: string
-  }],
-  winners: array[{
-    position: number,
-    winner: object,
-    prize: number,
-    paid: boolean,
-    paidAt: timestamp,
-    paymentId: string
-  }],
-  status: 'active' | 'ended' | 'completed',
-  provablyFair: {
-    commitmentBlock: number,
-    blockHash: string,
-    verified: boolean,
-    blockData: object
-  },
-  ticketSystem: {
-    maxTicketsPerUser: number,
-    limitPercentage: 2
-  }
-}
-```
-
-### **Provably Fair Algorithm**
-```javascript
-// Winner selection process
-function selectWinners(blockHash, lotteryId, participants, winnerCount) {
-  const winners = [];
-  const remaining = [...participants];
-  
-  for (let position = 1; position <= winnerCount; position++) {
-    // Create unique seed for each position
-    const seed = blockHash + lotteryId + position + "SALT";
-    
-    // Generate deterministic random index
-    const randomIndex = hash(seed) % remaining.length;
-    
-    // Select winner and remove from pool
-    winners.push({
-      position,
-      winner: remaining[randomIndex],
-      verificationData: { seed, randomIndex, blockHash }
-    });
-    
-    remaining.splice(randomIndex, 1);
-  }
-  
-  return winners;
-}
-```
-
-## 🔒 Security Features
-
-### **Authentication & Authorization**
-- Firebase Authentication with email/password
-- Admin-only access to management functions
-- Session management and timeout
-- Secure token validation
-
-### **Provably Fair Guarantees**
-- Bitcoin blockchain provides unpredictable randomness
-- Future block selection prevents manipulation
-- Public verification of all results
-- Cryptographic proof of fairness
-
-### **Payment Security**
-- Pi Network SDK handles all transactions
+#### **Financial Security**
+- Pi Network SDK handles all real cryptocurrency
 - No private keys stored on platform
-- Transaction verification and logging
-- Automatic payment processing
-
-### **Data Protection**
-- Firebase security rules
-- Input validation and sanitization
-- Rate limiting on API calls
-- Error handling and logging
-
-## 🎯 Usage Examples
-
-### **Example 1: Daily Lottery**
-```
-Title: "Daily Pi Jackpot"
-Type: Daily (24 hours)
-Entry Fee: 1π
-Platform Fee: 0.1π
-Participants: 150
-Winners: 10
-Prize Pool: 135π (150 × 1 - 15 platform fees)
-Ticket Limit: 3 per user (2% of 150)
-```
-
-### **Example 2: Weekly Mega Lottery**
-```
-Title: "Weekly Mega Lottery"
-Type: Weekly (7 days)
-Entry Fee: 5π
-Platform Fee: 0.5π
-Participants: 800
-Winners: 20
-Prize Pool: 3600π (800 × 5 - 400 platform fees)
-Ticket Limit: 16 per user (2% of 800)
-1st Place: 648π (18% of pool)
-2nd Place: 504π (14% of pool)
-...continuing down to 20th place
-```
-
-### **Example 3: Verification Process**
-```
-User wants to verify 1st place winner:
-1. Go to lottery results page
-2. Click "Verify on Blockchain"
-3. See Bitcoin block #850,150 used
-4. Check block hash: 0000000000000000000823c5b2c0e8c1ae0b9d2f...
-5. Verify calculation: hash + lottery_ID + position_1 = winner_index
-6. Confirm winner was at that index in participant list
-7. Result: Provably fair! ✅
-```
+- All transactions verified on Pi blockchain
+- Comprehensive audit trails
+- Anti-money laundering checks
 
 ## 📈 Platform Statistics
 
-### **Fair Distribution Examples**
-With traditional single-winner lottery (1000 participants):
-- **Win chance**: 0.1% per person
-- **Winners**: 1 person happy, 999 disappointed
+### **Real Money Distribution Examples**
+With traditional single-winner lottery (1000 participants, 1π entry):
+- **Total pool**: 1000π (real Pi cryptocurrency)
+- **Winner**: 1 person gets ~900π (after fees)
+- **Losers**: 999 people lose their real Pi
 
-With our multi-winner system (1000 participants):
-- **Win chance**: 2.5% per person (25 winners)
-- **Winners**: 25 people happy, much better experience!
+With our multi-winner system (1000 participants, 1π entry):
+- **Total pool**: 1000π (real Pi cryptocurrency)
+- **Winners**: 25 people share ~900π prize pool
+- **Better experience**: More winners, more happiness!
 
 ### **2% Ticket System Benefits**
 - **Prevents whale domination**: No user can own >2% of chances
-- **Fair for everyone**: Regular users have meaningful chances
+- **Fair for everyone**: Regular users have meaningful chances to win real Pi
 - **Scales properly**: Limits increase as participation grows
 - **Encourages participation**: People join because it's fair
 
 ## 🔧 Development
 
-### **Project Structure**
-```
-pi-lottery-admin/
-├── public/
-│   ├── index.html           # Enhanced Pi SDK integration
-│   └── favicon.ico
-├── src/
-│   ├── App.js              # Admin dashboard (enhanced)
-│   ├── UserApp.js          # User interface (new)
-│   ├── firebase.js         # Firebase configuration
-│   ├── index.js           # React entry point
-│   ├── index.css          # Enhanced styles
-│   └── utils/
-│       └── bitcoinUtils.js # Bitcoin blockchain utilities (new)
-├── .env                   # Environment variables (enhanced)
-├── package.json           # Dependencies (updated)
-├── netlify.toml          # Deployment configuration
-└── README.md             # This file
-```
-
-### **Available Scripts**
+### **PRODUCTION Deployment Checklist**
 ```bash
-npm start                 # Development server
-npm run build            # Production build
-npm run build:production # Optimized production build
-npm test                 # Run tests
-npm run lint             # Check code quality
-npm run format           # Format code with Prettier
-npm run analyze          # Analyze bundle size
-npm run deploy:netlify   # Deploy to Netlify
-```
+# 1. PRODUCTION Environment
+REACT_APP_PI_ENVIRONMENT=production
+REACT_APP_DEPLOYMENT_ENV=production
+NODE_ENV=production
 
-### **Development Guidelines**
-- Follow React hooks patterns
-- Use semantic commit messages
-- Maintain responsive design
-- Test on multiple devices
-- Document new features
-- Keep security in mind
-
-## 🚀 Deployment
-
-### **Production Checklist**
-```bash
-# 1. Environment setup
-REACT_APP_DEV_MODE=false
-REACT_APP_ENABLE_DEBUG_MODE=false
+# 2. Security Configuration
 GENERATE_SOURCEMAP=false
+REACT_APP_ENABLE_DEBUG_MODE=false
 
-# 2. Build optimization
+# 3. Build PRODUCTION version
 npm run build:production
 
-# 3. Deploy to Netlify
+# 4. Deploy to live platform
 npm run deploy:netlify
 
-# 4. Verify deployment
-# - Test admin login
-# - Test user wallet connection
-# - Test lottery creation
-# - Test prize distribution
+# 5. PRODUCTION Verification
+# - Test admin login with real credentials
+# - Test user wallet connection with real Pi
+# - Test small lottery creation with minimal real Pi
+# - Test prize distribution with actual Pi payments
 # - Verify Bitcoin API connectivity
+# - Check legal compliance pages
 ```
 
-### **Netlify Deployment**
-1. Connect GitHub repository to Netlify
-2. Set build command: `npm run build:production`
-3. Set publish directory: `build`
-4. Add environment variables in Netlify dashboard
-5. Enable form submissions and functions if needed
+### **PRODUCTION Environment Variables**
+```env
+# Critical PRODUCTION settings
+REACT_APP_PI_ENVIRONMENT=production
+REACT_APP_PI_API_KEY=your_PRODUCTION_api_key
+REACT_APP_DEPLOYMENT_ENV=production
 
-### **Firebase Deployment (Alternative)**
-```bash
-npm install -g firebase-tools
-firebase login
-firebase init hosting
-npm run build:production
-firebase deploy
+# Security
+REACT_APP_ENABLE_DEBUG_MODE=false
+REACT_APP_ADMIN_SESSION_TIMEOUT_MINUTES=480
+
+# Legal Compliance
+REACT_APP_COMPANY_NAME=Your Legal Company Name
+REACT_APP_CONTACT_EMAIL=legal@yourcompany.com
+REACT_APP_LEGAL_LAST_UPDATED=2024-12-19
 ```
 
-## 🐛 Troubleshooting
+## 🐛 PRODUCTION Troubleshooting
 
-### **Common Issues**
+### **Common PRODUCTION Issues**
 
-#### **Pi SDK Not Loading**
+#### **Real Pi Payment Failures**
 ```
-Problem: Pi SDK fails to load or connect
+Problem: Real Pi payments fail during lottery entry
 Solutions:
-1. Check internet connection
-2. Verify Pi API key in .env
-3. Check browser console for errors
-4. Try refreshing the page
-5. Use incognito/private browsing mode
-```
-
-#### **Bitcoin API Errors**
-```
-Problem: Cannot fetch Bitcoin block data
-Solutions:
-1. API might be temporarily down (uses fallbacks)
-2. Check network connectivity
-3. Verify API endpoints in bitcoinUtils.js
-4. Check browser console for specific errors
-```
-
-#### **Firebase Permission Errors**
-```
-Problem: Permission denied accessing Firestore
-Solutions:
-1. Verify admin email in .env matches Firebase user
-2. Check Firestore security rules
-3. Ensure Authentication is enabled
-4. Verify Firebase config in .env
+1. Ensure user has sufficient REAL Pi balance
+2. Check Pi Network mainnet status
+3. Verify production API keys are correct
+4. Check user's Pi wallet connection
+5. Verify KYC/AML compliance if required
 ```
 
 #### **Prize Distribution Failures**
 ```
-Problem: Pi payments fail during distribution
+Problem: Real Pi prizes fail to distribute
 Solutions:
-1. Ensure admin wallet has sufficient Pi balance
-2. Check Pi Network status
-3. Verify recipient wallet addresses
+1. Ensure admin wallet has sufficient REAL Pi balance
+2. Check Pi Network mainnet connectivity
+3. Verify recipient wallet addresses are valid
 4. Try smaller test payments first
 5. Check Pi SDK console for payment errors
+6. Verify compliance with large transaction limits
 ```
 
-### **Debug Mode**
-Enable debug mode for detailed logging:
-```env
-REACT_APP_ENABLE_DEBUG_MODE=true
-REACT_APP_ENABLE_CONSOLE_LOGS=true
+#### **Legal Compliance Issues**
 ```
+Problem: Users report gambling law concerns
+Solutions:
+1. Verify platform complies with local gambling laws
+2. Implement geo-blocking for restricted jurisdictions
+3. Add proper age verification (18+)
+4. Include responsible gambling resources
+5. Consult legal counsel for compliance
+```
+
+## ⚖️ Legal and Compliance
+
+### **🚨 CRITICAL LEGAL WARNINGS**
+
+#### **Gambling Regulations**
+- **Check local laws** - Online gambling is illegal in many jurisdictions
+- **Age restrictions** - Platform restricted to users 18+ years old
+- **Licensing** - May require gambling license in some areas
+- **Tax obligations** - Winners may owe taxes on real Pi prizes
+- **Compliance costs** - Budget for legal and compliance expenses
+
+#### **Financial Regulations**
+- **AML/KYC** - May need identity verification for large transactions
+- **Money transmission** - May require money transmitter license
+- **Consumer protection** - Must comply with consumer protection laws
+- **Advertising restrictions** - Gambling advertising may be restricted
+
+#### **Platform Responsibilities**
+- **Responsible gambling** - Must provide addiction prevention resources
+- **Fair play** - Must ensure games are truly random and fair
+- **Data protection** - Must comply with privacy laws (GDPR, etc.)
+- **Dispute resolution** - Must have process for handling user complaints
+
+### **Recommended Legal Steps**
+1. **Consult gambling lawyer** before launching
+2. **Obtain necessary licenses** in your jurisdiction
+3. **Implement KYC/AML** procedures
+4. **Set up customer support** for gambling-related issues
+5. **Purchase insurance** for gambling operations
+6. **Register with gambling authorities** if required
 
 ## 📞 Support & Contributing
 
-### **Getting Help**
-- Check this README for common solutions
-- Search existing GitHub issues
-- Create new issue with detailed description
-- Include browser console logs and screenshots
+### **PRODUCTION Support**
+- **Legal Issues**: Consult your gambling compliance lawyer
+- **Technical Issues**: Check Firebase Functions logs and Pi Network status
+- **User Complaints**: Follow responsible gambling dispute resolution procedures
+- **Payment Issues**: Contact Pi Network support for mainnet issues
 
-### **Contributing**
-1. Fork the repository
-2. Create feature branch: `git checkout -b feature-name`
-3. Make your changes
-4. Test thoroughly
-5. Commit with clear messages
-6. Push to your fork
-7. Create pull request
-
-### **Bug Reports**
+### **PRODUCTION Monitoring**
 Include:
-- Operating system and browser version
-- Steps to reproduce the issue
-- Expected vs actual behavior
-- Console logs and screenshots
-- Environment configuration (without secrets)
+- **Real Pi transaction volumes** and success rates
+- **User complaint** logs and resolution times
+- **Compliance audit** trails and reports
+- **Financial reconciliation** between platform and Pi Network
+- **Security incident** logs and responses
 
 ## 📄 License
 
 MIT License - see LICENSE file for details.
 
+⚠️ **DISCLAIMER**: This software is provided as-is for educational purposes. Users are responsible for ensuring compliance with all applicable gambling laws and regulations in their jurisdiction. The developers are not responsible for any legal issues arising from the use of this platform with real cryptocurrency.
+
 ## 🙏 Acknowledgments
 
-- Pi Network team for the Pi SDK
-- Bitcoin Core developers for the blockchain
-- Blockstream for the Bitcoin API
-- Firebase team for the backend services
-- React team for the frontend framework
-- Open source community for inspiration and tools
+- Pi Network team for the PRODUCTION Pi SDK
+- Bitcoin Core developers for the blockchain randomness
+- Firebase team for secure backend services
+- Legal advisors for compliance guidance
+- Responsible gambling organizations for addiction prevention resources
 
 ---
 
-**Built with ❤️ for the Pi Network community**
+**🚨 FINAL WARNING: PRODUCTION MODE ACTIVE 🚨**
 
-*Making lotteries fair, transparent, and fun for everyone! 🎰*
+*This platform uses REAL Pi cryptocurrency. All transactions involve actual monetary value. Users are gambling with real money. Ensure full legal compliance before launching!*
+
+**⚠️ REGULATORY COMPLIANCE REQUIRED ⚠️**
+
+*Obtain proper gambling licenses, implement KYC/AML procedures, and consult legal counsel before accepting real money from users.*
