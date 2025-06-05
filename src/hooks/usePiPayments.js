@@ -1,4 +1,4 @@
-// File path: src/hooks/usePiPayments.js - Complete Fixed Version with Pi Slug
+// File path: src/hooks/usePiPayments.js - Updated with Access Token Support
 import { useState } from 'react';
 
 const usePiPayments = () => {
@@ -40,6 +40,22 @@ const usePiPayments = () => {
     return `https://${config.region}-${config.projectId}.cloudfunctions.net`;
   };
 
+  // Get Pi access token from SDK
+  const getPiAccessToken = async () => {
+    try {
+      if (!window.Pi) {
+        throw new Error('Pi SDK not available');
+      }
+
+      // Get access token from Pi SDK - this might need to be implemented
+      // For now, we'll try to get it from the Pi user object
+      return null; // Placeholder - Pi SDK doesn't expose access token directly
+    } catch (error) {
+      console.warn('⚠️ Could not get Pi access token:', error.message);
+      return null;
+    }
+  };
+
   // Enhanced API call helper with proper timeout handling
   const apiCall = async (functionName, data, options = {}) => {
     const config = getConfig();
@@ -48,19 +64,26 @@ const usePiPayments = () => {
     
     console.log(`🔗 Calling Firebase Function: ${url}`);
     console.log(`📤 Request data:`, data);
-    console.log(`🏷️ Pi Slug: ${config.piSlug}`);
+    
+    // Get Pi access token
+    const accessToken = await getPiAccessToken();
+    if (accessToken) {
+      console.log('🔑 Including Pi access token in request');
+    }
     
     const requestOptions = {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'Accept': 'application/json',
-        'Pi-App-Slug': config.piSlug, // Include Pi slug in headers
+        'Pi-App-Slug': config.piSlug,
+        ...(accessToken && { 'Pi-Access-Token': accessToken }),
         ...options.headers
       },
       body: JSON.stringify({
         ...data,
-        piSlug: config.piSlug // Include Pi slug in body
+        piSlug: config.piSlug,
+        ...(accessToken && { accessToken })
       })
     };
 
@@ -86,7 +109,6 @@ const usePiPayments = () => {
         clearTimeout(timeoutId);
 
         console.log(`📡 Response status: ${response.status} for ${functionName}`);
-        console.log(`📡 Response headers:`, response.headers);
 
         if (!response.ok) {
           let errorData;
@@ -122,7 +144,7 @@ const usePiPayments = () => {
     throw new Error(`API call failed after ${maxAttempts} attempts: ${lastError.message}`);
   };
 
-  // Create lottery payment with enhanced error handling
+  // Create lottery payment with enhanced Pi API integration
   const createLotteryPayment = async (piUser, lottery, onSuccess, onError) => {
     if (!piUser || !lottery) {
       throw new Error('User and lottery data required');
@@ -206,16 +228,57 @@ const usePiPayments = () => {
           }
         },
 
-        onCancel: (paymentId) => {
+        onCancel: async (paymentId) => {
           console.log('❌ Payment cancelled by user:', paymentId);
+          
+          try {
+            await apiCall('cancelPayment', { paymentId });
+            console.log('✅ Cancellation processed');
+          } catch (cancelError) {
+            console.error('❌ Cancellation processing failed:', cancelError);
+          }
+          
           const cancelError = new Error('Payment was cancelled by user');
           if (onError) onError(cancelError);
         },
 
-        onError: (error, paymentId) => {
+        onError: async (error, paymentId) => {
           console.error('❌ Pi SDK payment error:', { error, paymentId });
+          
+          try {
+            await apiCall('handlePaymentError', { 
+              paymentId, 
+              errorDetails: error 
+            });
+            console.log('✅ Error handling processed');
+          } catch (errorHandlingError) {
+            console.error('❌ Error handling failed:', errorHandlingError);
+          }
+          
           const enhancedError = new Error(`Payment failed: ${error.message || error}`);
           if (onError) onError(enhancedError);
+        },
+
+        onIncompletePaymentFound: async (paymentDTO) => {
+          console.log('🔄 Incomplete payment found:', paymentDTO);
+          
+          try {
+            // Try to complete the incomplete payment
+            if (paymentDTO.transaction && paymentDTO.transaction.txid) {
+              await apiCall('completePayment', {
+                paymentId: paymentDTO.identifier,
+                txnId: paymentDTO.transaction.txid,
+                lotteryId: lottery.id,
+                userUid: piUser.uid
+              });
+              
+              console.log('✅ Incomplete payment completed');
+              if (onSuccess) onSuccess({ paymentId: paymentDTO.identifier });
+            }
+          } catch (incompleteError) {
+            console.error('❌ Incomplete payment handling failed:', incompleteError);
+            if (onError) onError(incompleteError);
+          }
         }
       };
 
@@ -240,9 +303,8 @@ const usePiPayments = () => {
     }
   };
 
-  // Distribute prize with enhanced security and validation
+  // Distribute prize (unchanged)
   const distributePrize = async (winner, lotteryId, onSuccess, onError) => {
-    // Validate configuration
     try {
       getConfig();
     } catch (configError) {
@@ -261,7 +323,6 @@ const usePiPayments = () => {
         piSlug: getConfig().piSlug
       });
 
-      // Validate prize data
       if (!winner.prize || winner.prize <= 0) {
         throw new Error('Invalid prize amount');
       }
@@ -293,14 +354,13 @@ const usePiPayments = () => {
     }
   };
 
-  // Health check function for monitoring
+  // Health check function
   const healthCheck = async () => {
     try {
       const config = getConfig();
       const baseUrl = getFunctionsBaseUrl();
       
       console.log('🔍 Testing health check:', `${baseUrl}/healthCheck`);
-      console.log('🏷️ Pi Slug:', config.piSlug);
       
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 10000);
